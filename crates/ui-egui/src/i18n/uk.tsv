@@ -3908,6 +3908,7 @@ axis	Vertical	Вертикальна
 	Selected	Вибрано
 	Seat picked — booking needs an SGR account, so the flow ends here.	Місце вибрано — бронювання потребує облікового запису SGR, тому процес закінчується тут.
 	{name} — {free} of {total} seats free	{name} — вільних місць: {free} з {total}
+	{arr} · {free} free	{arr} · вільно: {free}
 	The vendor hasn't reported this set's coaches yet — the sweep keeps asking.	Постачальник ще не повідомив вагони цього складу — обхід продовжує питати.
 	The ground drapes the basemap flat; contours (0 = off) draw the relief with their heights.	Земля клає базову карту плошчи; горизонтали (0 = викл) малюють рельєф з висотами.
 	The 3D environment — the basemap draped flat, contour lines and placed assets, in their own panels.	3D-середовище — базова карта плошчи, горизонтали та розміщені об'єкти, у своїх панелях.

@@ -3376,6 +3376,7 @@ axis	Vertical	垂直
 	Selected	已選擇
 	Seat picked — booking needs an SGR account, so the flow ends here.	已選座位——訂票需要 SGR 帳戶，流程到此結束。
 	{name} — {free} of {total} seats free	{name} — {total} 個座位剩 {free} 個
+	{arr} · {free} free	{arr} · 空位 {free}
 	The vendor hasn't reported this set's coaches yet — the sweep keeps asking.	供應商尚未回報這列車的車廂——輪詢繼續詢問。
 	The ground drapes the basemap flat; contours (0 = off) draw the relief with their heights.	地面平鋪底圖；等高線（0 = 關閉）帶高度繪出地形起伏。
 	The 3D environment — the basemap draped flat, contour lines and placed assets, in their own panels.	3D 環境——平鋪的底圖、等高線與已放置的資產，都在各自的面板裡。

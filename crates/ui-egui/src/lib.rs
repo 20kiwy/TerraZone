@@ -875,6 +875,13 @@ impl TerrazoneApp {
             // Keep the status bar's progress moving and pick the result up when it arrives.
             ctx.request_repaint_after(std::time::Duration::from_millis(100));
         }
+        // The fleet's own heartbeat: while any feed is live the canvas repaints on a 100 ms
+        // cadence of its own — the poll round, the answers and the SGR trains move while the
+        // mouse sits still, and nothing waits for an input event to make its round. This is
+        // the fleet system session's refresh thread, as the frame loop egui gives us.
+        if crate::fleet::is_live(self) {
+            ctx.request_repaint_after(std::time::Duration::from_millis(100));
+        }
         // The window's close button (or the system quitting the app) asks about unsaved documents,
         // once the saves running in the background are done.
         if ctx.input(|i| i.viewport().close_requested()) {

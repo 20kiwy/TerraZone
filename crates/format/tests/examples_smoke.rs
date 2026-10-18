@@ -6,7 +6,7 @@ use terrazon_format::{load, sniff};
 #[test]
 fn shipped_examples_open() {
     for f in ["dusk-poster", "feature-sheet", "neon-drive", "perspective-city", "ribbons"] {
-        let bytes = std::fs::read(format!("../../examples/{f}.vectorcraft")).unwrap();
+        let bytes = std::fs::read(format!("../../examples/{f}.terrazon")).unwrap();
         assert!(sniff(&bytes), "{f} is sniffed as native");
         let doc = load(&bytes).unwrap();
         assert!(!doc.layers.is_empty(), "{f} has layers");

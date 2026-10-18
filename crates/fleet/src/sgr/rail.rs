@@ -15,7 +15,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::{Provider, Vehicle, VehicleKind, feed::FleetRequest};
+use crate::{Provider, Vehicle, VehicleKind, feed::FleetRequest, sgr::seats};
 
 /// The TICIDIS public API base (keyless reads only — the booking flow stays the vendor's).
 pub const SGR_BASE: &str = "https://sgrticket-api.trc.co.tz/TICIDIS/api/v1";
@@ -77,7 +77,7 @@ pub struct RailAtlas {
 /// read one asset: a broken or missing atlas fails the check before it ever reaches a map.
 pub fn embedded_atlas() -> &'static RailAtlas {
     static ATLAS: std::sync::OnceLock<RailAtlas> = std::sync::OnceLock::new();
-    ATLAS.get_or_init(|| RailAtlas::parse(include_bytes!("../assets/tz-rail.json")).unwrap_or_default())
+    ATLAS.get_or_init(|| RailAtlas::parse(include_bytes!("../../assets/tz-rail.json")).unwrap_or_default())
 }
 
 /// A timetable stop: one train, one station, one clock time (minutes since midnight EAT).
@@ -128,6 +128,10 @@ pub struct SgrTrain {
     pub stops: Vec<SgrStop>,
     #[serde(default)]
     pub cars: Vec<SgrCoach>,
+    /// The vendor's `tripTimeTableTrainSetId` for this trip row — the id the seat-set ask
+    /// (`TrainSetBy`) names. `None` until a trip answer carries it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub trip_set_id: Option<i64>,
 }
 
 /// The SGR timetable the sweep builds: the trip date (Dar es Salaam days), the station list
@@ -140,6 +144,12 @@ pub struct SgrTimetable {
     /// The station list, in the API's own order (Dar es Salaam first, Dodoma last).
     pub stations: Vec<(i64, String)>,
     pub trains: Vec<SgrTrain>,
+    /// The active train's seat set (the sweep's `TrainSetBy` ask) and the `trips_no` it
+    /// belongs to — the panel shows the coach grids under that train.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub seat_set: Option<seats::TrainSet>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub seat_set_trip: Option<String>,
 }
 
 /// One trip row out of a `SearchTrip` answer, normalized for the merge.
@@ -155,6 +165,8 @@ pub struct SweptTrip {
     pub end_min: u32,
     /// The trip row's own `railwayCars` (class, capacity, free seats), when it carried them.
     pub cars: Vec<SgrCoach>,
+    /// The vendor's `tripTimeTableTrainSetId` (the seat-set ask names it).
+    pub trip_set_id: Option<i64>,
 }
 
 /// What one sweep answer carried (the two answer shapes share an endpoint family, so the
@@ -163,6 +175,8 @@ pub struct SweptTrip {
 pub enum Absorb {
     Stations(Vec<(i64, String)>),
     Trips(Vec<SweptTrip>),
+    /// A `TrainSetBy` answer: the active trip's coach grids (the seat map the panel reads).
+    Seats(seats::TrainSet),
     /// `TRIP112 - Selected Journey is not found!` — a pair with no service that day: the
     /// sweep keeps walking.
     Empty,
@@ -584,6 +598,16 @@ impl SgrTimetable {
                     self.absorb_trip(t);
                 }
             }
+            Absorb::Seats(set) => {
+                // The set belongs to the train whose coaches it names: the car ids both
+                // answers share are the link (a TrainSetBy answer carries no trip id of its
+                // own). No match — the sweep asked before the trip rows landed; the next
+                // seat ask (every third poll) re-fits it.
+                let set_car_ids: Vec<i64> = set.coaches.iter().map(|c| c.id).collect();
+                let trip = self.trains.iter().find(|t| t.cars.iter().any(|c| set_car_ids.contains(&c.id))).map(|t| t.trips_no.clone());
+                self.seat_set = Some(set.clone());
+                self.seat_set_trip = trip;
+            }
             Absorb::Empty => {}
         }
     }
@@ -598,6 +622,7 @@ impl SgrTimetable {
                     direction: if t.landing_id == 12 { 1 } else { 2 },
                     stops: Vec::new(),
                     cars: Vec::new(),
+                    trip_set_id: None,
                 });
                 let n = self.trains.len();
                 &mut self.trains[n - 1]
@@ -605,6 +630,10 @@ impl SgrTimetable {
         };
         if train.name.is_empty() {
             train.name = t.trip_name.clone();
+        }
+        // The seat-set id rides the newest answer that carries it.
+        if t.trip_set_id.is_some() {
+            train.trip_set_id = t.trip_set_id;
         }
         // The coaches ride the newest answer that carries them (availability moves; an answer
         // without cars — an older endpoint shape — leaves what we have).
@@ -741,6 +770,11 @@ pub fn absorb_answer(bytes: &[u8]) -> Result<Absorb, String> {
     let text = std::str::from_utf8(bytes).map_err(|_| "the answer is not UTF-8 text".to_string())?;
     let v: serde_json::Value = serde_json::from_str(text).map_err(|e| format!("the answer is not JSON: {e}"))?;
     let code = v.get("code").and_then(|x| x.as_i64()).unwrap_or(-1);
+    // A TrainSetBy answer (the seat-set ask): `data` is an OBJECT carrying
+    // `trainSetRailwayCars` — before the array shapes, which expect `data` as a list.
+    if code == 200 && v.pointer("/data/trainSetRailwayCars").is_some_and(|x| x.is_array()) {
+        return seats::parse_train_set(bytes).map(Absorb::Seats);
+    }
     let data = v.get("data").and_then(|x| x.as_array()).cloned().unwrap_or_default();
     if code != 200 {
         // A pair with no service that day answers code 404 / "TRIP112 …" — the sweep's
@@ -805,6 +839,7 @@ pub fn absorb_answer(bytes: &[u8]) -> Result<Absorb, String> {
             start_min: start,
             end_min: end,
             cars,
+            trip_set_id: row.get("tripTimeTableTrainSetId").and_then(|x| x.as_i64()),
         });
     }
     Ok(Absorb::Trips(trips))
@@ -842,11 +877,6 @@ impl crate::auth::AuthFlow for SgrAuth {
 
     fn poll(&self, _secret: &str, _view: crate::feed::ViewBox, _zoom: f64, poll_no: u64) -> Result<FleetRequest, String> {
         let date = today_eat(std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs() as i64).unwrap_or(0));
-        let headers = vec![
-            ("Accept".into(), "application/json".into()),
-            ("Accept-Language".into(), "en-GB,en;q=0.9".into()),
-            ("User-Agent".into(), "TerraZone/0.20.0 (SGR schedule sweep)".into()),
-        ];
         let step = sweep_step(poll_no);
         let (boarding, landing) = sweep_pair(step);
         let req = match boarding {
@@ -854,7 +884,7 @@ impl crate::auth::AuthFlow for SgrAuth {
                 key: format!("sgr/poll{poll_no}"),
                 provider: Provider::Sgr,
                 url: format!("{SGR_BASE}/Public/GetTripAssignedStations"),
-                headers,
+                headers: sweep_headers(),
                 body: None,
                 cells: Vec::new(),
             },
@@ -862,7 +892,7 @@ impl crate::auth::AuthFlow for SgrAuth {
                 key: format!("sgr/poll{poll_no}"),
                 provider: Provider::Sgr,
                 url: format!("{SGR_BASE}/Public/SearchTrip"),
-                headers,
+                headers: sweep_headers(),
                 body: Some((
                     format!(
                         r#"{{"date":"{date}","boardingStationId":{b},"landingStationId":{landing},"passengerCount":1,"isReservation":false,"isOneWay":true}}"#
@@ -874,6 +904,39 @@ impl crate::auth::AuthFlow for SgrAuth {
         };
         Ok(req)
     }
+}
+
+/// The sweep's own header block (the public reads ride it — schedule, seat sets alike).
+pub fn sweep_headers() -> Vec<(String, String)> {
+    vec![
+        ("Accept".into(), "application/json".into()),
+        ("Accept-Language".into(), "en-GB,en;q=0.9".into()),
+        ("User-Agent".into(), "TerraZone/0.21.0 (SGR schedule sweep)".into()),
+    ]
+}
+
+/// The seat-set ask: every third poll (gentle — the seat grid is heavy and changes slowly),
+/// for the train the sweep is currently riding — the running one, else the next to depart —
+/// when the vendor gave that trip its `tripTimeTableTrainSetId`. The answer fingerprints
+/// into [`Absorb::Seats`] and the timetable keeps the set under the matching train.
+pub fn seat_request(tt: &SgrTimetable, poll_no: u64) -> Option<FleetRequest> {
+    if poll_no % 3 != 1 {
+        return None;
+    }
+    let today = today_eat(std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs() as i64).unwrap_or(0));
+    if tt.date != today {
+        return None; // a stale schedule's seats are nobody's seats
+    }
+    let now = now_minutes_eat(std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs() as i64).unwrap_or(0));
+    let starts_after_now = |t: &SgrTrain| t.stops.first().map(|s| s.time_min).unwrap_or(u32::MAX) >= now;
+    let active = tt.running(now).into_iter().find(|t| t.trip_set_id.is_some()).or_else(|| {
+        let mut next: Vec<&SgrTrain> = tt.trains.iter().filter(|t| starts_after_now(t)).collect();
+        next.sort_by_key(|t| t.stops.first().map(|s| s.time_min).unwrap_or(u32::MAX));
+        next.into_iter().find(|t| t.trip_set_id.is_some())
+    })?;
+    let trip_set_id = active.trip_set_id?;
+    let (Some(first), Some(last)) = (active.stops.first(), active.stops.last()) else { return None };
+    Some(seats::train_set_request(first.station_id, last.station_id, trip_set_id, poll_no))
 }
 
 #[cfg(test)]
@@ -929,6 +992,7 @@ mod tests {
                 start_min: 6 * 60,
                 end_min: 9 * 60 + 50,
                 cars: Vec::new(),
+                trip_set_id: None,
             }]),
         );
         // The intermediate pass times the sweep's later steps merge in.
@@ -944,6 +1008,7 @@ mod tests {
                 start_min: 6 * 60 + 16,
                 end_min: 9 * 60 + 50,
                 cars: Vec::new(),
+                trip_set_id: None,
             }]),
         );
         t
@@ -1061,6 +1126,7 @@ mod tests {
                 start_min: 23 * 60 + 25,
                 end_min: 45,
                 cars: Vec::new(),
+                trip_set_id: None,
             }]),
         );
         let train = &t.trains[0];
@@ -1094,6 +1160,7 @@ mod tests {
                 start_min: 6 * 60,
                 end_min: 9 * 60 + 50,
                 cars: vec![SgrCoach { id: 417, name: "Royal Class".into(), order: 1, capacity: 44, empty: 0 }],
+                trip_set_id: None,
             }]),
         );
         assert_eq!(t.trains[0].cars.len(), 1);
@@ -1114,6 +1181,7 @@ mod tests {
                     SgrCoach { id: 417, name: "Royal Class".into(), order: 1, capacity: 44, empty: 3 },
                     SgrCoach { id: 418, name: "Business".into(), order: 2, capacity: 45, empty: 12 },
                 ],
+                trip_set_id: None,
             }]),
         );
         assert_eq!(t.trains[0].cars.len(), 2);
@@ -1146,6 +1214,7 @@ mod tests {
                     start_min: start,
                     end_min: 9 * 60 + 50,
                     cars: Vec::new(),
+                    trip_set_id: None,
                 }]),
             );
         }

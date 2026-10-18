@@ -423,6 +423,18 @@ pub fn tick(app: &mut TerrazoneApp, view: Option<FleetView>) {
                     }
                     match fleetlib::feed::parse(provider, &bytes) {
                         Ok(vehicles) => {
+                            // The flight vendor answers anonymous callers with its global
+                            // capped cloud (the bbox rides the query, the server ignores
+                            // it) — the layer keeps the view's share: only the aircraft
+                            // inside the box this ask covered (a little over, so a pan
+                            // doesn't blink the edges).
+                            let flight_box = view.map(|((w, s, e, n), _)| (w - 0.15, s - 0.15, e + 0.15, n + 0.15));
+                            let vehicles = match (provider, flight_box) {
+                                (Provider::Flight, Some((w, s, e, n))) => {
+                                    vehicles.into_iter().filter(|v| v.lon >= w && v.lon <= e && v.lat >= s && v.lat <= n).collect()
+                                }
+                                _ => vehicles,
+                            };
                             cache.grid.insert(provider, fleetlib::feed::grid_cells(&vehicles, fleetlib::h3grid::res_for_zoom(grid_zoom)));
                             cache.markers.insert(provider, vehicles);
                             cache.status.insert(provider, FeedStatus::Ready);
@@ -598,7 +610,7 @@ pub fn tick(app: &mut TerrazoneApp, view: Option<FleetView>) {
                 continue;
             }
             cache.icons_pending.insert(url.clone());
-            fetcher.get(format!("icon/{url}"), url, vec![("User-Agent".into(), "TerraZone/0.20.0 (Bolt vehicle artwork)".into())], cache.tx.clone());
+            fetcher.get(format!("icon/{url}"), url, vec![("User-Agent".into(), "TerraZone/0.21.0 (Bolt vehicle artwork)".into())], cache.tx.clone());
         }
     }
 }
@@ -687,6 +699,28 @@ pub fn has_visible(app: &TerrazoneApp) -> bool {
         }
     }
     false
+}
+
+/// Is any feed live right now — fetching, waiting on an answer, riding a schedule, or the
+/// demo drifting? The app's frame loop reads this to keep a 100 ms repaint cadence of its
+/// own: the poll round, the markers and the SGR trains move while the mouse sits still, and
+/// a fetch never waits for an input event to make its round (the bug the user saw: the map
+/// only refetched when a mouse move happened to drive a frame).
+pub fn is_live(app: &TerrazoneApp) -> bool {
+    let Some(doc) = app.session.active().map(|st| &st.doc) else { return false };
+    let cache = &app.canvas.fleet;
+    if doc.fleet.demo && doc.fleet.demo_visible && row_visible(doc, "Demo") {
+        return true;
+    }
+    doc.fleet.layers.iter().any(|l| {
+        if !l.visible || !row_visible(doc, l.provider.label()) {
+            return false;
+        }
+        if l.needs_bootstrap() || l.wants_fetch() {
+            return true;
+        }
+        l.provider == Provider::Sgr && l.schedule.is_some() || !cache.markers_of(l.provider).is_empty()
+    })
 }
 
 /// The 2D fleet: the H3 grid of the fetched items outlined under one vector icon per vehicle,
@@ -950,16 +984,57 @@ const ICON_MAX: f32 = 28.0;
 
 /// One vehicle's icon: the kind's outline rotated to its heading (nose lands on
 /// `(sin h, −cos h)`), sized by the marine ladder under the zoom's scale, over a white halo.
+/// The vendor's own artwork (Bolt's downloaded pin) rides the same bearing: the pin is
+/// anchored tip-down at the point and swung round to the vehicle's heading, over a soft
+/// ground shadow, with a heading needle over it so the direction reads even where the
+/// artwork itself is round.
 fn icon_shape(out: &mut Vec<Shape>, v: &Vehicle, centre: Pos2, color: Color32, icons: &HashMap<String, egui::TextureHandle>, zoom_scale: f32) {
     // The vendor's own artwork first (Bolt's downloaded pin, anchored tip-down at the point).
     if let Some(url) = &v.icon_url
         && let Some(tex) = icons.get(url)
     {
         let (w, h) = (tex.size()[0] as f32, tex.size()[1] as f32);
-        let target = (fleetlib::sizing::px(fleetlib::sizing::class_of(v.kind, v.length_m)) * 1.9 * zoom_scale).min(ICON_MAX);
+        // The floor keeps the pin seen at every zoom ("at least seen well"); the cap keeps a
+        // marker a marker (it names a point, it does not cover the block).
+        let target = (fleetlib::sizing::px(fleetlib::sizing::class_of(v.kind, v.length_m)) * 1.9 * zoom_scale).clamp(14.0, ICON_MAX);
         let scale = target / h.max(1.0);
-        let rect = Rect::from_min_size(pos2(centre.x - w * scale * 0.5, centre.y - h * scale), egui::vec2(w * scale, h * scale));
-        out.push(Shape::image(tex.id(), rect, Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)), Color32::WHITE));
+        let (pw, ph) = (w * scale, h * scale);
+        // The ground shadow: a soft ellipse under the tip so the pin sits ON the map.
+        out.push(Shape::ellipse_filled(centre + egui::vec2(0.0, ph * 0.06), egui::vec2(ph * 0.34, ph * 0.12), Color32::from_black_alpha(60)));
+        let known = v.heading_deg.is_finite() && v.heading_deg >= 0.0;
+        let rad = if known { v.heading_deg.to_radians() } else { 0.0 };
+        let (sin, cos) = rad.sin_cos();
+        // The pin's corners in body frame (tip at the origin, body above), swung round the
+        // tip by the bearing (screen-clockwise: heading 90 points the body east).
+        let corner = |dx: f32, dy: f32| pos2(centre.x + dx * cos - dy * sin, centre.y + dx * sin + dy * cos);
+        let mut mesh = egui::Mesh::with_texture(tex.id());
+        let mut quad: [u32; 4] = [0; 4];
+        for (i, ((dx, dy), uv)) in [
+            ((-pw * 0.5, -ph), pos2(0.0, 0.0)),
+            ((pw * 0.5, -ph), pos2(1.0, 0.0)),
+            ((pw * 0.5, 0.0), pos2(1.0, 1.0)),
+            ((-pw * 0.5, 0.0), pos2(0.0, 1.0)),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            quad[i] = mesh.vertices.len() as u32;
+            mesh.vertices.push(egui::epaint::Vertex { pos: corner(dx, dy), uv, color: Color32::WHITE });
+        }
+        let [tl, tr, br, bl] = quad;
+        mesh.add_triangle(tl, tr, br);
+        mesh.add_triangle(tl, br, bl);
+        out.push(Shape::Mesh(std::sync::Arc::new(mesh)));
+        // The heading needle: a short dart from the pin's middle along the bearing, with the
+        // feed's colour under a white edge — the direction reads even on round artwork.
+        if known {
+            let from = centre + egui::vec2(sin * ph * 0.12, -cos * ph * 0.12);
+            let to = centre + egui::vec2(sin * ph * 0.46, -cos * ph * 0.46);
+            out.push(Shape::line_segment([from, to], Stroke::new(2.6, Color32::from_black_alpha(90))));
+            out.push(Shape::line_segment([from, to], Stroke::new(1.4, color)));
+            out.push(Shape::circle_filled(to, 2.2, color));
+            out.push(Shape::circle_filled(to, 1.1, Color32::WHITE));
+        }
         return;
     }
     let class = fleetlib::sizing::class_of(v.kind, v.length_m);

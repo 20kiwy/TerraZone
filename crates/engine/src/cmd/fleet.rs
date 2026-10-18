@@ -203,7 +203,10 @@ fn set_auth(s: &mut Session, p: &Value) -> Result<Value> {
     };
     let mut out = String::new();
     let mut created = Vec::new();
-    s.edit("Fleet Sign-in", |d, _| {
+    // Background, never an undo step: the trust and the vault re-sign the feed in on their
+    // own every launch, and event-showing feeds are not tracked history (the user's ask) —
+    // undo/redo belongs to the art, not to a session the system refreshed a second ago.
+    s.edit_background(|d, _| {
         let l = fleet_of(d).layer_mut(provider);
         l.auth = auth;
         if endpoint.is_some() {
@@ -254,7 +257,10 @@ fn system_auth(s: &mut Session, p: &Value) -> Result<Value> {
     }
     let cookie = str_param(p, "cookie").unwrap_or_default().trim().to_string();
     let mut created = Vec::new();
-    s.edit("Fleet System Session", |d, _| {
+    // Background, never an undo step: the handshake answers every poll cadence — a session
+    // the system minted itself is an event display, not tracked history (the user's ask:
+    // "the Fleet System session is not in redo and undo").
+    s.edit_background(|d, _| {
         let l = ensure_system_layer(d, provider);
         l.auth = Auth::System(cookie);
         l.status = FeedStatus::Connecting;
@@ -359,7 +365,9 @@ fn set_poll(s: &mut Session, p: &Value) -> Result<Value> {
 
 fn poll_now(s: &mut Session, p: &Value) -> Result<Value> {
     let only = str_param(p, "provider").and_then(Provider::parse);
-    s.edit("Poll Fleet", |d, _| {
+    // Background, never an undo step: a poll is a refresh of event-showing feeds, not a
+    // change anyone undoes.
+    s.edit_background(|d, _| {
         for l in &mut fleet_of(d).layers {
             if only.is_none_or(|prov| l.provider == prov) && l.wants_fetch() {
                 l.status = FeedStatus::Connecting;
@@ -657,7 +665,7 @@ mod tests {
     }
 
     #[test]
-    fn signing_in_adds_bolt_and_undo_removes_only_the_user_feed() {
+    fn signing_in_adds_bolt_and_history_stays_clean() {
         let mut s = session();
         s.execute("fleet.syncTree", &json!({})).unwrap();
         assert_eq!(fleet_children(&s), vec!["Marine Radar", "Flight Radar", "SGR Trains"]);
@@ -668,9 +676,11 @@ mod tests {
         assert_eq!(bolt["authSet"], true);
         assert_eq!(bolt["managed"], false);
         assert_eq!(bolt["status"], "connecting");
-        // Undo the sign-in: the group stays (the system radars hold it), only Bolt leaves.
-        s.execute("edit.undo", &json!({})).unwrap();
-        assert_eq!(fleet_children(&s), vec!["Marine Radar", "Flight Radar", "SGR Trains"]);
+        // Event-showing feeds are not tracked history: the sign-in (like the system's own
+        // session landings and every poll) is a background edit — the undo list stays at
+        // zero, so the user's Ctrl+Z never walks a session the machine refreshed itself.
+        assert!(s.active().unwrap().history.undo.is_empty(), "the sign-in is not tracked history");
+        assert_eq!(fleet_children(&s), vec!["Marine Radar", "Flight Radar", "SGR Trains", "Bolt"]);
     }
 
     #[test]

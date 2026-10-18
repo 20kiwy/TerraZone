@@ -15,8 +15,15 @@ pub mod auth;
 pub mod feed;
 pub mod h3grid;
 pub mod icons;
-pub mod rail;
+pub mod providers;
+pub mod sgr;
 pub mod sizing;
+
+// The per-provider APIs: the three poll feeds in their own modules, the SGR in its folder
+// (`sgr::rail` keeps its long-standing path so every reader reads the same one).
+pub use providers::{bolt, flight, marine};
+pub use sgr::rail;
+pub use sgr::seats;
 
 pub use auth::{
     AuthFlow, AuthMethod, AuthRequest, BoltAuth, BoltSession, BoltTrust, Credential, Device, FlightAuth, MarineAuth, PendingSession,

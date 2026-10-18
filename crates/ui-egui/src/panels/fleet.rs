@@ -307,6 +307,15 @@ fn sgr_editor(app: &mut TerrazoneApp, ui: &mut Ui) {
                         widgets::dim_label(ui, tl!("Selected"));
                     }
                 });
+                // The active train's seat map: when the sweep's TrainSetBy answer is this
+                // train's, each coach draws its own grid — the vendor's arrangement, the
+                // free seats green, the taken seats dim, the aisles gaps.
+                if tt.seat_set_trip.as_deref() == Some(train.trips_no.as_str())
+                    && let Some(set) = &tt.seat_set
+                    && let Some(grid) = set.coach(car.id)
+                {
+                    draw_seat_grid(ui, &t, grid);
+                }
             }
             if picked.is_some() {
                 widgets::dim_label(ui, tl!("Seat picked — booking needs an SGR account, so the flow ends here."));
@@ -320,6 +329,71 @@ fn sgr_editor(app: &mut TerrazoneApp, ui: &mut Ui) {
 /// `HH:MM` in the vendor's own clock style (minutes since midnight EAT).
 fn format_clock(min: u32) -> String {
     format!("{:02}:{:02}", min / 60, min % 60)
+}
+
+/// One coach's seat grid, drawn the way the vendor's own layout draws it: the column
+/// letters over the rows, the row numbers on the left, free seats green, taken seats dim,
+/// and the aisles/WCs/luggage gaps left as gaps. Long coaches scroll in place (the panel's
+/// own rules: a long list scrolls, it does not push the panel out).
+fn draw_seat_grid(ui: &mut Ui, t: &Tokens, coach: &terrazon_fleet::seats::SeatCoach) {
+    use terrazon_fleet::seats::SeatType;
+    if !coach.has_seat || coach.seats.is_empty() || coach.row_count == 0 || coach.column_count == 0 {
+        return;
+    }
+    widgets::dim_label(
+        ui,
+        &crate::i18n::fmt(tl!("{arr} · {free} free"), &[("arr", &coach.arrangement()), ("free", &coach.free_count().to_string())]),
+    );
+    const CELL: f32 = 11.0;
+    const GAP: f32 = 2.0;
+    let letter_w = 14.0;
+    let grid_w = letter_w + f32::from(coach.column_count) * (CELL + GAP);
+    let grid_h = f32::from(coach.row_count) * (CELL + GAP);
+    let free = egui::Color32::from_rgb(56, 142, 90);
+    let taken = t.text_dim.gamma_multiply(0.55);
+    let special = t.text_dim.gamma_multiply(0.28);
+    egui::ScrollArea::vertical().max_height(grid_h.min(190.0)).show(ui, |ui| {
+        let (rect, _) = ui.allocate_exact_size(vec2(grid_w, grid_h), Sense::hover());
+        let painter = ui.painter_at(rect);
+        // The column letters over their seat columns (the aisle's gap carries no letter).
+        for col in 1..=coach.column_count {
+            let label = coach.seats.iter().find(|s| s.column == col).map(|s| s.column_label.as_str()).unwrap_or("");
+            if label.is_empty() {
+                continue;
+            }
+            painter.text(
+                rect.left_top() + vec2(letter_w + f32::from(col - 1) * (CELL + GAP) + CELL * 0.5, 2.0),
+                egui::Align2::CENTER_TOP,
+                label,
+                egui::FontId::proportional(8.0),
+                t.text_dim,
+            );
+        }
+        for seat in &coach.seats {
+            let x = rect.left() + letter_w + f32::from(seat.column - 1) * (CELL + GAP);
+            let y = rect.top() + f32::from(seat.row - 1) * (CELL + GAP);
+            let cell = egui::Rect::from_min_size(egui::pos2(x, y), vec2(CELL, CELL));
+            if seat.row == 1 {
+                // The row number rides its first seat's column edge (one paint per row).
+                painter.text(
+                    egui::pos2(rect.left(), y + CELL * 0.5),
+                    egui::Align2::LEFT_CENTER,
+                    seat.row_label.as_str(),
+                    egui::FontId::proportional(8.0),
+                    t.text_dim,
+                );
+            }
+            match seat.seat_type {
+                SeatType::Seat | SeatType::Disabled => {
+                    painter.rect_filled(cell, 2.5, if seat.available { free } else { taken });
+                }
+                SeatType::Luggage | SeatType::Wc => {
+                    painter.rect_filled(cell, 2.5, special);
+                }
+                SeatType::Cancelled | SeatType::Other(_) => {}
+            }
+        }
+    });
 }
 
 /// Bolt's sign-in editor: the phone number → the 4-digit code the vendor sends → verified.

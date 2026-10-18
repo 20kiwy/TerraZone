@@ -3925,6 +3925,7 @@ axis	Vertical	Verticale
 	Selected	Selezionato
 	Seat picked — booking needs an SGR account, so the flow ends here.	Posto scelto — la prenotazione richiede un account SGR, quindi il flusso finisce qui.
 	{name} — {free} of {total} seats free	{name} — {free} posti liberi su {total}
+	{arr} · {free} free	{arr} · {free} liberi
 	The vendor hasn't reported this set's coaches yet — the sweep keeps asking.	Il fornitore non ha ancora riportato le carrozze di questo treno — la scansione continua a chiedere.
 	The ground drapes the basemap flat; contours (0 = off) draw the relief with their heights.	Il terreno stende la base in piano; le curve di livello (0 = off) disegnano il rilievo con le loro altezze.
 	The 3D environment — the basemap draped flat, contour lines and placed assets, in their own panels.	L'ambiente 3D — la base drappeggiata in piano, curve di livello e asset posizionati, in pannelli dedicati.

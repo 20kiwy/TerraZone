@@ -169,7 +169,19 @@ default-members = ["crates/*", "apps/terrazon", "apps/terrazon-cli", "xtask"]
 # times — the ETA at every station to the terminal, in East Africa Time — while the map
 # highlights the rail line they ride. Aircraft draw by type: wide-bodies and freighters the
 # heavy plane, rotorcraft the helicopter, light GA the small plane.
-version = "0.20.0"
+# 0.21.0: the fleet reads like four vendors behind one lib — each provider's API in its own
+# module (bolt, marine, flight; the SGR its own sgr/ folder with the rail sweep and the new
+# seat-map lib), the auth flows together in auth.rs, the fetch together in feed.rs. The SGR
+# seat map reads the vendor's TrainSetBy answer: rows, columns, the seat types (39–43), the
+# vendor's own arrangement ("2+2 · 12 rows · 44 seats") and numbering, drawn per coach under
+# the active train; the booking chain's requests (Ticket/*, the phone OTP) are added code —
+# TerraZone never books. Fleet sessions and tile handshakes leave the undo/redo list
+# (event-showing feeds are not tracked history: setAuth, systemAuth, poll_now and the tile
+# session store are background edits), the live fleet keeps a 100 ms refresh cadence of its
+# own (polls, markers and trains move while the mouse sits still), and Bolt's downloaded pin
+# rides the vehicle's bearing — rotated round its tip over a ground shadow with a heading
+# needle, floored so it is always seen.
+version = "0.21.0"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 rust-version = "1.95"

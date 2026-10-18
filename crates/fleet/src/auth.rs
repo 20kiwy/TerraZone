@@ -166,13 +166,17 @@ impl BoltTrust {
 
     /// The session secret the trust mints (the vault's `bolt/session` JSON) — the same
     /// shape a phone sign-in produces, so every consumer reads one form. The session id is
-    /// unique per mint: the vendor ties the poll's `rh_session_id` to the sign-in, and a
-    /// reused id is refused (a fresh one rides every launch).
+    /// stable per deployment: the vendor accepts a session it has seen (verified live) and
+    /// a fresh id every launch reads as a minting farm to its new throttle.
     pub fn session_secret(&self) -> String {
         let short: String = self.device_uuid.chars().take(8).collect();
         let created_ms = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_millis() as i64).unwrap_or(0);
+        // The session id is STABLE per deployment (the device pair alone names it): the
+        // vendor accepts a session it saw before (verified live — the same sid polls round
+        // after round), and a fresh id every launch reads as a minting farm to the vendor's
+        // new throttle. A real phone sign-in in the vault outranks the trust and stays.
         BoltSession {
-            session_id: format!("trust-{short}-{created_ms}"),
+            session_id: format!("trust-{short}"),
             device_id: self.device_uuid.clone(),
             auth_username: self.auth_username.clone(),
             phone: self.phone.clone(),
@@ -282,11 +286,11 @@ pub struct FlightAuth;
 
 const BOLT_BASE: &str = "https://user.live.boltsvc.net";
 const BOLT_UA: &str = "Bolt/13113543 CFNetwork/1568.300.101 Darwin/24.2.0";
-const BOLT_VERSION: &str = "CI.169.1";
+const BOLT_VERSION: &str = "CI.180.0";
 const BOLT_LANGUAGE: &str = "en-GB";
 const BOLT_DEVICE_TYPE: &str = "iphone";
-const BOLT_DEVICE_OS: &str = "iOS13.2";
-const BOLT_DEVICE_NAME: &str = "iPhone16,1";
+const BOLT_DEVICE_OS: &str = "18.2.0";
+const BOLT_DEVICE_NAME: &str = "iPhone";
 const BOLT_GPS_ACCURACY: &str = "5.0";
 
 const MARINE_TILE_BASE: &str = "https://www.marinetraffic.com/getData/get_data_json_4_mob";
@@ -421,13 +425,12 @@ impl AuthFlow for BoltAuth {
             lat = lat,
             lng = lng
         );
-        // NOTE: this is a raw string — newlines inside are legal JSON whitespace, but a
-        // `\` line-continuation would ride as a literal backslash and the vendor answers
-        // 702 INVALID_REQUEST (the app's polls failed with exactly that until now).
+        // NOTE: the body is ONE LINE. The vendor's tightened parser (2026, from CI.180.0
+        // on) answers a pretty-printed poll 702 INVALID_REQUEST — whitespace between the
+        // fields reads as a malformed body now. The device block rides current values too:
+        // the old `iOS13.2`/`iPhone16,1` pair reads as a stale install and is refused.
         let body = format!(
-            r#"{{"order_handle":{{}},"stage":"category_selection","pickup_stop":{{"lat":{lat:.6},"lng":{lng:.6}}}
-,"viewport":{{"south_west":{{"lat":{sw_lat:.6},"lng":{sw_lng:.6}}},"north_east":{{"lat":{ne_lat:.6},"lng":{ne_lng:.6}}}}}
-,"destination_stops":[{{"lat":{dlat:.6},"lng":{dlng:.6}}}],"payment_method":{{"type":"default","id":"cash"}}}}"#,
+            r#"{{"order_handle":{{}},"stage":"category_selection","pickup_stop":{{"lat":{lat:.6},"lng":{lng:.6}}},"viewport":{{"south_west":{{"lat":{sw_lat:.6},"lng":{sw_lng:.6}}},"north_east":{{"lat":{ne_lat:.6},"lng":{ne_lng:.6}}}}},"destination_stops":[{{"lat":{dlat:.6},"lng":{dlng:.6}}}],"payment_method":{{"type":"default","id":"cash"}}}}"#,
             lat = lat,
             lng = lng,
             dlat = lat + 0.005,
@@ -532,10 +535,11 @@ impl AuthFlow for FlightAuth {
 
     fn poll(&self, secret: &str, view: crate::feed::ViewBox, _zoom: f64, poll_no: u64) -> Result<FleetRequest, String> {
         let (w, s, e, n) = view;
-        // `data-cloud` answers real data when the request carries the web client's
-        // headers — `data-live` 302-redirects datacenter IPs to a dead legacy feed.
+        // The vendor renamed the query (2026: `bounds=` answers stats only, `bbox=` answers
+        // the aircraft object) and answers anonymous callers with its global capped cloud —
+        // the runtime keeps the view's share (the drain filters by the box this ask covers).
         let url = format!(
-            "{FLIGHT_FEED}?bounds={n:.3},{s:.3},{w:.3},{e:.3}\
+            "{FLIGHT_FEED}?bbox={n:.3},{s:.3},{w:.3},{e:.3}\
 &faa=1&satellite=1&mlat=1&flarm=1&adsb=1&gnd=1&air=1&vehicles=1&estimated=1&maxage=14400&gliders=1&stats=0"
         );
         let mut headers = vec![
@@ -985,7 +989,7 @@ mod tests {
         assert!(FlightAuth.bootstrap(1).is_none(), "nothing to mint");
         assert!(FlightAuth.otp_start("+255700000000", &device(), 1).is_err());
         let bare = FlightAuth.poll("", SINZA, 16.0, 2).unwrap();
-        assert!(bare.url.contains("bounds=-6.740,-6.800,39.180,39.270"), "{}", bare.url);
+        assert!(bare.url.contains("bbox=-6.740,-6.800,39.180,39.270"), "{}", bare.url);
         assert!(bare.url.contains("adsb=1") && bare.url.contains("stats=0"));
         assert!(!bare.headers.iter().any(|(k, _)| k == "Cookie"), "no credential, no cookie");
         assert!(bare.headers.iter().any(|(k, v)| k == "Origin" && v.contains("flightradar24")));

@@ -480,7 +480,10 @@ fn source_session(s: &mut Session, p: &Value) -> Result<Value> {
     const C: &str = "map.sourceSession";
     let id = str_param(p, "id").ok_or_else(|| bad(C, "give the source's `id` (see map.sources)"))?.to_string();
     let session = str_param(p, "session").unwrap_or_default().to_string();
-    s.edit("Tile Source Session", |d, _| {
+    // Background, never an undo step: the handshake answers whenever the vendor's session
+    // token expires — tiles are event displays that refresh on their own, and a refresh is
+    // not tracked history (the undo list belongs to the art).
+    s.edit_background(|d, _| {
         let m = map_of(d);
         let src = m.sources.iter_mut().find(|s| s.id == id).ok_or_else(|| bad(C, format!("no tile source called `{id}` (see map.sources)")))?;
         src.session = session;
@@ -886,7 +889,8 @@ mod tests {
         s.execute("map.sourceSession", &json!({ "id": "google-map-tiles", "session": "tok-1" })).unwrap();
         let src = |s: &Session| s.doc().unwrap().doc.map.sources.iter().find(|src| src.id == "google-map-tiles").unwrap().session.clone();
         assert_eq!(src(&s), "tok-1");
-        s.execute("edit.undo", &json!({})).unwrap();
-        assert_eq!(src(&s), "", "the store is one undoable edit");
+        // Tiles are event displays that refresh on their own: the handshake's store is a
+        // background edit — the undo list stays clean.
+        assert!(s.active().unwrap().history.undo.is_empty(), "the session store is not tracked history");
     }
 }

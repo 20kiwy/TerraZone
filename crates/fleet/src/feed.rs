@@ -54,6 +54,16 @@ pub fn build_requests(st: &FleetState, view: ViewBox, zoom: f64, poll: u64) -> (
             Err(reason) => skipped.push((layer.provider, reason)),
         }
     }
+    // The SGR's seat-set ask rides the sweep's own cadence (every third poll, the active
+    // trip only — the coach grids the panel shows): one more gentle public read.
+    if let Some(l) = st.layers.iter().find(|l| l.provider == Provider::Sgr)
+        && l.visible
+        && l.wants_fetch()
+        && let Some(tt) = &l.schedule
+        && let Some(req) = crate::sgr::rail::seat_request(tt, poll)
+    {
+        out.push(req);
+    }
     (out, skipped)
 }
 
@@ -108,182 +118,33 @@ pub fn grid_cells(markers: &[Vehicle], res: h3o::Resolution) -> Vec<h3o::CellInd
 
 /// Parse one provider's answer into vehicles. The vendor-traced shapes come first — Bolt's
 /// `{code, message, data:{vehicles:{taxi:{category: [ … ]}}}}` poll and the marine mobile
-/// tile's `data.rows` — and anything else falls through to the flexible reader (a bare
-/// array, an `{item: …}` wrapper, or the flight feed's `{id: [hex, lat, lon, heading, …]}`
-/// shape; keys matched by the names vendors actually use).
+/// tile's `data.rows` (each vendor's own module in [`crate::providers`]) — and anything
+/// else falls through to the flexible reader (a bare array, an `{item: …}` wrapper, or the
+/// flight feed's `{id: [hex, lat, lon, heading, …]}` shape; keys matched by the names
+/// vendors actually use).
 pub fn parse(provider: Provider, bytes: &[u8]) -> Result<Vec<Vehicle>, String> {
     match provider {
-        Provider::Bolt if looks_like_bolt_poll(bytes) => {
+        Provider::Bolt if crate::providers::bolt::looks_like_poll(bytes) => {
             // The vendor's own shape — its refusal reads as the error it is, never as
             // a generic "nothing here".
-            return parse_bolt_poll(bytes);
+            return crate::providers::bolt::parse_poll(bytes);
         }
-        Provider::Marine if looks_like_marine_tile(bytes) => {
-            return parse_marine_tile(bytes);
+        Provider::Marine if crate::providers::marine::looks_like_tile(bytes) => {
+            return crate::providers::marine::parse_tile(bytes);
+        }
+        Provider::Flight => {
+            // The flight feed rides its own reader: the hex-keyed object and the newer
+            // `{"aircraft": […]}` wrapper both read (an honest empty is zero vehicles).
+            return crate::providers::flight::parse_feed(bytes);
         }
         _ => {}
     }
     parse_generic(provider, bytes)
 }
 
-/// The Bolt poll's fingerprint: a JSON object carrying a numeric `code`.
-fn looks_like_bolt_poll(bytes: &[u8]) -> bool {
-    std::str::from_utf8(bytes)
-        .ok()
-        .and_then(|t| serde_json::from_str::<serde_json::Value>(t).ok())
-        .and_then(|v| v.get("code").cloned())
-        .is_some_and(|c| c.is_i64() || c.is_u64())
-}
-
-/// The marine tile's fingerprint: `data.rows`, or `data` as a plain array.
-fn looks_like_marine_tile(bytes: &[u8]) -> bool {
-    std::str::from_utf8(bytes)
-        .ok()
-        .and_then(|t| serde_json::from_str::<serde_json::Value>(t).ok())
-        .map(|v| v.pointer("/data/rows").is_some() || v.get("data").is_some_and(|d| d.is_array()))
-        .unwrap_or(false)
-}
-
-/// Bolt's own poll shape: `{code, message, data:{vehicles:{…}}}` — the vehicles ride in
-/// `taxi` (grouped by the zone-specific `icon_id`), rental bikes/scooters in `rent`, the
-/// display names and groups in `category_details`, and the per-class artwork URLs in
-/// `icons` (the CDN links the runtime downloads once per id and draws as the real pins).
-/// `code != 0` is the vendor's own refusal and reads as the error it is — never as an
-/// empty street.
-fn parse_bolt_poll(bytes: &[u8]) -> Result<Vec<Vehicle>, String> {
-    let text = std::str::from_utf8(bytes).map_err(|_| "the answer is not UTF-8 text".to_string())?;
-    let v: serde_json::Value = serde_json::from_str(text).map_err(|e| format!("the answer is not JSON: {e}"))?;
-    let code = v.get("code").and_then(|x| x.as_i64()).unwrap_or(-1);
-    if code != 0 {
-        let message = v.get("message").and_then(|x| x.as_str()).unwrap_or("(no message)");
-        return Err(format!("the feed answered: {message} (code {code})"));
-    }
-    let Some(vehicles) = v.pointer("/data/vehicles").and_then(|t| t.as_object()) else {
-        return Err("no vehicles block in the poll answer".into());
-    };
-    // The data-driven tables: display names + groups per id, and the artwork per id. A poll
-    // without them (an older market?) falls back to the built-in id table.
-    let details = v.pointer("/data/vehicles/category_details/taxi").and_then(|d| d.as_object());
-    let detail_of = |id: &str| -> Option<(&str, &str)> {
-        let d = details?.get(id)?;
-        Some((d.get("name").and_then(|x| x.as_str()).unwrap_or(""), d.get("group").and_then(|x| x.as_str()).unwrap_or("")))
-    };
-    let icons = v.pointer("/data/vehicles/icons").and_then(|d| d.as_object());
-    let icon_of = |group: &str, id: &str| -> Option<String> {
-        icons?.get(group)?.get(id)?.get("icon_url").and_then(|x| x.as_str()).map(str::to_string).filter(|s| s.starts_with("http"))
-    };
-    let mut out = Vec::new();
-    for (group_key, list) in vehicles {
-        if group_key == "icons" || group_key == "category_details" || group_key == "initial_display_categories" {
-            continue;
-        }
-        let Some(list) = list.as_object() else { continue };
-        for (category_id, list) in list {
-            let Some(list) = list.as_array() else { continue };
-            for item in list {
-                let (Some(lat), Some(lon)) =
-                    (item.get("lat").and_then(|x| x.as_f64()), item.get("lng").or_else(|| item.get("lon")).and_then(|x| x.as_f64()))
-                else {
-                    continue;
-                };
-                if !(-90.0..=90.0).contains(&lat) || !(-180.0..=180.0).contains(&lon) {
-                    continue;
-                }
-                let icon_id = item
-                    .get("icon_id")
-                    .map(|x| match x {
-                        serde_json::Value::String(s) => s.clone(),
-                        serde_json::Value::Number(n) => n.to_string(),
-                        _ => String::new(),
-                    })
-                    .unwrap_or_default();
-                // Name: the vendor's own `category_details` first, the built-in table next,
-                // the group key last.
-                let name = detail_of(category_id)
-                    .map(|(n, _)| n)
-                    .filter(|n| !n.is_empty())
-                    .map(String::from)
-                    .or_else(|| crate::auth::bolt_type_name(&icon_id).map(String::from))
-                    .or_else(|| (!category_id.is_empty()).then(|| prettify_category(category_id)));
-                // Kind: the vendor's own group first; rentals are bikes by definition; the
-                // name/category fallback last.
-                let kind = if group_key == "rent" {
-                    VehicleKind::Motorcycle
-                } else {
-                    detail_of(category_id)
-                        .and_then(|(_, g)| crate::auth::bolt_group_kind(g))
-                        .unwrap_or_else(|| crate::auth::bolt_kind_for(category_id, &icon_id))
-                };
-                // Artwork: the icons block keys the taxi ids numerically and the rental
-                // kinds by name ("scooter", "ebike" are icon_ids).
-                let icon_url = icon_of("taxi", &icon_id).or_else(|| icon_of("rent", &icon_id));
-                out.push(Vehicle {
-                    id: item.get("id").and_then(as_text).unwrap_or_else(|| "bolt".into()),
-                    kind,
-                    lon,
-                    lat,
-                    heading_deg: item.get("bearing").and_then(|x| x.as_f64()).map(|h| h as f32).unwrap_or(-1.0),
-                    length_m: None,
-                    name,
-                    category: (!category_id.is_empty() && category_id.parse::<u64>().is_err()).then(|| prettify_category(category_id)),
-                    icon_url,
-                    alt_m: None,
-                });
-            }
-        }
-    }
-    if out.is_empty() {
-        return Err("the poll carried no vehicles".into());
-    }
-    Ok(out)
-}
-
-/// The marine mobile tile shape: `data.rows` (or a flat `data` array) of objects keyed the
-/// way the vendor's app writes them — `LAT`/`LON` (or `Y`/`X`), `SHIP_ID`/`MMSI`,
-/// `HEADING`/`COURSE`, `TYPE_NAME`, `SHIPNAME`. Numbers packed into strings parse too.
-fn parse_marine_tile(bytes: &[u8]) -> Result<Vec<Vehicle>, String> {
-    let text = std::str::from_utf8(bytes).map_err(|_| "the answer is not UTF-8 text".to_string())?;
-    let v: serde_json::Value = serde_json::from_str(text).map_err(|e| format!("the answer is not JSON: {e}"))?;
-    let rows = v
-        .pointer("/data/rows")
-        .and_then(|r| r.as_array())
-        .or_else(|| v.get("data").and_then(|d| d.as_array()))
-        .ok_or_else(|| "no rows in the tile answer".to_string())?;
-    let mut out = Vec::new();
-    for item in rows {
-        let (Some(lat), Some(lon)) = (f_of(item, &["LAT", "lat", "Y", "y"]), f_of(item, &["LON", "lon", "LNG", "lng", "X", "x"])) else {
-            continue;
-        };
-        if !(-90.0..=90.0).contains(&lat) || !(-180.0..=180.0).contains(&lon) {
-            continue;
-        }
-        let stype = text_of(item, &["TYPE_NAME", "SHIPTYPE", "shiptype", "TYPE", "type", "ship_type"]);
-        let kind = match stype.as_deref().map(|s| s.to_ascii_lowercase()) {
-            Some(t) if t.contains("boat") || t.contains("pilot") || t.contains("tug") || t.contains("fishing") => VehicleKind::Boat,
-            _ => VehicleKind::Ship,
-        };
-        out.push(Vehicle {
-            id: text_of(item, &["SHIP_ID", "ship_id", "MMSI", "mmsi", "id"]).unwrap_or_else(|| format!("mt-{lat:.5},{lon:.5}")),
-            kind,
-            lon,
-            lat,
-            heading_deg: f_of(item, &["HEADING", "heading", "COURSE", "course", "cog"]).map(|h| h as f32).unwrap_or(-1.0),
-            length_m: f_of(item, &["LENGTH", "length", "loa", "len"]).map(|l| l as f32),
-            name: text_of(item, &["SHIPNAME", "name", "NAME"]),
-            category: stype.clone().filter(|s| !s.is_empty()),
-            icon_url: None,
-            alt_m: None,
-        });
-    }
-    if out.is_empty() {
-        return Err("the tile carried no vessels".into());
-    }
-    Ok(out)
-}
-
 /// A field read as text whether the vendor packed it as a number or a string
 /// (Bolt's `"id": 123` and `"id": "123"` are the same vehicle).
-fn as_text(v: &serde_json::Value) -> Option<String> {
+pub(crate) fn as_text(v: &serde_json::Value) -> Option<String> {
     match v {
         serde_json::Value::String(s) => Some(s.clone()).filter(|s| !s.trim().is_empty()),
         serde_json::Value::Number(n) => Some(n.to_string()),
@@ -293,7 +154,7 @@ fn as_text(v: &serde_json::Value) -> Option<String> {
 
 /// A field read as text whether the vendor packed it as a string or a number
 /// (`SHIP_ID: 12` and `"MMSI": "123"` are the same ship).
-fn text_of(item: &serde_json::Value, keys: &[&str]) -> Option<String> {
+pub(crate) fn text_of(item: &serde_json::Value, keys: &[&str]) -> Option<String> {
     let obj = item.as_object()?;
     for k in keys {
         for (name, val) in obj {
@@ -311,21 +172,7 @@ fn text_of(item: &serde_json::Value, keys: &[&str]) -> Option<String> {
     None
 }
 
-/// "boda_boda" → "Boda Boda" — the vendor sends category keys lowercased; people read titles.
-fn prettify_category(key: &str) -> String {
-    key.split(['_', '-', ' '])
-        .filter(|w| !w.is_empty())
-        .map(|w| {
-            let mut chars = w.chars();
-            match chars.next() {
-                Some(first) => first.to_uppercase().collect::<String>() + chars.as_str().to_ascii_lowercase().as_str(),
-                None => String::new(),
-            }
-        })
-        .collect::<Vec<_>>()
-        .join(" ")
-}
-fn parse_generic(provider: Provider, bytes: &[u8]) -> Result<Vec<Vehicle>, String> {
+pub(crate) fn parse_generic(provider: Provider, bytes: &[u8]) -> Result<Vec<Vehicle>, String> {
     let text = std::str::from_utf8(bytes).map_err(|_| "the answer is not UTF-8 text".to_string())?;
     let v: serde_json::Value = serde_json::from_str(text).map_err(|e| format!("the answer is not JSON: {e}"))?;
     let empty = Vec::new();
@@ -358,7 +205,7 @@ fn parse_generic(provider: Provider, bytes: &[u8]) -> Result<Vec<Vehicle>, Strin
 /// A stable key placeholder for array items.
 static DUMMY_KEY: String = String::new();
 
-fn f_of(item: &serde_json::Value, keys: &[&str]) -> Option<f64> {
+pub(crate) fn f_of(item: &serde_json::Value, keys: &[&str]) -> Option<f64> {
     let obj = item.as_object()?;
     for k in keys {
         for (name, val) in obj {
@@ -379,7 +226,7 @@ fn f_of(item: &serde_json::Value, keys: &[&str]) -> Option<f64> {
     None
 }
 
-fn s_of(item: &serde_json::Value, keys: &[&str]) -> Option<String> {
+pub(crate) fn s_of(item: &serde_json::Value, keys: &[&str]) -> Option<String> {
     let obj = item.as_object()?;
     for k in keys {
         for (name, val) in obj {
@@ -393,7 +240,7 @@ fn s_of(item: &serde_json::Value, keys: &[&str]) -> Option<String> {
     None
 }
 
-fn read_vehicle(provider: Provider, id: &str, item: &serde_json::Value) -> Option<Vehicle> {
+pub(crate) fn read_vehicle(provider: Provider, id: &str, item: &serde_json::Value) -> Option<Vehicle> {
     // The flight feed's array shape: [squawk, lat, lon, track, alt, speed, …, type_code,
     // registration, …, origin, destination, flight, …, callsign] — the indices the vendor's
     // own web client reads (verified live: `"DH8C"`/"B788" ride index 8, the registration
@@ -413,7 +260,7 @@ fn read_vehicle(provider: Provider, id: &str, item: &serde_json::Value) -> Optio
                 let alt_m = arr.get(4).and_then(serde_json::Value::as_f64).filter(|a| *a > 0.0).map(|ft| (ft * 0.3048) as f32);
                 return Some(Vehicle {
                     id: if id.is_empty() { "aircraft".into() } else { id.to_string() },
-                    kind: flight_kind_for(type_code),
+                    kind: crate::providers::flight::kind_for(type_code),
                     lon,
                     lat,
                     heading_deg: heading.map(|h| h as f32).unwrap_or(-1.0),
@@ -434,7 +281,7 @@ fn read_vehicle(provider: Provider, id: &str, item: &serde_json::Value) -> Optio
     }
     let type_name = s_of(item, &["type", "kind", "category", "vtype", "vehicleType"]).unwrap_or_default();
     let kind = match provider {
-        Provider::Flight => flight_kind_for(&type_name),
+        Provider::Flight => crate::providers::flight::kind_for(&type_name),
         Provider::Marine => {
             let len = f_of(item, &["length", "loa", "len"]);
             match len {
@@ -470,67 +317,6 @@ fn read_vehicle(provider: Provider, id: &str, item: &serde_json::Value) -> Optio
     })
 }
 
-/// The aircraft kind from the vendor's model code (ICAO type designator, `B788`, `DH8C`,
-/// `H145`, …) — the by-type read the flight layer draws: rotorcraft fly the helicopter
-/// icon, wide-bodies (freighters included) the heavy plane, light GA the small plane, and
-/// everything else the everyday airliner.
-pub fn flight_kind_for(type_code: &str) -> VehicleKind {
-    let c = type_code.trim().to_ascii_uppercase();
-    if c.is_empty() {
-        return VehicleKind::Plane;
-    }
-    // Rotorcraft families first — the exact codes and the prefixes that only helicopters
-    // use (a `B4` Bell is a rotorcraft unless it is a BAe 146, `B46x`).
-    const HELI: &[&str] = &[
-        "A109", "A119", "A139", "AS35", "AS50", "AS65", "B06", "B105", "B106", "B107", "B212", "B214", "B222", "B230", "B407", "B412", "B427",
-        "B429", "B430", "B439", "B525", "EC13", "EC20", "EC25", "EC35", "EC45", "EC55", "EC6", "EC7", "H12", "H13", "H14", "H15", "H16", "H17",
-        "H21", "H22", "H25H", "KA26", "KA27", "KA32", "KA50", "KA52", "KA62", "MD52", "MD53", "MD60", "MI2", "MI8", "MI17", "MI24", "MI26", "MI28",
-        "MI34", "MI38", "OH58", "R22", "R24", "R44", "R66", "S61", "S64", "S65", "S67", "S70", "S75", "S76", "S92", "S97", "UH1", "UH60", "V22",
-        "G2", "SW4",
-    ];
-    if HELI.iter().any(|h| c == *h) {
-        return VehicleKind::Helicopter;
-    }
-    if c.starts_with("EC")
-        || c.starts_with("MI")
-        || c.starts_with("UH")
-        || c.starts_with("AH")
-        || c.starts_with("OH")
-        || [
-            "AS3", "AS5", "AS6", "AW1", "AW3", "AW6", "AW9", "B06", "B21", "B22", "B40", "B41", "B42", "B43", "KA2", "KA3", "KA5", "R22", "R24",
-            "R44", "R66", "S61", "S64", "S65", "S67", "S70", "S75", "S76", "S92", "V2", "G2", "SW4", "H12", "H13", "H14", "H15", "H16", "H17", "H21",
-            "H22",
-        ]
-        .iter()
-        .any(|h| c.starts_with(h))
-    {
-        return VehicleKind::Helicopter;
-    }
-    // Heavy / wide-body (the freighters read here — the type code is the airframe, and the
-    // big ones are the cargo planes the feed is asked about).
-    if c == "C17"
-        || ["B74", "B76", "B77", "B78", "A30", "A31", "A33", "A34", "A35", "A38", "MD11", "DC10", "K35", "IL7", "IL9", "A124", "AN12", "L101", "C5M"]
-            .iter()
-            .any(|h| c.starts_with(h))
-    {
-        return VehicleKind::PlaneHeavy;
-    }
-    // Light general aviation (Cessna singles and twins, Pipers, SR22s, light jets — the
-    // four-character codes; the three-character `C17` Globemaster hit the heavy branch above).
-    if c.starts_with("C1")
-        || c.starts_with("C2")
-        || [
-            "C4", "C5", "C6", "C7", "C8", "C9", "P28", "PA2", "PA3", "SR2", "DA2", "DA4", "M20", "BE1", "BE3", "BE5", "BE7", "BE9", "LJ4", "LJ6",
-            "LJ7", "GLF", "GL5", "GL6", "E5", "EA5", "FA5", "FA7", "SF5", "JS3", "JS4", "TBM",
-        ]
-        .iter()
-        .any(|h| c.starts_with(h))
-    {
-        return VehicleKind::PlaneLight;
-    }
-    VehicleKind::Plane
-}
-
 /// The demo feed: deterministic sample traffic in the covering cells, drifting one step per
 /// tick — the layer's own look, clearly labelled demo, generated offline so the icons, the
 /// marine sizing and the 3D markers can be seen before any vendor signs in. The density
@@ -560,7 +346,7 @@ pub fn demo_markers(view: ViewBox, zoom: f64, tick: u64) -> Vec<Vehicle> {
         };
         // The demo shows the whole type system offline: street traffic, ships of the marine
         // ladder, and the flight layer's by-type read — the everyday airliner, the wide-body
-        // freighter, the rotorcraft — each in its own marker (see `flight_kind_for`). At
+        // freighter, the rotorcraft — each in its own marker (see `providers::flight::kind_for`). At
         // street zooms the road kinds lead (a city block reads as traffic, not an airshow).
         let fine = u8::from(res) >= 8;
         let which = if fine { h % 10 } else { h % 7 };
@@ -656,7 +442,7 @@ mod tests {
         }
         assert!(bolt.headers.iter().any(|(k, v)| k == "Authorization" && v.starts_with("Basic ")));
         let flight = reqs.iter().find(|r| r.provider == Provider::Flight).unwrap();
-        assert!(flight.url.contains("bounds="), "the flight feed takes a bounds box: {}", flight.url);
+        assert!(flight.url.contains("bbox="), "the flight feed takes its box: {}", flight.url);
         assert!(flight.headers.iter().any(|(k, v)| k == "Cookie" && v == "c"));
         let sgr = reqs.iter().find(|r| r.provider == Provider::Sgr).unwrap();
         assert!(sgr.url.contains("sgrticket-api.trc.co.tz"), "the sweep asks the TRC API: {}", sgr.url);
