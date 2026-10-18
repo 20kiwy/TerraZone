@@ -1,0 +1,47 @@
+[package]
+name = "terrazon-engine"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "TerraZone engine: sessions, history, selection, the command registry"
+
+[lints]
+workspace = true
+
+[dependencies]
+terrazon-geom = { workspace = true }
+terrazon-color = { workspace = true }
+terrazon-doc = { workspace = true }
+terrazon-map = { workspace = true }
+terrazon-fleet = { workspace = true }
+terrazon-assets = { workspace = true }
+terrazon-tools = { workspace = true }
+terrazon-text = { workspace = true }
+terrazon-render = { workspace = true }
+terrazon-pathops = { workspace = true }
+terrazon-brush = { workspace = true }
+terrazon-trace = { workspace = true }
+terrazon-svg = { workspace = true }
+terrazon-format = { workspace = true }
+terrazon-pdf = { workspace = true }
+terrazon-cad = { workspace = true }
+terrazon-eps = { workspace = true }
+terrazon-metafile = { workspace = true }
+terrazon-plugins = { workspace = true }
+terrazon-affinity = { workspace = true }
+image = { workspace = true }
+flate2 = { workspace = true }
+kurbo = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+log = { workspace = true }
+
+[dev-dependencies]
+terrazon-affinity = { workspace = true, features = ["synth"] }
+crc32fast = { workspace = true }
+terrazon-testkit = { workspace = true }
+proptest = { workspace = true }
+wat = { workspace = true }
+# Zstandard streams for the Illustrator editing data fuzz tests.
+ruzstd = { workspace = true }

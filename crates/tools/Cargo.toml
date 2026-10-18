@@ -1,0 +1,25 @@
+[package]
+name = "terrazon-tools"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "TerraZone tool state machines: pointer events in, commands and overlays out"
+
+[lints]
+workspace = true
+
+[dependencies]
+terrazon-geom = { workspace = true }
+terrazon-color = { workspace = true }
+terrazon-doc = { workspace = true }
+terrazon-assets = { workspace = true }
+terrazon-map = { workspace = true }
+terrazon-pathops = { workspace = true }
+terrazon-text = { workspace = true }
+kurbo = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+image = { workspace = true }
+terrazon-text = { workspace = true, features = ["test-fonts"] }

@@ -1,0 +1,27 @@
+[package]
+name = "terrazon-mcp"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "TerraZone MCP server: JSON-RPC 2.0 over stdio, driving a running app or a headless session"
+
+[lints]
+workspace = true
+
+[dependencies]
+terrazon-engine = { workspace = true }
+terrazon-render = { workspace = true }
+terrazon-svg = { workspace = true }
+terrazon-format = { workspace = true }
+terrazon-tools = { workspace = true }
+terrazon-geom = { workspace = true }
+terrazon-doc = { workspace = true }
+serde_json = { workspace = true }
+log = { workspace = true }
+
+image = { workspace = true }
+
+[dev-dependencies]
+terrazon-testkit = { workspace = true }
+proptest = { workspace = true }
+socket2 = { workspace = true }

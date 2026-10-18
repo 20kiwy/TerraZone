@@ -1,0 +1,16 @@
+[package]
+name = "terrazon-assets"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "TerraZone Assets: the placement catalogue (tree, house, building, stadium, pin) and the document's placed assets — network-free, shared by the 2D map, the 3D environment and the tools"
+
+[lints]
+workspace = true
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+terrazon-testkit = { workspace = true }

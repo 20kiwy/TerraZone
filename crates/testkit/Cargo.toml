@@ -1,0 +1,23 @@
+[package]
+name = "terrazon-testkit"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "TerraZone test helpers: fixtures, generators, render comparison, geometry assertions"
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+terrazon-geom = { workspace = true }
+terrazon-color = { workspace = true }
+terrazon-doc = { workspace = true }
+terrazon-engine = { workspace = true }
+terrazon-render = { workspace = true }
+terrazon-format = { workspace = true }
+terrazon-svg = { workspace = true }
+kurbo = { workspace = true }
+serde_json = { workspace = true }
+proptest = { workspace = true }
+image = { workspace = true }

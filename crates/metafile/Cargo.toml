@@ -1,0 +1,19 @@
+[package]
+name = "terrazon-metafile"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "TerraZone Windows metafiles: hand-written EMF and WMF writers and readers"
+
+[lints]
+workspace = true
+
+[dependencies]
+terrazon-geom = { workspace = true }
+terrazon-color = { workspace = true }
+terrazon-doc = { workspace = true }
+terrazon-effects = { workspace = true }
+terrazon-brush = { workspace = true }
+terrazon-text = { workspace = true }
+kurbo = { workspace = true }
+image = { workspace = true }

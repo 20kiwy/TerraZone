@@ -1,0 +1,16 @@
+[package]
+name = "terrazon-map"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "TerraZone map layer: Web Mercator (EPSG:3857) mapping and XYZ tile sources"
+
+[lints]
+workspace = true
+
+[dependencies]
+serde = { workspace = true }
+# GeoJSON/TileSet.json/session/adsbdb parsing (was dev-only; the native map-format readers use it).
+serde_json = { workspace = true }
+# Vector tiles come gzip-compressed (Mapbox serves .mvt gzipped).
+flate2 = { workspace = true }

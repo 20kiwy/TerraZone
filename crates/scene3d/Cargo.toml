@@ -1,0 +1,18 @@
+[package]
+name = "terrazon-scene3d"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "TerraZone 3D environment: DEM terrain, orbit camera, meshes and asset placements"
+
+[lints]
+workspace = true
+
+[dependencies]
+glam = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+image = { workspace = true }
+
+[dev-dependencies]
+terrazon-testkit = { workspace = true }

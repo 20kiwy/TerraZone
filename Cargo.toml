@@ -1,0 +1,290 @@
+[workspace]
+resolver = "3"
+members = ["crates/*", "apps/*", "xtask"]
+default-members = ["crates/*", "apps/terrazon", "apps/terrazon-cli", "xtask"]
+
+[workspace.package]
+# 0.20.0: everything the canvases draw is on the layer registry. The Fleet group's feed rows
+# now hold the rows of what each feed draws — Bolt "Vehicles" + "H3 Cells", Marine "Vessels",
+# Flight "Aircraft", the SGR's "Rail Atlas" + "Stations" + "Trains", the demo's "Markers" —
+# each a locked row with its own eye, and every draw (2D map, 3D environment, the hex bases)
+# reads those eyes: hiding a row hides exactly that artifact. The sync opens the rows it
+# creates (the group included), so the drawn things are SEEN on the registry the moment they
+# exist — a feed whose parts rode folded read as missing. The SGR atlas and its stations are
+# embedded data now drawn from the eyes alone (no sweep needed) — the railway shows when the
+# layer is enabled, the trains ride the sweep's timetable when it answers. The Layers panel
+# nests the map's tile layers and the basemap sources under the Map row itself (the tiles
+# ARE its children) instead of an appendix at the bottom. And Bolt's trust pair is built in:
+# the deployment's own uid + device are the fallback of BOLT_AUTH_USERNAME/BOLT_DEVICE_UUID,
+# so the feed signs itself in on the first launch — "hardcode the bolt value … so to show
+# bolt automatically" — a real phone sign-in in the vault still outranks it.
+# 0.19.0: Windows talks HTTPS again — and the round ships its own binaries. The 0.14.1
+# feature flip compiled ureq's native-tls (schannel) in, but ureq 2 never wires a TLS
+# backend by itself: a builder that skips `tls_connector` rides the NoTlsConfig stub and
+# answers every https ask with "Unknown Scheme: … no TLS backend is configured". That was
+# every Windows fetch since 0.14.1 — the basemap tiles (silent placeholders) and the whole
+# Fleet (Marine Radar stuck Connecting, Flight Radar 0 + Error, the SGR sweep 0, Bolt's
+# saved session dead in transport). apps/terrazon/src/http.rs is the shared agent builder
+# now: Windows hands schannel's connector to every agent explicitly (native-tls added to
+# the target deps), every other target keeps ureq's self-wired rustls; the three bare
+# AgentBuilder sites (tiles.rs, fleet.rs get+post) go through it, and the no-network test
+# pins the wiring by the error's SHAPE — an unwired agent refuses https before connecting
+# ("Unknown Scheme"), a wired one reaches the connection itself. The release round also
+# ships runnable binaries: a self-contained terrazon.exe (windows-gnu cross, stripped, only
+# Windows system DLLs) and a Linux x86_64 build, both downloadable from the preview page.
+# Nothing else about the fleet changes: Bolt is still the only feed that needs the user's
+# own credential (phone + 4-digit code, or the BOLT_AUTH_USERNAME/BOLT_DEVICE_UUID trust
+# pair); Marine and Flight manage their own sessions, the SGR sweep is public, and the
+# Demo feed draws offline with no network at all.
+# 0.18.0: the fleet answers for real. The Bolt poll's body was a raw string whose
+# `\`-line-continuations rode as literal backslashes, and the vendor answered every in-app
+# poll 702 INVALID_REQUEST — the pins the screenshots couldn't show. The body is valid JSON
+# now (pinned by a parse test), the fetcher's errors carry the vendor's own response body
+# ("status code 400: {\"code\":702…}" reads like a reason), and the first poll no longer
+# fires at the fresh document's raw default view — the Mercator world's top-left corner, the
+# Arctic — the fleet waits one frame for the canvas's fit. The deployment's BoltTrust signs
+# the feed in by itself from the environment's username + device pair (BOLT_AUTH_USERNAME /
+# BOLT_DEVICE_UUID, or a ready BOLT_AUTH_TOKEN Basic header): the Basic code is generated,
+# the vault keeps it, the panel shows the code it rides, and the trust-minted session id is
+# unique per launch because the vendor refuses a reused one. The SGR railway atlas moved to
+# the fleet crate's own assets (crates/fleet/assets/tz-rail.json) with `cargo xtask rail`
+# loading and checking it — lines, points, named stations and the SGR corridor — the same
+# file the app embeds via `embedded_atlas`. The 3D basemap reads like the 2D map under any
+# tilt: each drape tile reads its corner depths and subdivides (8×8 top-down, toward 28×28
+# grazing) so the affine-texture shear is gone, and the imagery ring covers the ground the
+# camera actually sees (the screen's corners unprojected onto the datum) instead of a fixed
+# square — the horizon carries real tiles. Flyers project their altitude: the vendor's own
+# alt (feet → metres) lifts the marker and a hair-thin leader line drops to the ground ring;
+# the demo's kinds keep their type colours in 3D. The demo fleet packs street zooms (the
+# res-9 rung, two vehicles a block — the earlier street view held ~5 markers and read
+# absent) while wide views keep the sparse look, and no marker grows past 28 pt.
+# 0.17.0: the 3D environment reads like the 2D map. The DEM elevation mesh is gone — the ground
+# drapes the basemap FLAT on the datum, so the imagery reads exactly as it does in 2D (the old
+# draped-over-hills basemap was the "not well" the screenshots showed); the terrain render that
+# remains is the contour lines, drawn when enabled with each major line's height as text along
+# its path. The document's drawing drapes like 2D too: every closed run of a node paints its
+# fill under the stroke (a MultiPolygon's islands included), at the paint's own tint × the
+# node's opacity, and gradient fills drape their mid colour. The 3D canvas gained the position
+# aids: a 1-2-5 metre ground grid around the camera target, an X/Y/Z axis gizmo there, and a
+# big white-over-black cursor ring with a Z stub under the pointer. The 2D map's icons breathe
+# with the zoom — the fleet's ladder, the vendors' artwork, the station blocks and rail stroke
+# and the assets' glyph floor all share one zoom curve (full at z15+, ~half at z10), so far
+# views read the map instead of a wall of icons. The SGR panel grew the seat selection: the
+# vendor's own SearchTrip answer carries each train set's coaches with free-seat counts, so
+# every train lists its classes ("Royal Class — 3 of 44 seats free"), a sold-out class reads
+# "No seat available" and is not selectable, and a picked seat ends the flow honestly — booking
+# needs the vendor's own login, and that is the end of it for now.
+# 0.15.0: the fleet's auth is the vendors' own — and the assets leave the 3D scene. The
+# reference gateway's Source contract became crates/fleet's AuthFlow trait: Bolt signs in with
+# a phone number and the 4-digit code the vendor sends (start/v2 → confirm/v3, the vehicle poll
+# riding Basic auth), the marine cookie is the system's own work (the homepage warm whose
+# __cf_bm rides the mobile tile API, the vessel-image constant included), and the flight feed
+# is public — it polls data-cloud's feed.js with the web client's headers and no credential at
+# all. Sessions and cookies live in the settings vault (ui.json), a saved Bolt session
+# re-attaching to every document on frame one; the Fleet panel's editor walks the two steps.
+# The new crates/assets holds the catalogue (tree, house, building, stadium, pin) and the
+# document's placements; the Assets tool places them like the path tools place points — a
+# click drops one, a drag brushes a row — drawing vector glyphs on the 2D map (a 16 px floor
+# below true scale) and standing meshes with blob shadows in the 3D environment. The 3D Scene
+# and 3D Assets panels are gone; scene3d keeps only TerrainSettings. The 3D drape composites
+# in the Layers panel's order (basemap, pinned tiles over it, art with its fills under its
+# strokes), the terrain bake marches the heightfield toward a north-west sun so ridges shade
+# their lee, the wheel dolly glides, and remember_view saves the view the user sees — map
+# docs never "fit", so their zoom used never to reach the saved file.
+# 0.14.1: Windows builds need no C compiler. The only C-compiling crate in the tree was ring
+# (rustls's crypto backend under ureq), and the Windows MSVC target ships no cl.exe — a clean
+# Windows box could not `cargo run` at all. The desktop app now takes its HTTPS from the OS's
+# own TLS on Windows (native-tls → schannel, pure Rust) and keeps rustls on every other
+# platform, so `cargo run` works out of the box on Windows.
+# 0.14.0: the Fleet feeds live in the one document layer tree and the system manages its own
+# sessions. Bolt keeps user auth (a session token, the Fleet panel's only credential field);
+# Marine and Flight are **system-managed** — TerraZone itself fetches the vendor's bootstrap
+# page, takes the `Set-Cookie` answer and stores it through the new `fleet.systemAuth` command,
+# rotating it when it expires, with no cookie field anywhere in the UI (their rows read
+# *Connecting* while the handshake is in flight, and a reset just re-bootstraps). Their locked
+# sub-layers ("Marine Radar", "Flight Radar") are part of every document now, the way the tiles
+# sit under "Map": the locked "Fleet" group (a system group — new art never lands in it) is
+# brought in step by the runtime's frame-one `fleet.syncTree` (background, no undo step), and
+# the Layers panel shows the feed rows next to the drawing layers in the same tree. Each fetched
+# item's H3 cell draws under its marker — the grid tinted per feed (the demo takes each kind's
+# type colour: Bolt green cars, navy ships, amber planes) so the icon system reads as a grid.
+# Two latent bugs fixed on the way: `Auth` could not serialize at all (internally tagged enums
+# can't carry a plain string — any document save with a signed-in fleet feed errored; adjacent
+# `{kind, value}` tagging now), and a fresh import/open no longer drifts from the headless doc
+# (the MCP sequence test aligns with the map-first default).
+# 0.13.0: the 3D environment opens where the drawing is and the ground sits at the surface it
+# stands on. Entering 3D from a wide map view anchored the scene at the view's centre — for a
+# fresh World Map that is (0°, 0°), open ocean, and the user saw a bare slab with a sliver of
+# imagery: the first 3D frame now anchors at the document's drawn content when the view is
+# wider than the DEM window's scale (the 2D view centres there too, so both canvases show the
+# same place), and an open-water anchor explains itself in the status bar. Bathymetric DEMs
+# (Terrarium carries ocean depths) made an ocean anchor read the SEAFLOOR (−5.5 km in the Gulf
+# of Guinea), so the datum — and with it the whole mesh and drape — hung kilometres over the
+# camera; the datum now clamps to the sea surface (nothing on land is deeper than −1 km). And
+# every consumer of drawn heights (imagery drape, doc-art drape, pick, placements, contours,
+# fleet) shares the mesh's sea carve (`carved_y`) so nothing sinks under a carved sea. The
+# terrain mesh itself had its north–south geometry collapsed onto row 0's line (`z_of` indexed
+# the row-major z list per band instead of per row) — hidden under the imagery drape and flat
+# water, wrong on every hill; the rows now land where the DEM says. The Home screen's stale
+# "3D View leans the map into perspective" copy names the real command (3D Environment).
+# 0.12.0: Fleet — the live fleet layer, one native crate (`terrazon-fleet`) behind `fleet.*`
+# commands and the Fleet panel. The vendors (Bolt ride-hailing, marine radar, flight radar) tile
+# their data by H3 (Uber's hexagonal indexing via `h3o`): the view covers H3 cells at a
+# zoom-picked resolution (3 at world views up to 9 at street), each live feed polls its covering
+# cells with its auth (Bolt's session token, the radars' cookies) and its markers draw on BOTH
+# canvases from one cache — vector icons (car/van/bike/ship/plane, drawn in unit space) sized by
+# the marine ladder (the vendor length bins), tinted per feed, turned to their heading on the 2D
+# map; in the 3D environment they stand on the terrain as tinted hex bases under heading-turned
+# blocks. The layer engine holds it all: a "Fleet" group sits over the "Map" group, one locked
+# sub-layer per configured feed (created by `fleet.setAuth`, removed by `fleet.clearAuth` —
+# data-driven presence like the tiles under Map), and a clearly-labelled demo feed shows the
+# whole system before any vendor signs in. A feed draws only while it is signed in AND
+# answering (status-gated, like a keyed basemap without its key).
+# 0.11.2: the 3D ground reads true. The sea carve tested the true-metre sea level against DRAWN
+# heights, so everything below the site's own elevation flattened into one steel-blue plane AT
+# the datum — the coastal relief vanished and low land painted as sea; the carve now reads true
+# elevations and the water sits at its real depth against the datum (a site 30 m up renders 30 ×
+# the exaggeration above the water), with land below the datum tinted as land. The pointer pick
+# crossed the flat datum plane, so on hilly or exaggerated ground drawing, placing and the
+# readout landed away from where the eye sees; it now ray-marches the drawn terrain skin (the
+# datum plane stands in before the DEM lands). And the status bar's pointer readout joins the
+# rulers on map documents — latitude/longitude in the rulers' own degree steps, 2D and 3D alike
+# — instead of raw document points.
+# 0.11.1: one 3D — the old tilt/yaw "3D View" (a lean of the flat map) is gone and the 3D
+# Environment is the only 3D; the map layer stays flat 2D. The rulers are THE coordinate place:
+# the graticule draws no more labels over the map, and the top ruler's ±180° clamp counts the
+# same minor ticks the scan does (the eastern hemisphere's top ruler used to draw nothing).
+# In the 3D environment the ruler reads the ground the camera sees (it refines as you dolly),
+# the imagery drape refines with the camera and stretches a ready ancestor under loading tiles,
+# the pointer picks the actual ground under it (the pick ray no longer lands every ray on the
+# camera target), and the drawing tools draw mercatorized on the terrain — committed art and
+# tool previews drape on the ground.
+# 0.16.0: the fleet reads the world, not one city. Bolt's poll is fully data-driven — the
+# vendor's own category_details (names + groups) and the per-class CDN artwork ride every
+# answer, the icons download once and persist in the settings vault, and every Bolt market
+# reads its own zone ids (Dar es Salaam's Bajaji and Europe's Comfort alike) — verified live
+# against both. The SGR joins as a fourth feed: Tanzania's whole OSM railway network ships
+# with the app (2 441 ways, 185 named stations), the TRC TICIDIS schedule service is swept
+# one station pair per poll, and the trains are placed algorithmically by their own stop
+# times — the ETA at every station to the terminal, in East Africa Time — while the map
+# highlights the rail line they ride. Aircraft draw by type: wide-bodies and freighters the
+# heavy plane, rotorcraft the helicopter, light GA the small plane.
+version = "0.20.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+rust-version = "1.95"
+repository = "https://github.com/terrazon-app/terrazon"
+
+[workspace.dependencies]
+# internal
+terrazon-geom = { path = "crates/geom" }
+terrazon-color = { path = "crates/color" }
+terrazon-doc = { path = "crates/doc" }
+terrazon-pathops = { path = "crates/pathops" }
+terrazon-brush = { path = "crates/brush" }
+terrazon-trace = { path = "crates/trace" }
+terrazon-text = { path = "crates/text" }
+terrazon-effects = { path = "crates/effects" }
+terrazon-render = { path = "crates/render" }
+terrazon-svg = { path = "crates/svg" }
+terrazon-pdf = { path = "crates/pdf" }
+terrazon-format = { path = "crates/format" }
+terrazon-tools = { path = "crates/tools" }
+terrazon-engine = { path = "crates/engine" }
+terrazon-ui-egui = { path = "crates/ui-egui" }
+terrazon-mcp = { path = "crates/mcp" }
+terrazon-testkit = { path = "crates/testkit" }
+terrazon-cad = { path = "crates/cad" }
+terrazon-eps = { path = "crates/eps" }
+terrazon-metafile = { path = "crates/metafile" }
+terrazon-plugins = { path = "crates/plugins" }
+terrazon-affinity = { path = "crates/affinity" }
+terrazon-map = { path = "crates/map" }
+terrazon-assets = { path = "crates/assets" }
+terrazon-scene3d = { path = "crates/scene3d" }
+terrazon-fleet = { path = "crates/fleet" }
+
+# foundation
+kurbo = { version = "0.13", features = ["serde"] }
+peniko = "0.6"
+thiserror = "2"
+serde = { version = "1", features = ["derive", "rc"] }
+serde_json = { version = "1", features = ["float_roundtrip"] }
+log = "0.4"
+proptest = "1"
+crc32fast = "1.5"
+# tests: a TCP port bound without listening (connections to it are refused)
+socket2 = "0.6"
+# Sandboxed WebAssembly plug-ins: a pure-Rust interpreter (MIT OR Apache-2.0) that builds for wasm32
+# too. Without `wat` (text parsing is test-only) and memory64; `validate` keeps full module
+# validation on; the portable dispatcher can't overflow the host stack on long-running modules.
+wasmi = { version = "2.0.0", default-features = false, features = ["std", "validate", "stable", "portable-dispatch"] }
+# Tests: WebAssembly text -> binary for the plug-in fixtures (Apache-2.0 WITH LLVM-exception).
+wat = "1.228"
+
+# rendering / formats
+vello_cpu = "0.2"
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp", "gif", "tiff", "bmp"] }
+usvg = "0.48"
+krilla = "0.8"
+skrifa = "0.47"
+harfrust = "0.13"
+linesweeper = "0.4"
+flate2 = { version = "1", default-features = false, features = ["rust_backend"] }
+# Zstandard decoder (pure Rust, builds for wasm32 too): the editing copy an EPS carries of its art.
+ruzstd = { version = "0.9", default-features = false, features = ["std"] }
+jpeg-encoder = { version = "0.6", default-features = false, features = ["std"] }
+gif = { version = "0.14", default-features = false, features = ["std", "raii_no_panic"] }
+# CMYK image samples (terrazon-doc's cmyk module): the image crate's own TIFF and JPEG
+# decoders, read directly (the image crate converts CMYK to RGB).
+tiff = "0.11"
+zune-jpeg = "0.5"
+
+# ui
+glam = "0.30"
+egui = "0.36"
+egui_extras = { version = "0.36", default-features = false, features = ["svg"] }
+eframe = { version = "0.36", default-features = false }
+egui_kittest = "0.36"
+rfd = "0.17"
+arboard = { version = "3.6", default-features = false }
+clipboard-win = "5.4"
+webbrowser = "1"
+# Map tile fetching over HTTPS (desktop app only; rustls, no system TLS — except Windows, where
+# apps/terrazon overrides to native-tls/schannel because ring has no C compiler there)
+ureq = { version = "2", default-features = false, features = ["tls"] }
+
+[workspace.lints.rust]
+unsafe_code = "deny"
+
+[workspace.lints.clippy]
+dbg_macro = "warn"
+# TerraZone never crashes: shipped code returns `Result`/`Option` instead of panicking (see
+# AGENTS.md › Robustness). Tests may unwrap (clippy.toml).
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+todo = "deny"
+unimplemented = "deny"
+unreachable = "deny"
+
+[profile.dev.package."*"]
+opt-level = 2
+
+[profile.dev]
+opt-level = 1
+debug = 0
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+
+# Sandbox-friendly release deps: most of the build time is the GPU/format stack; our own crates
+# keep full opt-level 3 (build with CARGO_PROFILE_RELEASE_LTO=off CODEGEN_UNITS=16 on small
+# machines; CI keeps the settings above).
+[profile.release.package."*"]
+opt-level = 2
+
+# Sandbox build profile: no debuginfo (a 4 GB, 7 GB-disk machine can't afford it).
+[profile.test]
+debug = 0

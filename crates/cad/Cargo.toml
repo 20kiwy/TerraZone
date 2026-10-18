@@ -1,0 +1,23 @@
+[package]
+name = "terrazon-cad"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "TerraZone CAD interchange: a hand-written ASCII DXF writer (R12 to 2018)"
+
+[lints]
+workspace = true
+
+[dependencies]
+terrazon-geom = { workspace = true }
+terrazon-color = { workspace = true }
+terrazon-doc = { workspace = true }
+terrazon-effects = { workspace = true }
+terrazon-brush = { workspace = true }
+terrazon-pathops = { workspace = true }
+terrazon-text = { workspace = true }
+kurbo = { workspace = true }
+image = { workspace = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }

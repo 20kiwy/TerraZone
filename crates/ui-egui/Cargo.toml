@@ -1,0 +1,47 @@
+[package]
+name = "terrazon-ui-egui"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "TerraZone egui frontend (menus, panels, tools and canvas); swappable — nothing below depends on it"
+
+[lints]
+workspace = true
+
+[dependencies]
+terrazon-geom = { workspace = true }
+terrazon-color = { workspace = true }
+terrazon-doc = { workspace = true }
+terrazon-render = { workspace = true }
+terrazon-text = { workspace = true }
+terrazon-tools = { workspace = true }
+terrazon-engine = { workspace = true }
+terrazon-map = { workspace = true }
+terrazon-assets = { workspace = true }
+terrazon-fleet = { workspace = true }
+h3o = "0.11"
+# The Bolt vehicle artwork (PNG pins) rides the settings vault base64-encoded.
+base64 = "0.22"
+terrazon-scene3d = { workspace = true }
+terrazon-svg = { workspace = true }
+terrazon-effects = { workspace = true }
+terrazon-plugins = { workspace = true }
+terrazon-pdf = { workspace = true }
+terrazon-cad = { workspace = true }
+terrazon-eps = { workspace = true }
+terrazon-format = { workspace = true }
+egui = { workspace = true }
+egui_extras = { workspace = true }
+glam = { workspace = true }
+image = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+log = { workspace = true }
+
+[dev-dependencies]
+terrazon-testkit = { workspace = true }
+wat = { workspace = true }
+
+[build-dependencies]
+serde_json = { workspace = true }
+toml = "1"

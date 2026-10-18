@@ -1,0 +1,21 @@
+[package]
+name = "terrazon-effects"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "TerraZone live effects evaluated to geometry"
+
+[lints]
+workspace = true
+
+[dependencies]
+terrazon-geom = { workspace = true }
+terrazon-doc = { workspace = true }
+terrazon-pathops = { workspace = true }
+terrazon-text = { workspace = true }
+terrazon-plugins = { workspace = true }
+kurbo = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+terrazon-color = { workspace = true }

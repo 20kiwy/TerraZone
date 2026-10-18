@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Name=TerraZone
+GenericName=Vector Graphics Editor
+Comment=Draw and edit vector illustrations, SVG and PDF
+Exec=terrazon %F
+TryExec=terrazon
+Icon=app.terrazon.terrazon
+Terminal=false
+StartupNotify=true
+StartupWMClass=app.terrazon.terrazon
+Categories=Graphics;2DGraphics;VectorGraphics;
+Keywords=vector;illustration;svg;pdf;drawing;bezier;
+MimeType=image/svg+xml;application/pdf;

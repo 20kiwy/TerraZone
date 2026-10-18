@@ -1,0 +1,17 @@
+[package]
+name = "terrazon-brush"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "TerraZone brushes: calligraphic, scatter, art, pattern and bristle brush definitions and stroke geometry"
+
+[lints]
+workspace = true
+
+[dependencies]
+terrazon-geom = { workspace = true }
+terrazon-color = { workspace = true }
+terrazon-doc = { workspace = true }
+kurbo = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }

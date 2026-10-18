@@ -1,0 +1,23 @@
+	3D Environment	3D Environment
+	Terrain	Terrain
+	Terrain loading	Terrain loading
+	no DEM fetcher	no DEM fetcher
+	Click to place · Esc to finish	Click to place · Esc to finish
+	Placement finished	Placement finished
+	3D environment — drag to orbit · Shift-drag to pan · wheel to zoom	3D environment — drag to orbit · Shift-drag to pan · wheel to zoom
+@msg	3D anchors the map view centre — open water here; zoom the 2D map to an area to bring it into 3D	3D anchors the map view centre — open water here; zoom the 2D map to an area to bring it into 3D
+	Triangle budget reached — showing the closest {n} tris	Triangle budget reached — showing the closest {n} tris
+	Timetable for {date}	Timetable for {date}
+	{n} stations · {m} trains	{n} stations · {m} trains
+	Running now	Running now
+	Next: {name} in {m} min	Next: {name} in {m} min
+	Arrives {name} in {m} min	Arrives {name} in {m} min
+	Mapping the SGR line — one station pair per poll; trains appear as the timetable fills in.	Mapping the SGR line — one station pair per poll; trains appear as the timetable fills in.
+	No train on the line right now — the sweep keeps the timetable current.	No train on the line right now — the sweep keeps the timetable current.
+	The timetable rides the document — a saved map keeps it.	The timetable rides the document — a saved map keeps it.
+	Vehicle icons download from Bolt automatically.	Vehicle icons download from Bolt automatically.
+	SGR Timetable	SGR Timetable
+
+	Bolt signed in from the deployment's own trust ({uid})	Bolt signed in from the deployment's own trust ({uid})
+	Auth code {code} (generated, Basic {uid})	Auth code {code} (generated, Basic {uid})
+	Device {device}	Device {device}

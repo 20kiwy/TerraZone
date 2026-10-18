@@ -1,0 +1,75 @@
+[package]
+name = "terrazon"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+default-run = "terrazon"
+
+[lints]
+workspace = true
+
+[features]
+default = ["wgpu", "accessibility"]
+wgpu = ["eframe/wgpu"]
+accessibility = ["eframe/accesskit"]
+# Build with --no-default-features --features windows7 and the win7 Rust target.
+windows7 = ["eframe/glow"]
+
+[dependencies]
+terrazon-engine = { workspace = true }
+terrazon-ui-egui = { workspace = true }
+terrazon-scene3d = { workspace = true }
+terrazon-fleet = { workspace = true }
+terrazon-text = { workspace = true }
+eframe = { workspace = true, features = ["default_fonts", "wayland", "x11"] }
+egui = { workspace = true }
+serde_json = { workspace = true }
+log = { workspace = true }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+rfd = { workspace = true }
+# wayland-data-control: native Wayland clipboard (Linux; X11 through XWayland only sees what X11 apps copied).
+arboard = { workspace = true, features = ["image-data", "wayland-data-control"] }
+image = { workspace = true }
+webbrowser = { workspace = true }
+# The window's monitors, size and position (the same winit eframe runs on).
+winit = { version = "0.30", default-features = false }
+
+[target.'cfg(not(any(target_arch = "wasm32", windows)))'.dependencies]
+# Map tile fetching over HTTPS (see src/tiles.rs) — rustls on Linux/macOS
+ureq = { workspace = true }
+
+[target.'cfg(windows)'.dependencies]
+clipboard-win = { workspace = true }
+# Map tile fetching over HTTPS (see src/tiles.rs) — the OS's schannel through native-tls:
+# rustls's ring needs a C compiler (cl.exe) and the MSVC target ships none, so the Windows
+# build runs with no C toolchain at all. ureq 2 never wires a TLS backend by itself: the
+# connector is handed to every agent explicitly (src/http.rs), or every https ask dies in
+# transport with "Unknown Scheme … no TLS backend".
+ureq = { version = "2", default-features = false, features = ["native-tls"] }
+native-tls = "0.2"
+
+# DirectWrite's system font collection (src/system_fonts.rs): fonts that font services such as
+# Adobe Fonts load in place (#579). MIT OR Apache-2.0, already in the build through accesskit.
+[target.'cfg(all(windows, not(target_vendor = "win7")))'.dependencies]
+windows = { version = "0.62", features = ["Win32_Graphics_DirectWrite"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+# The macOS menu bar (src/mac_menu.rs): Tauri's menu crate, AppKit menus behind a safe API (no GTK
+# with default features off). Pinned exactly: review the diff before bumping.
+muda = { version = "=0.21.1", default-features = false }
+objc2 = "0.6"
+objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "NSApplication", "NSMenu", "NSEvent", "NSPasteboard", "NSResponder", "NSTextInputContext"] }
+# Files opened from Finder and the Dock (src/open_documents.rs) and pasted bitmaps (src/clipboard.rs); both already come with winit, muda and rfd.
+objc2-foundation = { version = "0.3", default-features = false, features = ["std", "block2", "NSArray", "NSData", "NSNotification", "NSOperation", "NSString", "NSURL"] }
+block2 = "0.6"
+# CoreText's font manager (src/mac_fonts.rs): fonts that apps and font managers register from their
+# own folders (#579). Zlib OR Apache-2.0 OR MIT; objc2-core-foundation already comes with
+# objc2-foundation.
+objc2-core-foundation = { version = "0.3", default-features = false, features = ["std", "CFArray", "CFString", "CFURL"] }
+objc2-core-text = { version = "0.3", default-features = false, features = ["std", "CTFontManager"] }
+
+[build-dependencies]
+# Icon + VERSIONINFO for terrazon.exe; build.rs only uses it when targeting Windows.
+winresource = "0.1"

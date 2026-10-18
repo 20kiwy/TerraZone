@@ -1,0 +1,27 @@
+[package]
+name = "terrazon-doc"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "TerraZone document model: artboards, layers, objects, appearance (pure data + serde)"
+
+[lints]
+workspace = true
+
+[dependencies]
+terrazon-geom = { workspace = true }
+terrazon-map = { workspace = true }
+terrazon-assets = { workspace = true }
+terrazon-fleet = { workspace = true }
+terrazon-color = { workspace = true }
+kurbo = { workspace = true }
+image = { workspace = true }
+tiff = { workspace = true }
+zune-jpeg = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+jpeg-encoder = { workspace = true }
+proptest = { workspace = true }

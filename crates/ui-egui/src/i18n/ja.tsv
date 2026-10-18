@@ -1,0 +1,3918 @@
+# Japanese (ja) catalog. Same format as zh-hant.tsv:  context <TAB> source <TAB> translation
+# (empty context = a plain UI string; `@id` = a command id; `@plural` = "one|other" forms).
+#
+# Clean-room: menu and feature names follow the names Japanese users of vector illustration
+# software know, written from the meaning of TerraZone's English labels; no other application's
+# Japanese localisation was copied. Toggles read as their action (「…を表示」「…を隠す」).
+#
+# Coverage: the whole interface — every menu string and every `tl!` literal (`complete_menus`,
+# tested). Left in English on purpose (`MENU_KEEP_AS_IS` in the tests): the product name, language
+# names, OpenType, the built-in workspace names and the bracketed perspective grid preset names.
+
+# Panels, dialogs, tooltips, the hint bar and document tabs (from issue #217): written from the
+# meaning of the English labels in the vocabulary Japanese users of vector illustration software know.
+# Built at run time (status messages, counts, section lists).
+
+# Strings added on main since the catalog was written (Layers panel, saved selections, Delete Anchor Points).
+
+# About › Contributors / Models (credits.rs)
+
+# The macOS menu bar (native_menu): the app and Window menus' system items, Settings pages.
+
+# Photoshop-style raster effects (Effect menu, their dialogs).
+	 to apply the selection's to it  |  	：選択中の属性を適用  |  
+	All printer's marks	すべてのトンボと情報
+	Built-in presets don't change: New makes a copy you can edit.	組み込みのプリセットは変更できません。「新規」で編集可能なコピーを作成します。
+	Built-in presets don't change: New… starts an editable copy.	組み込みのプリセットは変更できません。「新規…」で編集できる複製を作成します。
+	Can't print these settings: see the Summary	この設定ではプリントできません。「サマリー」を確認してください
+	Couldn't copy to the system clipboard: {e}	システムのクリップボードにコピーできませんでした：{e}
+	Couldn't paste from the clipboard: {e}	クリップボードからペーストできませんでした：{e}
+	Couldn't save recovery data: {e}	復帰用データを保存できませんでした：{e}
+	Couldn't {} {name}: {e}	{name} を{}できませんでした：{e}
+	Don't Save	保存しない
+	Don't Show Center	中心を表示しない
+	Double-click to edit the characters' paint	ダブルクリックで文字のペイントを編集
+	Drag art or swatches here, or use + to add the selection's colors and text styles.	ここにアートやスウォッチをドラッグするか、+ で選択範囲のカラーやテキストスタイルを追加します。
+	Drag to the window's left edge to dock	ウィンドウの左端までドラッグしてドッキング
+	Each page prints as one image, at the document's raster effects resolution.	各ページは、ドキュメントのラスタライズ効果の解像度で 1 つの画像としてプリントされます。
+	Edit the selected point's colour in the Color panel	選択したポイントのカラーをカラーパネルで編集
+	Eyedropper: click the art to sample the stop's colour	スポイト: アートをクリックして分岐点のカラーをサンプル
+	Files of a PDF standard can't be password-protected.	PDF 規格のファイルにはパスワードを設定できません。
+	Fonts whose licence doesn't allow embedding are not copied.	埋め込みが許可されていないライセンスのフォントはコピーされません。
+	Frequencies and angles are the output device's to apply.	線数と角度は出力デバイス側で適用されます。
+	Generate CSS: the whole document's CSS while nothing is selected	CSS を生成: 何も選択していないときはドキュメント全体の CSS
+	How colours outside the press's gamut are separated.	印刷機の色域外のカラーの分版方法です。
+	Keep this row's colors (exclude)	この行のカラーを保持 (除外)
+	Lossless (lossy WebP isn't available yet)	ロスレス (非可逆 WebP は未対応)
+	Opening it left out what TerraZone can't read yet ({what}), so replacing it loses that for good. Save under another name to keep it.	開いたときに TerraZone がまだ読み込めない内容（{what}）が除外されたため、置き換えるとそれは完全に失われます。保持するには別の名前で保存してください。
+	PDF/X-1a files are CMYK: every colour is converted to the destination (blank: the output intent's CMYK profile), untagged.	PDF/X-1a は CMYK のファイルです。すべてのカラーを変換先 (空欄なら出力インテントの CMYK プロファイル) に変換し、プロファイルは埋め込みません。
+	Reset the rows to the artwork's colors	行をアートワークのカラーにリセット
+	Separations list the document's inks here: one page per ink that prints.	分版では、ドキュメントのインキがここに一覧表示されます。プリントするインキごとに 1 ページになります。
+	Show Grid (⌘')	グリッドを表示 (⌘')
+	Show and print from the Lab definition; PDF files carry it as the ink's alternate color.	Lab 定義で表示・印刷します。PDF ではインキの代替カラーとして保存されます。
+	TerraZone didn't quit normally last time. These documents had unsaved changes:	TerraZone は前回正常に終了しませんでした。次のドキュメントに未保存の変更があります:
+	The cell shows the type object's text as HTML.	セルには文字オブジェクトのテキストが HTML として表示されます。
+	The edge of the paper the printer can't reach: the art goes inside it, and the preview shows it dashed.	プリンターが印刷できない用紙の端の部分です。アートはこの内側に配置され、プレビューでは破線で表示されます。
+	The system's settings of this printer	このプリンターのシステム設定
+	Type becomes outlines, and strokes a CAD line can't draw become filled shapes.	テキストはアウトライン化され、CAD の線で描けない線は塗りのシェイプになります。
+	Use Typographer's Quotes	引用符を使用
+	Use the Selected Text's Font	選択したテキストのフォントを使用
+	Use the document's swatch: pasted colors take its color.	ドキュメントのスウォッチを使用: ペーストしたカラーはそのカラーになります。
+	Working CMYK (don't tag)	作業用 CMYK (タグなし)
+	Your changes will be lost if you don't save them.	保存しないと変更は失われます。
+	  — missing	  — 見つかりません
+	  — substituted by {style}	  — {style} で代用
+	  — {n} characters from another font	  — {n} 文字はほかのフォント
+	 a pin to warp  |  	：ピンをドラッグしてワープ  |  
+	 a point to edit it  |  	：ポイントを編集  |  
+	 a stroke to add a width point  |  	：線幅ポイントを追加  |  
+	 across a selected object to set the gradient direction	：選択したオブジェクト上でグラデーションの方向を設定
+	 across paths to push them along  |  	：パスを押し出す  |  
+	 an anchor or path segment to select it  |  	：アンカーポイントまたはセグメントを選択  |  
+	 an object to copy its attributes  |  	：オブジェクトの属性をコピー  |  
+	 an object, then another to blend them  |  	：オブジェクトを順にクリックしてブレンド  |  
+	 for exact size	：数値で指定
+	 for exact values	：数値で指定
+	 from center  |  	：中心から描画  |  
+	 keeps its proportions)	：縦横比を固定）
+	 near a selected pin to rotate  |  	：選択したピンの近くで回転  |  
+	 on the canvas to create one	：アートボードを作成
+	 over paths to roughen their outlines  |  	：パスの輪郭を粗くする  |  
+	 over paths, and hold still to keep going  |  	：パス上で押し続けると効果が続く  |  
+	 right or left to zoom in or out  |  	：右で拡大、左で縮小  |  
+	 the art to add a pin  |  	：アートにピンを追加  |  
+	 the object to duplicate	：オブジェクトを複製
+	 the object to select  |  	：オブジェクトを選択  |  
+	 to add a corner point  |  	：コーナーポイントを追加  |  
+	 to add a smooth point  |  	：スムーズポイントを追加  |  
+	 to add smooth points  |  	：スムーズポイントを追加  |  
+	 to add	：追加
+	 to blend from it  |  	：そこからブレンド  |  
+	 to change one side  |  	：片側だけ変更  |  
+	 to close  |  	：パスを閉じる  |  
+	 to constrain proportions  |  	：縦横比を固定  |  
+	 to copy  |  	：コピー  |  
+	 to create area type  |  	：エリア内文字を作成  |  
+	 to create point type  |  	：ポイント文字を作成  |  
+	 to draw  |  	：描画  |  
+	 to exit editing	：編集を終了
+	 to finish	：終了
+	 to keep zooming	：拡大または縮小し続ける
+	 to move  |  	：移動  |  
+	 to move in perspective  |  	：遠近で移動  |  
+	 to pan the view	：表示位置を移動
+	 to remove pins	：ピンを削除
+	 to remove points	：ポイントを削除
+	 to sample a color	：カラーを取得
+	 to scale in perspective	：遠近で拡大・縮小
+	 to search every command	：すべてのコマンドを検索
+	 to select an artboard  |  	：アートボードを選択  |  
+	 to select more pins  |  	：ピンを追加選択  |  
+	 to select more points  |  	：ポイントを追加選択  |  
+	 to select multiple objects  |  	：複数のオブジェクトを選択  |  
+	 to set spacing and orientation	：間隔と方向を設定
+	 to set the reference point  |  	：基準点を設定  |  
+	 to size the brush (	：ブラシサイズを変更（
+	 to toggle corner  |  	：コーナーと切り替え  |  
+	 to transform  |  	：変形  |  
+	 to zoom in  |  	：拡大  |  
+	 to zoom into an area	：範囲を拡大
+	 to zoom out  |  	：縮小  |  
+	 while dragging to move perpendicular to the plane  |  	：ドラッグ中に面と垂直に移動  |  
+	% of all commits	全コミットに占める割合
+	(closest)	(最も近い)
+	+ Add Scale	+ 縮尺を追加
+	0.2 (quality) to 100 (speed)	0.2 (品質優先) 〜 100 (速度優先)
+	1 Color Job…	1 色ジョブ…
+	1 {unit} on the artboard stands for {real} {unit} in the scene.	アートボード上の 1 {unit} が、実際の {real} {unit} に当たります。
+	2 Color Job…	2 色ジョブ…
+	3 Color Job…	3 色ジョブ…
+	30° Angles	30° の角度
+	3D Ribbon	3D リボン
+	3D and Materials	3D とマテリアル
+	45° Angles	45° の角度
+	60° Angles	60° の角度
+	90° & 45° & 30° Angles	90°・45°・30° の角度
+	90° & 45° Angles	90°・45° の角度
+	90° Angles	90° の角度
+	:	：
+	< 1 sec	1 秒未満
+	<Opacity Mask>	<不透明マスク>
+	A File…	ファイル…
+	A file dialog is open: choose there first	ファイルダイアログが開いています。先にそちらで選択してください
+	A lower value follows the stroke closely; a higher one gives fewer points and smoother curves.	値を小さくするとストロークに忠実に、大きくするとポイントが少なく滑らかな曲線になります。
+	A new preset starting from the selected one	選択したプリセットをもとにした新しいプリセット
+	A saved copy of the selected preset	選択したプリセットの保存済みの複製
+	About TerraZone	TerraZone について
+	About	情報
+	Above Text	テキストの上
+	Absolute Position	絶対位置
+	Abutting	隣接
+	Accurate	精細
+	Action {n}	アクション {n}
+	Actions	アクション
+	Activate Document	ドキュメントをアクティブにする
+	Active Perspective Plane	アクティブな遠近面
+	Actual Size	100% 表示
+	Add Anchor (Pen)	アンカーポイントを追加 (ペン)
+	Add Anchor Point Tool	アンカーポイントの追加ツール
+	Add Anchor Point	アンカーポイントを追加
+	Add Anchor Points	アンカーポイントの追加
+	Add Content	コンテンツを追加
+	Add Effect	効果を追加
+	Add Freeform Line	フリーフォームラインを追加
+	Add Freeform Point	フリーフォームポイントを追加
+	Add Guide	ガイドを追加
+	Add Mesh Line	メッシュラインを追加
+	Add New Effect	新規効果を追加
+	Add New Fill	新規塗りを追加
+	Add New Stroke	新規線を追加
+	Add New	新規追加
+	Add Selected Artwork (Alt: as one asset)	選択したアートワークを追加 (Alt: 1 つのアセットとして)
+	Add Selected Artwork as Multiple Assets	選択したアートワークを複数のアセットとして追加
+	Add Selected Artwork as One Asset	選択したアートワークを 1 つのアセットとして追加
+	Add Spine Point	スパインポイントを追加
+	Add Swatches	スウォッチを追加
+	Add Used Colors	使用中のカラーを追加
+	Add to Graphic Styles	グラフィックスタイルに追加
+	Add to Library	ライブラリに追加
+	Add to Profiles	プロファイルに追加
+	Add to Profiles…	プロファイルに追加…
+	Add to Selection	選択範囲に追加
+	Add to Swatches	スウォッチに追加
+	Add	追加
+	Additional Fonts Folder	追加フォントフォルダー
+	Additional Plug-ins Folder	追加プラグインフォルダー
+	Adjust Adjoining Width Points	隣接する幅ポイントを調整
+	Adjust Color Balance…	カラーバランス調整…
+	Adjust Colors	カラーを調整
+	Adjust Options:	調整オプション:
+	Advanced Options	詳細オプション
+	Advanced	詳細
+	Align Objects:	オブジェクトの整列:
+	Align On:	整列位置:
+	Align Stroke to Center	線を中央に揃える
+	Align Stroke to Inside	線を内側に揃える
+	Align Stroke to Outside	線を外側に揃える
+	Align Stroke:	線の位置:
+	Align To:	整列の基準:
+	Align center	中央揃え
+	Align left	左揃え
+	Align right	右揃え
+	Align to Artboard	アートボードに整列
+	Align to Glyph Bounds	字形の境界に整列
+	Align to Key Object	キーオブジェクトに整列
+	Align to Page	ページに沿う
+	Align to Path	パスに沿う
+	Align to Selection	選択範囲に整列
+	Align	整列
+	Align:	整列:
+	Alignment Guides	整列ガイド
+	Alignment:	整列:
+	All Artwork Above	前面のすべてのアートワーク
+	All Caps	すべて大文字
+	All Categories	すべてのカテゴリ
+	All Scripts	すべての文字
+	All Text Objects	すべてのテキストオブジェクト
+	All Tools	すべてのツール
+	All colours are within the CMYK gamut	すべてのカラーが CMYK の色域内です
+	All on Active Artboard	作業アートボードのすべてを選択
+	All on Same Layers	同じレイヤー上のすべて
+	All the art	すべてのアート
+	All	すべてを選択
+	Alt	Alt
+	Alt:	代替テキスト:
+	Alter Paths for Appearance	外観を保つためにパスを変更
+	Amount	量
+	Amount:	量:
+	Anchor Point Tool	アンカーポイントツール
+	Anchor Point	アンカーポイント
+	Anchor Points	アンカーポイント
+	Anchor Points, Handle, and Bounding Box Display	アンカーポイント、ハンドル、バウンディングボックスの表示
+	Anchor/Path Labels	アンカー／パスラベル
+	Anchors:	アンカー:
+	Angle	角度
+	Angle:	角度:
+	Angles	角度
+	Animated Zoom	アニメーションズーム
+	Anti-Alias	アンチエイリアス
+	Anti-alias Rasters	ラスターをアンチエイリアス
+	Anti-alias	アンチエイリアス
+	Anti-aliased Artwork	アートワークをアンチエイリアス
+	Anti-aliasing:	アンチエイリアス:
+	Any Kind	すべての種類
+	Appearance Attribute	アピアランス属性
+	Appearance Item	アピアランス項目
+	Appearance Panel	アピアランスパネル
+	Appearance of Black	ブラックのアピアランス
+	Appearance panel	アピアランスパネル
+	Appearance	アピアランス
+	Applies the next time TerraZone starts.	TerraZone の次回起動時に適用されます。
+	Applies when the linked file is relinked or updated.	リンクファイルを再リンクまたは更新したときに適用されます。
+	Apply Brush	ブラシを適用
+	Apply Character Style	文字スタイルを適用
+	Apply Effect	効果を適用
+	Apply Graphic Style	グラフィックスタイルを適用
+	Apply Last Color	最後のカラーを適用
+	Apply Last Effect	前回の効果を適用
+	Apply Last Gradient	最後のグラデーションを適用
+	Apply Paragraph Style	段落スタイルを適用
+	Apply SVG Filter…	SVG フィルターを適用…
+	Apply to All ({count} more missing)	すべてに適用 (ほかに {count} 個が見つかりません)
+	Apply to All	すべてに適用
+	Apply	適用
+	Arc Lower…	円弧 (下弦)…
+	Arc Tool	円弧ツール
+	Arc Upper…	円弧 (上弦)…
+	Arc	円弧
+	Arch…	アーチ…
+	Arc…	円弧…
+	Area / Path Type	エリア内文字／パス上文字
+	Area Graph Tool	面グラフツール
+	Area Text Objects	エリア内文字オブジェクト
+	Area Type Options	エリア内文字オプション
+	Area Type Options…	エリア内文字オプション…
+	Area Type Tool	エリア内文字ツール
+	Around Object	オブジェクトの周囲
+	Arrange by Column	1 列に配置
+	Arrange by Row	1 行に配置
+	Arrange	重ね順
+	Arrange: Bring to Front	重ね順: 最前面へ
+	Arrowheads:	矢印:
+	Art using a deleted global swatch keeps its colour.	削除したグローバルスウォッチを使っているアートは、そのカラーを保持します。
+	Art	アート
+	Artboard Options	アートボードオプション
+	Artboard Options: edit with the Artboard tool	アートボードオプション: アートボードツールで編集
+	Artboard Options…	アートボードオプション…
+	Artboard Tool	アートボードツール
+	Artboard {number}	アートボード {number}
+	Artboard	アートボード
+	Artboard:	アートボード:
+	Artboards	アートボード
+	Artboards: {n}	アートボード: {n}
+	Artwork Colors	アートワークのカラー
+	As Multiple Assets	複数アセットとして
+	As Single Asset	単一アセットとして
+	Ascender	アセンダ
+	Ask When Modified	変更時に確認
+	Aspect Ratio	縦横比
+	Asset Export Settings	アセットの書き出し設定
+	Asset Export	アセットの書き出し
+	Assets	アセット
+	Assign Profile…	プロファイルの指定…
+	Assign	指定
+	Assign:	指定:
+	Attach to Active Plane	現在の面に配置
+	Attributes	属性
+	Author Title:	作成者の肩書き:
+	Author:	作成者:
+	Auto Size New Area Type	新規エリア内文字を自動サイズ調整
+	Auto Spell Check	自動スペルチェック
+	Auto	自動
+	Auto-Collapse Iconic Panels	アイコンパネルを自動的に折りたたむ
+	Auto-Rotate (turn the paper to each artboard)	自動回転 (アートボードごとに用紙を回転)
+	Automatic flatness	フラットネスを自動設定
+	Automatic	自動
+	Automatically Save Recovery Data	復帰用データを自動保存
+	Automatically	自動
+	Average	平均
+	Average…	平均…
+	Axis	軸
+	Axis:	軸:
+	BLANK DOCUMENT PRESETS	空白のドキュメントプリセット
+	Background Color:	背景色:
+	Background Contents	背景のカラー
+	Background Contents:	背景のカラー:
+	Background:	背景:
+	Backspace	Backspace
+	Bar Graph Tool	棒グラフツール
+	Baseline Shift	ベースラインシフト
+	Baseline	ベースライン
+	Basic Latin	基本ラテン文字
+	Batch	バッチ
+	Begin Recording	記録を開始
+	Bend:	カーブ:
+	Best	高品質
+	Bevel Join	ベベル結合
+	Bevel	ベベル
+	Binary assets added	追加したバイナリアセット
+	Binary assets removed	削除したバイナリアセット
+	Bitmap	ビットマップ
+	Black and White Logo	白黒ロゴ
+	Black and White	白黒
+	Black	ブラック
+	Bleed	裁ち落とし
+	Bleed:	裁ち落とし:
+	Bleeds	裁ち落とし
+	Blend Front to Back	前後にブレンド
+	Blend Horizontally	左右にブレンド
+	Blend Info	ブレンド情報
+	Blend Options	ブレンドオプション
+	Blend Options…	ブレンドオプション…
+	Blend Tool	ブレンドツール
+	Blend Vertically	上下にブレンド
+	Blend	ブレンド
+	Blending Mode	描画モード
+	Blends and Transparency	ブレンドと透明
+	Bloat Tool	膨張ツール
+	Blob Brush Tool	塗りブラシツール
+	Blob Brush	塗りブラシ
+	Blue	ブルー
+	Blur	ぼかし
+	Bold	太字
+	Bottom in Front	下が前面
+	Bottom	下
+	Bottom-to-Bottom Leading	欧文ベースライン基準の行送り
+	Bottom:	下:
+	Bounds (Fill Proportionally)	境界 (縦横比を保って全体を覆う)
+	Bounds (Fit Proportionally)	境界 (縦横比を保って収める)
+	Bounds	境界
+	Break Link to Graphic Style	グラフィックスタイルへのリンクを解除
+	Break Link to Symbol	シンボルへのリンクを解除
+	Break Link	リンクを解除
+	Brick Offset:	レンガのオフセット:
+	Brick by Column	レンガ (列)
+	Brick by Row	レンガ (行)
+	Brightness	明るさ
+	Brightness/Contrast…	明るさ・コントラスト…
+	Brights	ビビッド
+	Bring All to Front	すべてを手前に移動
+	Bring Forward	前面へ
+	Bring to Front	最前面へ
+	Bristle Brush Strokes	絵筆ブラシストローク
+	Bristle	剛毛
+	Browser	ブラウザー
+	Brush Affects:	ブラシの影響:
+	Brush Definition	ブラシの定義
+	Brush Libraries (on the roadmap)	ブラシライブラリ (今後対応予定)
+	Brush Libraries	ブラシライブラリ
+	Brush Options…	ブラシオプション…
+	Brush Strokes	ブラシストローク
+	Brushes	ブラシ
+	Built-in Libraries	内蔵ライブラリ
+	Built-in presets are read-only: New… starts an editable copy.	組み込みのプリセットは読み取り専用です。「新規…」で編集可能なコピーを作成できます。
+	Bulge…	でこぼこ…
+	Bullet	箇条書き記号
+	Burasagari	ぶら下がり
+	Butt Cap	先端なし
+	Byte Order:	バイト順序:
+	CMYK Color	CMYK カラー
+	CMYK colours print with their own values; off, they go through the colour settings too.	CMYK カラーは元の値のままプリントされます。オフにすると、カラー設定も経由します。
+	CMYK	CMYK
+	CSS Properties	CSS プロパティ
+	Calligraphic	絵筆
+	Cancel Key Object	キーオブジェクトを解除
+	Cancel	キャンセル
+	Canvas Color	カンバスカラー
+	Cap	線端
+	Cap:	線端:
+	Cascade	重ねて表示
+	Center Artwork	アートワークを中央に配置
+	Center on Artboard	アートボードの中央に配置
+	Center	中央
+	Center-Justified Tab	中央揃えタブ
+	Centimeters	センチメートル
+	Chamfer	面取り
+	Change All	すべてを変更
+	Change Case	大文字と小文字の変更
+	Change Screen Mode (F)	スクリーンモードを切り替え (F)
+	Change to Global Rulers	グローバル定規に変更
+	Change to Left-to-Right Layout	左から右のレイアウトに変更
+	Change to Right-to-Left Layout	右から左のレイアウトに変更
+	Change	変更
+	Changed since the last Refresh.	前回の更新以降に変更されています。
+	Changes allowed:	許可する変更:
+	Changes made since it was last saved will be lost.	最後に保存した後の変更は失われます。
+	Changing these settings changes how raster effects look when exported, flattened or expanded.	この設定を変更すると、書き出し、分割・統合、拡張時のラスター効果の見え方が変わります。
+	Channel	チャンネル
+	Character / Paragraph	文字／段落
+	Character Alignment	文字揃え
+	Character Rotation	文字回転
+	Character Set:	文字セット:
+	Character Style Options	文字スタイルオプション
+	Character Style	文字スタイル
+	Character Styles	文字スタイル
+	Character options	文字オプション
+	Character	文字
+	Character:	文字:
+	Check Links	リンクを確認
+	Check Spelling…	スペルチェック…
+	Choose a folder	フォルダーを選択
+	Choose…	選択…
+	Circle	円
+	Classic Defaults	クラシックの初期設定
+	Clean Up…	余分なポイントを削除…
+	Clear All Tabs	すべてのタブを消去
+	Clear Appearance	アピアランスを消去
+	Clear Guides	ガイドを消去
+	Clear Overrides	オーバーライドを消去
+	Clear Recent Files	最近使用したファイルを消去
+	Clear	消去
+	Click an anchor point	アンカーポイントをクリック
+	Click or drag	クリックまたはドラッグ
+	Click the art with the Gradient tool to add or select points.	グラデーションツールでアートをクリックして、ポイントを追加または選択します。
+	Click the first point	始点をクリック
+	Click the ramp or a type button to apply a gradient.	グラデーションバーまたは種類ボタンをクリックして、グラデーションを適用します。
+	Click to add a tab stop, drag to move it, drag it off the ruler to delete it	クリックでタブ位置を追加、ドラッグで移動、定規の外へドラッグで削除
+	Click to apply to the selected type	クリックして選択したテキストに適用
+	Click to choose a swatch, Shift-click to mix a colour	クリックでスウォッチを選択、Shift クリックでカラーを混合
+	Click to edit the mask; Alt-click to view only the mask; Shift-click to disable or enable it	クリックでマスクを編集、Alt+クリックでマスクのみ表示、Shift+クリックで無効／有効を切り替え
+	Click to place each file at 100%, or drag to size it; arrow keys switch files, Esc skips one.	クリックで各ファイルを 100% で配置、ドラッグでサイズを指定します。矢印キーでファイルを切り替え、Esc キーで 1 つスキップします。
+	Click to select, double-click to edit	クリックで選択、ダブルクリックで編集
+	Click to toggle visibility	クリックで表示／非表示を切り替え
+	Click to zoom in, Alt-click to zoom out, drag to pan, double-click to fit	クリックでズームイン、Alt+クリックでズームアウト、ドラッグでパン、ダブルクリックで全体表示
+	Click	クリック
+	Client-side (.html)	クライアントサイド (.html)
+	Clip Complex Regions	複雑な領域をクリップ
+	Clip to Art	アートにクリップ
+	Clip to Artboard	アートボードサイズでクリップ
+	Clip to Bounding Box	バウンディングボックスでクリップ
+	Clip	クリップ
+	Clipboard Formats	クリップボードの形式
+	Clipboard Handling	クリップボードの処理
+	Clipboard as PDF	クリップボードを PDF として取得
+	Clipboard as PNG	クリップボードを PNG として取得
+	Clipboard as SVG	クリップボードを SVG として取得
+	Clipboard as Text	クリップボードをテキストとして取得
+	Clipping Mask	クリッピングマスク
+	Clipping Masks	クリッピングマスク
+	Close All	すべてを閉じる
+	Close Library	ライブラリを閉じる
+	Close Path	パスを閉じる
+	Close paths when ends are within:	端点が次の距離以内のとき、パスを閉じる：
+	Close	閉じる
+	Cmd	Cmd
+	Collapse Panels to Icons	パネルをアイコンに折りたたむ
+	Collapse to Icons	アイコンに折りたたむ
+	Collate	部単位で印刷
+	Collect Links in a Separate Folder	リンクを別フォルダーに収集
+	Collect for Export	書き出し用に追加
+	Collect in New Layer	新規レイヤーに集める
+	Color (,)	カラー (,)
+	Color Adjustments	色調補正
+	Color Burn	焼き込みカラー
+	Color Dodge	覆い焼きカラー
+	Color Group	カラーグループ
+	Color Group: {name}	カラーグループ：{name}
+	Color Group:	カラーグループ:
+	Color Guide Options	カラーガイドオプション
+	Color Guide Options…	カラーガイドオプション…
+	Color Guide	カラーガイド
+	Color Library	カラーライブラリ
+	Color Library…	カラーライブラリ…
+	Color Management	カラーマネジメント
+	Color Mixer (Shift-click the chip)	カラーミキサー (チップを Shift キーを押しながらクリック)
+	Color Mode	カラーモード
+	Color Mode:	カラーモード:
+	Color Model:	カラーモデル:
+	Color Models	カラーモデル
+	Color Picker	カラーピッカー
+	Color Picker…	カラーピッカー…
+	Color Reduction:	カラー減色:
+	Color Settings	カラー設定
+	Color Settings…	カラー設定…
+	Color Space	カラースペース
+	Color Swatches	カラースウォッチ
+	Color Table ({n} color)	カラーテーブル ({n} 色)
+	Color Table ({n} colors)	カラーテーブル ({n} 色)
+	Color Table	カラーテーブル
+	Color Theme	カラーテーマ
+	Color Themes	カラーテーマ
+	Color Type:	カラータイプ:
+	Color bars	カラーバー
+	Color blindness – Deuteranopia-type	D 型（2 型）色覚
+	Color blindness – Protanopia-type	P 型（1 型）色覚
+	Color conversion:	カラー変換:
+	Color images	カラーイメージ
+	Color	カラー
+	Color:	カラー:
+	Colorize	カラー化
+	Colors	カラー
+	Colors:	カラー数:
+	Column Graph Tool	集合縦棒グラフツール
+	Columns:	列数:
+	Column…	棒グラフ…
+	Combine Slices	スライスを結合
+	Coming soon — tracked in the parity plan	近日対応予定
+	Command Click to Select Objects Behind	Command+クリックで背面のオブジェクトを選択
+	Command Dialog	コマンドダイアログ
+	Commits	コミット
+	Community	コミュニティ
+	Company	企業
+	Compatibility:	互換性:
+	Compatible Gradient and Gradient Mesh Printing	互換性のあるグラデーションとグラデーションメッシュのプリント
+	Complement	補色
+	Complexity:	複雑さ:
+	Composite colours are converted to it; separations separate with it when it is a CMYK profile.	コンポジットカラーはこのプロファイルに変換されます。CMYK プロファイルの場合は、分版にも使用されます。
+	Compound Path	複合パス
+	Compress (RLE)	圧縮 (RLE)
+	Compress text and line art	テキストとラインアートを圧縮
+	Compression › Color › Above Ppi	圧縮 › カラー › 解像度が次の値を超える場合
+	Compression	圧縮
+	Compression:	圧縮:
+	Condition identifier:	出力条件の識別名:
+	Conflict {n} of {count}	競合 {n} / {count}
+	Connect Selected End Points	選択した端点を連結
+	Consolidate All Windows	すべてのウィンドウを統合
+	Constrain Angle	角度を制限
+	Constrain Width and Height Proportions	幅と高さの縦横比を固定
+	Constrain	制限
+	Construction Guides	作図ガイド
+	Contextual Alternates	前後関係に依存する字形
+	Contextual Task Bar	コンテキストタスクバー
+	Contrast	コントラスト
+	Contributors	コントリビューター
+	Control	コントロール
+	Convert All Spot Colors to Process	すべての特色をプロセスカラーに変換
+	Convert All Strokes to Outlines	すべての線をアウトラインに変換
+	Convert All Text to Outlines	すべてのテキストをアウトラインに変換
+	Convert Anchor Point	アンカーポイントの切り替え
+	Convert Anchor Points	アンカーポイントを切り替え
+	Convert Color	カラーを変換
+	Convert Document Color Mode	ドキュメントのカラーモードを変換
+	Convert Process to Global	プロセスカラーをグローバルに変換
+	Convert Selected Anchor Points to Corner	選択したアンカーポイントをコーナーポイントに変換
+	Convert Selected Anchor Points to Smooth	選択したアンカーポイントをスムーズポイントに変換
+	Convert To Area Type	エリア内文字に切り替え
+	Convert To Outlines	アウトラインに変換
+	Convert To Point Type	ポイント文字に切り替え
+	Convert text to outlines	テキストをアウトラインに変換
+	Convert to Artboards	アートボードに変換
+	Convert to CMYK	CMYK に変換
+	Convert to Grayscale	グレースケールに変換
+	Convert to RGB	RGB に変換
+	Convert to Shape	シェイプに変換
+	Convert to sRGB	sRGB に変換
+	Convert	変換
+	Convert:	変換:
+	Copied the CSS of {rules} object(s)	{rules} 個のオブジェクトの CSS をコピーしました
+	Copies:	コピー:
+	Copy (make a transformed copy)	コピー (変形したコピーを作成)
+	Copy All Objects	すべてのオブジェクトをコピー
+	Copy All Styles	すべてのスタイルをコピー
+	Copy Artboard	アートボードをコピー
+	Copy Color Value (Hex)	カラー値をコピー (16 進)
+	Copy Fonts Used in the Document	ドキュメントで使用しているフォントをコピー
+	Copy Links	リンクをコピー
+	Copy Selected Style	選択したスタイルをコピー
+	Copy Width Point	幅ポイントをコピー
+	Copy	コピー
+	Copyright Info URL:	著作権情報の URL:
+	Copyright Notice:	著作権表示:
+	Copyright Status:	著作権の状態:
+	Copyright Symbol	著作権記号
+	Copyright	著作権
+	Corner Radius	角の半径
+	Corner Radius:	角丸の半径:
+	Corner:	角の形状:
+	Corners	コーナー
+	Corners…	コーナー…
+	Create Clipping Mask	クリッピングマスクを作成
+	Create Document	ドキュメントを作成
+	Create From:	作成元:
+	Create Gradient Mesh…	グラデーションメッシュを作成…
+	Create Graph	グラフを作成
+	Create New Layer	新規レイヤーを作成
+	Create New Library	新規ライブラリを作成
+	Create New Library…	新規ライブラリを作成…
+	Create New Sublayer	新規サブレイヤーを作成
+	Create New Swatch…	新規スウォッチを作成…
+	Create New {kind} Style	新しい{kind}スタイルを作成
+	Create Object Mosaic…	モザイクオブジェクトを作成…
+	Create Outlines	アウトラインを作成
+	Create PDF layers from layers and sublayers	レイヤーとサブレイヤーから PDF レイヤーを作成
+	Create PDF-Compatible File	PDF 互換ファイルを作成
+	Create Path	パスを作成
+	Create Report	レポートを作成
+	Create Slice	スライスを作成
+	Create Sub-folders	サブフォルダーを作成
+	Create Text	テキストを作成
+	Create Trim Marks	トリムマークを作成
+	Create from Guides	ガイドから作成
+	Create from Selection	選択範囲から作成
+	Create	作成
+	Create:	作成:
+	Created	作成日
+	Created:	作成日:
+	Crop Image	画像の切り抜き
+	Crop Marks	トリムマーク
+	Crop To	切り抜き範囲
+	Crop	切り抜き
+	Crystallize Tool	結晶ツール
+	Ctrl	Ctrl
+	Currency & Symbols	通貨と記号
+	Current Brush	現在のブラシ
+	Current Colors ({total})	現在のカラー ({total})
+	Current Symbol	現在のシンボル
+	Curvature Tool	カーブツール
+	Curvature	曲線
+	Curves…	トーンカーブ…
+	Custom	カスタム
+	Customize…	カスタマイズ…
+	Cut Artboard	アートボードをカット
+	Cut Path at Selected Anchor Points	選択したアンカーポイントでパスをカット
+	Cut Path	パスをカット
+	Cut	切り取り
+	Cyan	シアン
+	DXF Import Options	DXF 読み込みオプション
+	DXF Info	DXF 情報
+	DXF Options Dialog	DXF オプションダイアログ
+	DXF Options	DXF オプション
+	Dark Gray	ダークグレー
+	Dark	暗い
+	Darken	比較 (暗)
+	Dash Pattern	破線パターン
+	Dashed Line	破線
+	Dashed	破線
+	Data Recovery	データ復帰
+	Data…	データ…
+	Dates	日付
+	Decimal-Justified Tab	小数点揃えタブ
+	Decimal:	小数点以下:
+	Decorative	装飾
+	Decrease Font Size	フォントサイズを小さく
+	Default Actions	初期設定アクション
+	Default Figure	デフォルトの数字
+	Default Fill and Stroke (D)	初期設定の塗りと線 (D)
+	Default Fill and Stroke	初期設定の塗りと線
+	Default Language	既定の言語
+	Default Printer	デフォルトのプリンター
+	Default Swatches	初期設定スウォッチ
+	Default	デフォルト
+	Define Grid…	グリッドを定義…
+	Define Perspective Grid	遠近グリッドを定義
+	Define Perspective Grid…	遠近グリッドを定義…
+	Delete All	すべてを削除
+	Delete Anchor Point Tool	アンカーポイントの削除ツール
+	Delete Anchor Point	アンカーポイントを削除
+	Delete Anchor Points	アンカーポイントを削除
+	Delete Artboard	アートボードを削除
+	Delete Artboards	アートボードを削除
+	Delete Brush	ブラシを削除
+	Delete Character Style	文字スタイルを削除
+	Delete Empty Artboards	空のアートボードを削除
+	Delete Freeform Point	フリーフォームポイントを削除
+	Delete Graphic Style (Alt-click: without asking)	グラフィックスタイルを削除 (Alt+クリック: 確認なし)
+	Delete Graphic Style	グラフィックスタイルを削除
+	Delete Layer	レイヤーを削除
+	Delete Library Item	ライブラリ項目を削除
+	Delete Library	ライブラリを削除
+	Delete Mesh Point	メッシュポイントを削除
+	Delete PDF Preset	PDF プリセットを削除
+	Delete Paragraph Style	段落スタイルを削除
+	Delete Pattern	パターンを削除
+	Delete Perspective Grid Preset	遠近グリッドプリセットを削除
+	Delete Point	ポイントを削除
+	Delete Preset	プリセットを削除
+	Delete Print Preset	プリントプリセットを削除
+	Delete Profile	プロファイルを削除
+	Delete Save for Web Preset	Web 用に保存プリセットを削除
+	Delete Selected Item	選択項目を削除
+	Delete Selection	選択項目を削除
+	Delete Slices	スライスを削除
+	Delete Spine Point	スパインポイントを削除
+	Delete Stop	分岐点を削除
+	Delete Swatch	スウォッチを削除
+	Delete Symbol	シンボルを削除
+	Delete Tab	タブを削除
+	Delete Theme	テーマを削除
+	Delete Transparency Flattener Preset	透明の分割・統合プリセットを削除
+	Delete Width Point	幅ポイントを削除
+	Delete Workspace	ワークスペースを削除
+	Delete the graphic style “{name}”?	グラフィックスタイル「{name}」を削除しますか？
+	Delete the library “{name}”?	ライブラリ「{name}」を削除しますか？
+	Delete theme	テーマを削除
+	Delete these {count} swatches and groups?	これら {count} 個のスウォッチとグループを削除しますか？
+	Delete these {n} graphic styles?	これら {n} 個のグラフィックスタイルを削除しますか？
+	Delete this saved preset	この保存済みプリセットを削除
+	Delete this {n} graphic style?	この {n} 個のグラフィックスタイルを削除しますか？
+	Delete {kind} Style	{kind}スタイルを削除
+	Delete “{name}”?	「{name}」を削除しますか？
+	Delete	削除
+	Depth:	深さ:
+	Descender	ディセンダ
+	Description	説明
+	Description:	説明:
+	Deselect	選択を解除
+	Design…	デザイン…
+	Destination:	出力先:
+	Detail:	詳細:
+	Devices	デバイス
+	Dialog	ダイアログ
+	Diamond	ひし形
+	Difference	差の絶対値
+	Differences from {preset}:	{preset} との違い:
+	Dim Copies to:	コピーの濃さ:
+	Dim Images to:	画像の濃さ:
+	Dimensions	寸法
+	Direct Selection Tool	ダイレクト選択ツール
+	Direction Handles	方向線ハンドル
+	Disable Auto Add/Delete	自動追加/削除機能を使用しない
+	Disable Opacity Mask	不透明マスクを無効にする
+	Discard Empty Type	空のテキストを破棄
+	Discard Recovered Documents	復帰したドキュメントを破棄
+	Discard White Overprint in Output	出力時に白のオーバープリントを破棄
+	Discard	破棄
+	Discarded {} recovered document(s)	復元したドキュメント {} 個を破棄しました
+	Discretionary Hyphen	任意ハイフン
+	Discretionary Ligatures	任意の合字
+	Display All Blacks Accurately	すべてのブラックを正確に表示
+	Display All Blacks as Rich Black	すべてのブラックをリッチブラックで表示
+	Display Bitmaps as Anti-aliased Images in Pixel Preview	ピクセルプレビューでビットマップをアンチエイリアス画像として表示
+	Display Options	表示オプション
+	Display Print Size at 100% Zoom	100% 表示でプリントサイズを表示
+	Display name	表示名
+	Distort & Transform	パスの変形
+	Distort Appearance	アピアランスを変形
+	Distort Linear Gradients	線形グラデーションを変形
+	Distort Pattern Fills	パターン塗りを変形
+	Distortion	変形
+	Distribute Objects:	オブジェクトの分布:
+	Distribute Spacing	等間隔に分布
+	Distribute Spacing:	間隔の分布:
+	Distribute	分布
+	Dither:	ディザ:
+	Divide Horizontally Into	水平方向に分割
+	Divide Objects Below	背面のオブジェクトで型抜き
+	Divide Slices	スライスを分割
+	Divide Slices…	スライスを分割…
+	Divide Vertically Into	垂直方向に分割
+	Divide	分割
+	Do Not Move	移動しない
+	Do you want to save the changes you made to “{name}”?	「{name}」への変更を保存しますか？
+	Dock Panel	パネルをドッキング
+	Document Color Mode	ドキュメントのカラーモード
+	Document Info	ドキュメント情報
+	Document Ink Options	ドキュメントのインキオプション
+	Document JSON	ドキュメント JSON
+	Document Library	ドキュメントライブラリ
+	Document Raster Effects Settings Dialog	ドキュメントのラスタライズ効果設定ダイアログ
+	Document Raster Effects Settings	ドキュメントのラスタライズ効果設定
+	Document Raster Effects Settings…	ドキュメントのラスタライズ効果設定…
+	Document Setup	ドキュメント設定
+	Document Setup…	ドキュメント設定…
+	Document Swatches	ドキュメントのスウォッチ
+	Document Title:	ドキュメントのタイトル:
+	Document open password	ドキュメントを開くパスワード
+	Document profile	ドキュメントプロファイル
+	Document	ドキュメント
+	Documents you create appear here.	作成したドキュメントはここに表示されます。
+	Done	完了
+	Dots	点線
+	Double Click To Isolate	ダブルクリックで分離
+	Double Column	2 列
+	Double Left Quotation Marks	左二重引用符
+	Double Quotes:	二重引用符:
+	Double Right Quotation Marks	右二重引用符
+	Double-click to insert	ダブルクリックで挿入
+	Double-click to rename	ダブルクリックで名前を変更
+	Double-click to target the contents	ダブルクリックで内容をターゲット
+	Double-click	ダブルクリック
+	Download	ダウンロード
+	Download:	ダウンロード:
+	Downloaded {what}	{what} をダウンロードしました
+	Downloaded {} file(s)	{} 個のファイルをダウンロードしました
+	Draft	ドラフト
+	Drag a handle	ハンドルをドラッグ
+	Drag art here, or select it and click +. Hold Alt for one asset of several objects.	アートをここにドラッグするか、選択して＋をクリックします。Alt を押すと、複数のオブジェクトを 1 つのアセットにします。
+	Drag onto art to apply this appearance	アートにドラッグしてこのアピアランスを適用
+	Drag the art to move it on the paper	アートをドラッグして用紙上で移動
+	Drag to float as a toolbar	ドラッグしてツールバーとして浮かせる
+	Drag to float the panel group	ドラッグしてパネルグループをフローティング
+	Drag to float the toolbar	ドラッグしてツールバーをフローティング
+	Drag to move	移動するにはドラッグ
+	Drag	ドラッグ
+	Draw Behind	背面描画
+	Draw Inside	内側描画
+	Draw Normal	標準描画
+	Draw in Perspective	遠近で描画
+	Draw	描画
+	Draw:	描画:
+	Drawing Mode	描画モード
+	Drop Shadow	ドロップシャドウ
+	Drop Shadow…	ドロップシャドウ…
+	Duotone Gradients	ダブルトーングラデーション
+	Duplicate Artboard	アートボードを複製
+	Duplicate Artboards	アートボードを複製
+	Duplicate Brush	ブラシを複製
+	Duplicate Character Style	文字スタイルを複製
+	Duplicate Effect	効果を複製
+	Duplicate Graphic Style	グラフィックスタイルを複製
+	Duplicate Item	項目を複製
+	Duplicate Layer	レイヤーを複製
+	Duplicate Paragraph Style	段落スタイルを複製
+	Duplicate Selected Item	選択項目を複製
+	Duplicate Selection	選択項目を複製
+	Duplicate Slice	スライスを複製
+	Duplicate Swatch	スウォッチを複製
+	Duplicate Symbol	シンボルを複製
+	Duplicate and Offset 10 pt	複製して 10 pt ずらす
+	Duplicate {kind} Style	{kind}スタイルを複製
+	Duplicate	複製
+	Dutch	オランダ語
+	EPS Options Dialog	EPS オプションダイアログ
+	EPS Options	EPS オプション
+	Earth Tones	アーストーン
+	East Asian Type	東アジア言語
+	Edit Artboards	アートボードを編集
+	Edit Clipping Path	クリッピングパスを編集
+	Edit Color Group	カラーグループを編集
+	Edit Colors	カラーを編集
+	Edit Contents	内容を編集
+	Edit Custom Dictionary…	カスタム辞書を編集…
+	Edit Envelope	エンベロープを編集
+	Edit Freeform Point	フリーフォームポイントを編集
+	Edit Gradient	グラデーションを編集
+	Edit Opacity Mask	不透明マスクを編集
+	Edit Original	オリジナルを編集
+	Edit PDF Preset	PDF プリセットを編集
+	Edit Pattern	パターンを編集
+	Edit Print Preset	プリントプリセットを編集
+	Edit Selection	選択範囲を編集
+	Edit Selection…	選択範囲を編集…
+	Edit Symbol	シンボルを編集
+	Edit Text	テキストを編集
+	Edit Theme	テーマを編集
+	Edit Toolbar	ツールバーを編集
+	Edit Views	表示を編集
+	Edit Views…	表示の編集…
+	Edit or Apply Color Group	カラーグループを編集または適用
+	Edit or Apply Color Group…	カラーグループを編集または適用…
+	Edit or Apply Colors	カラーを編集／適用
+	Edit selected paths within:	選択したパスを次の距離以内で編集：
+	Edit the applied effect, or add another one?	適用済みの効果を編集しますか？ それとも別の効果を追加しますか？
+	Edit the stop	分岐点を編集
+	Edit theme	テーマを編集
+	Edit	編集
+	Edit…	編集…
+	Effect Options	効果オプション
+	Effect	効果
+	Effective PPI	実効 PPI
+	Effects	効果
+	Effect…	効果…
+	Ellipse Properties:	楕円形のプロパティ:
+	Ellipse Tool	楕円形ツール
+	Ellipse	楕円形
+	Ellipse…	楕円形…
+	Ellipsis	省略記号
+	Em Box Bottom/Left	仮想ボディの下 / 左
+	Em Box Center	仮想ボディの中央
+	Em Box Top/Right	仮想ボディの上 / 右
+	Em Dash	EM ダッシュ
+	Em Space	EM スペース
+	Embed Fonts (Glyphs Used)	フォントを埋め込む (使用グリフ)
+	Embed Fonts (for other applications)	フォントを埋め込み (他のアプリケーション用)
+	Embed ICC Profile	ICC プロファイルを埋め込む
+	Embed ICC Profiles	ICC プロファイルを埋め込む
+	Embed Image	画像を埋め込み
+	Embed Image(s)	画像を埋め込み
+	Embed page thumbnails	ページサムネールを埋め込む
+	Embed	埋め込み
+	Embedded Image	埋め込み画像
+	Embedded {n} image(s)	{n} 個の画像を埋め込みました
+	Embedded {n} image(s); {missing} missing: relink them first	{n} 個の画像を埋め込みました。{missing} 個が見つかりません：先に再リンクしてください
+	Embedded	埋め込み
+	Emulsion:	乳剤面:
+	En Dash	EN ダッシュ
+	En Space	EN スペース
+	Enable Background Export	バックグラウンドで書き出しを有効にする
+	Enable Background Save	バックグラウンドで保存を有効にする
+	Enable Contextual Task Bar	コンテキストタスクバーを有効にする
+	Enable Missing Glyph Protection	欠落グリフの保護を有効にする
+	Enable Opacity Mask	不透明マスクを有効にする
+	Enable Rubber Band for	ラバーバンドを有効にする対象
+	Enable Touch Gestures	タッチジェスチャーを有効にする
+	Enable Touch Workspace	タッチワークスペースを有効にする
+	Enable copying of text, images and other content	テキスト、イメージ、その他のコンテンツのコピーを許可
+	Enable in-menu font previews	メニュー内でフォントプレビューを有効にする
+	Enable plaintext metadata	プレーンテキストのメタデータを有効にする
+	Enable text access for screen readers	スクリーンリーダー用にテキストアクセスを有効にする
+	Encoding	エンコーディング
+	Encoding:	エンコーディング:
+	Encryption: {name} (set by Compatibility)	暗号化：{name} (互換性の設定による)
+	End arrowhead	終点の矢印
+	English	English
+	English: UK	英語 (英国)
+	English: USA	英語 (米国)
+	Enter Isolation Mode	分離モードに入る
+	Enter	Enter
+	Entire Font	フォント全体
+	Envelope Distort	エンベロープ
+	Envelope Info	エンベロープ情報
+	Envelope Mesh	エンベロープメッシュ
+	Envelope Options	エンベロープオプション
+	Envelope Options…	エンベロープオプション…
+	Eraser Tool	消しゴムツール
+	Eraser	消しゴム
+	Error	エラー
+	Esc	Esc
+	Every (minutes)	間隔 (分)
+	Every option is at its default.	すべてのオプションが初期値です。
+	Every option matches {base}.	すべてのオプションが {base} と同じです。
+	Every-line Composer	すべての行を一括処理
+	Exact dash lengths	破線の長さを正確に保つ
+	Exceptions (comma separated)	例外 (カンマ区切り)
+	Exclude	中マド
+	Exclusion	除外
+	Exit Isolation Mode	分離モードを終了
+	Exit	終了
+	Expand Appearance	アピアランスを分割
+	Expand Brush Strokes	ブラシストロークを拡張
+	Expand Compound Shape	複合シェイプを拡張
+	Expand Gradient Mesh	グラデーションメッシュを拡張
+	Expand Gradient To	グラデーションの拡張先
+	Expand Layers Panel Rows	レイヤーパネルの行を展開
+	Expand Options	拡張オプション
+	Expand Panels	パネルを展開
+	Expand Repeat	リピートを拡張
+	Expand Shape	シェイプを拡張
+	Expand Shaper Group	Shaper グループを拡張
+	Expand applies to compound shapes (Alt-click a shape mode) — on the roadmap	拡張は複合シェイプ (Alt キーを押しながらシェイプモードをクリック)に適用されます。今後対応予定です。
+	Expand	拡張
+	Expand:	拡張:
+	Expand…	分割・拡張…
+	Export All…	すべて書き出し…
+	Export Artboard	アートボードを書き出し
+	Export As PNG…	PNG として書き出し…
+	Export As SVG…	SVG として書き出し…
+	Export As	形式を指定して書き出し
+	Export Asset	アセットを書き出し
+	Export Assets	アセットを書き出し
+	Export As…	形式を指定して書き出し…
+	Export CSS	CSS を書き出し
+	Export CSS…	CSS を書き出し…
+	Export DXF	DXF を書き出し
+	Export Document	ドキュメントを書き出し
+	Export EPS	EPS を書き出し
+	Export Keyboard Shortcuts…	キーボードショートカットを書き出し…
+	Export Option	書き出しオプション
+	Export PDF Presets	PDF プリセットを書き出し
+	Export PDF	PDF を書き出し
+	Export Perspective Grid Presets	遠近グリッドプリセットを書き出し
+	Export Print Presets	プリントプリセットを書き出し
+	Export Selected Art Only	選択したアートのみ書き出し
+	Export Selected CSS…	選択した CSS を書き出し…
+	Export Selection…	選択範囲を書き出し…
+	Export Settings	書き出し設定
+	Export Transparency Flattener Presets	透明の分割・統合プリセットを書き出し
+	Export and Clipboard Transparency Flattener Settings	書き出しとクリップボードの透明の分割・統合設定
+	Export for Screens Settings	スクリーン用に書き出しの設定
+	Export for Screens	スクリーン用に書き出し
+	Export for Screens…	スクリーン用に書き出し…
+	Export the selected assets (else all of them)	選択したアセットを書き出し (未選択の場合はすべて)
+	Export to:	書き出し先:
+	Export {count} Selected	選択した {count} 個を書き出し
+	Export	書き出し
+	Export:	書き出し:
+	Exported {count} file(s) to {folder}	{folder} に {count} 個のファイルを書き出しました
+	Exported {path}	{path} を書き出しました
+	Exported {what} with {} note(s): {first}	{what} を書き出しました (注意 {} 件：{first})
+	Exported {what}	{what} を書き出しました
+	Exporting {}	{} を書き出し中
+	Export…	書き出し…
+	Extrude & Bevel…	押し出しとベベル…
+	Eyedropper Applies:	スポイトの適用:
+	Eyedropper Options	スポイトオプション
+	Eyedropper Picks Up:	スポイトの抽出:
+	Eyedropper Tool	スポイトツール
+	Eyedropper	スポイト
+	Favorites	お気に入り
+	Feather…	ぼかし…
+	Feet & Inches	フィート・インチ
+	Feet	フィート
+	Fewer <tspan> Elements	<tspan>要素を減らす
+	Fidelity:	精度:
+	Figure Space	数字スペース
+	Figure:	数字:
+	File Dimensions	ファイルの寸法
+	File Format:	ファイル形式:
+	File Formats	ファイル形式
+	File Handling	ファイル管理
+	File Info Dialog	ファイル情報ダイアログ
+	File Info	ファイル情報
+	File Info…	ファイル情報…
+	File Name:	ファイル名:
+	File › Place… brings in an image, linked or embedded.	ファイル › 配置… で、画像をリンクまたは埋め込みで読み込めます。
+	File	ファイル
+	Files of this standard tag their colours with ICC profiles.	この規格のファイルでは、カラーに ICC プロファイルが付けられます。
+	Files	ファイル
+	Fill & Stroke	塗りと線
+	Fill (X), double-click for the Color Picker	塗り (X)、ダブルクリックでカラーピッカー
+	Fill Color	カラー (塗り)
+	Fill New Type Objects With Placeholder Text	新規テキストオブジェクトをダミーテキストで埋める
+	Fill Rule	塗りのルール
+	Fill and Stroke	塗りと線
+	Fill new strokes	新しいストロークに塗りを適用
+	Fill with Placeholder Text	サンプルテキストの割り付け
+	Fill	塗り
+	Fill: click for swatches, Shift-click for the color mixer	塗り: クリックでスウォッチ、Shift キーを押しながらクリックでカラーミキサー
+	Fill:	塗り:
+	Fills	塗り
+	Find Font	フォントを検索
+	Find Font…	フォントの検索と置換…
+	Find Next	次を検索
+	Find Objects	オブジェクトを検索
+	Find and Replace…	検索と置換…
+	Find	検索
+	First Page	最初のページ
+	First commit	最初のコミット
+	First	最初
+	First-line Left Indent	1 行目左インデント
+	Fisheye…	魚眼レンズ…
+	Fish…	魚形…
+	Fit All in Window	すべてのアートボードを全体表示
+	Fit All	すべてをフィット
+	Fit Artboard in Window	アートボードを全体表示
+	Fit Headline	ヘッドラインを合わせる
+	Fit dashes to corners and ends	破線をコーナーと端点に合わせる
+	Fit in View	表示に合わせる
+	Fit in Window	ウィンドウに合わせる
+	Fit on Screen	画面にフィット
+	Fit to Artwork Bounds	アートワーク境界に合わせる
+	Fit to Selected Art	選択オブジェクトに合わせる
+	Flag…	旗…
+	Flare Tool Options	フレアツールオプション
+	Flare Tool	フレアツール
+	Flare	フレア
+	Flat Image	統合イメージ
+	Flat Logo	フラットロゴ
+	Flatness:	フラットネス:
+	Flatten Artwork	アートワークを統合
+	Flatten Transparency	透明部分を分割・統合
+	Flatten Transparency…	透明部分を分割・統合…
+	Flattener Preview	分割・統合プレビュー
+	Flattener preset:	分割・統合プリセット:
+	Flattener presets	分割・統合プリセット
+	Flip Across	反転 (横方向)
+	Flip Along Horizontal Axis	水平軸に沿って反転
+	Flip Along Vertical Axis	垂直軸に沿って反転
+	Flip Along	反転 (縦方向)
+	Flip Horizontal	左右反転
+	Flip Row Order	行の順序を反転
+	Flip Vertical	上下反転
+	Flip	反転
+	Float Panel	パネルをフローティング
+	Float Tool Group	ツールグループをフローティング
+	Float in Window	ウィンドウを分離
+	Focal Fill	焦点の塗り
+	Focal Stroke	焦点の線
+	Folder Name:	フォルダー名:
+	Folder	フォルダー
+	Font Family & Style	フォントファミリー (スタイル)
+	Font Family	フォントファミリー
+	Font Family, Style & Size	フォントファミリー (スタイルとサイズ)
+	Font List	フォントリスト
+	Font Preview Size	フォントプレビューのサイズ
+	Font Size	フォントサイズ
+	Font	フォント
+	Font:	フォント:
+	Fonts in Document	ドキュメント内のフォント
+	Fonts in Document: {count}	ドキュメントのフォント：{count}
+	Fonts	フォント
+	Force	強制
+	Forced Line Break	強制改行
+	Format Options	形式オプション
+	Format Settings	形式の設定
+	Format	形式
+	Format:	形式:
+	Formats:	形式:
+	Fractional Widths	分数幅
+	Fractions	分数
+	Free Distort	自由変形
+	Free Distort…	パスの自由変形…
+	Free Transform Tool	自由変形ツール
+	Free Transform	自由変形
+	Free	自由
+	Freeform Gradient	フリーフォームグラデーション
+	French	フランス語
+	Frequency	線数
+	Full Document	ドキュメント全体
+	Full Screen Mode with Menu Bar	メニュー付きフルスクリーンモード
+	Full Screen Mode	フルスクリーンモード
+	Full Tone	フルトーン
+	GPL palettes keep solid colours only, as RGB.	GPL パレットにはベタ塗りのカラーのみが RGB で保存されます。
+	GPU Performance	GPU パフォーマンス
+	Gamma	ガンマ
+	Gamut Check	色域チェック
+	Gamut Warning	色域外警告
+	Gap Options…	間隔オプション…
+	Gaussian Blur	ぼかし (ガウス)
+	Gaussian Blur…	ぼかし (ガウス)…
+	General › Placement › X	一般 › 位置 › X
+	General › Thumbnails	一般 › サムネール
+	General	一般
+	Generate CSS	CSS を生成
+	German	ドイツ語
+	Get Preferences	環境設定を取得
+	Get Text Range	テキスト範囲を取得
+	Global Brush Dimensions	ブラシサイズ (共通)
+	Global Process Color	グローバルプロセスカラー
+	Global Process Color, CMYK	グローバルプロセスカラー、CMYK
+	Global	グローバル
+	Glyphs	字形
+	Go To Link	リンク元へ移動
+	Go to Artboard	アートボードへ移動
+	Good	標準
+	Grab bag	まとめて表示
+	Gradient (.)	グラデーション (.)
+	Gradient Fill: click to apply, drag onto art	グラデーションの塗り: クリックで適用、アートにドラッグ
+	Gradient Finishes	グラデーション仕上げ
+	Gradient Mesh	グラデーションメッシュ
+	Gradient Tool	グラデーションツール
+	Gradient Vector	グラデーションベクトル
+	Gradient across stroke	線に交差するグラデーション
+	Gradient along stroke	線に沿ったグラデーション
+	Gradient and Mesh Resolution:	グラデーションとメッシュの解像度:
+	Gradient swatches	グラデーションスウォッチ
+	Gradient within stroke	線内のグラデーション
+	Gradient	グラデーション
+	Gradients	グラデーション
+	Graph Data	グラフデータ
+	Graph Type	グラフの種類
+	Graph	グラフ
+	Graphic Style Libraries Menu	グラフィックスタイルライブラリメニュー
+	Graphic Style Libraries	グラフィックスタイルライブラリ
+	Graphic Style Library	グラフィックスタイルライブラリ
+	Graphic Style Options	グラフィックスタイルオプション
+	Graphic Style Options…	グラフィックスタイルオプション…
+	Graphic Style	グラフィックスタイル
+	Graphic Styles Options	グラフィックスタイルオプション
+	Graphic Styles	グラフィックスタイル
+	Graphic	グラフィック
+	Graphics Processor	グラフィックプロセッサー
+	Graphics	グラフィックス
+	Graphics: {adapter}	グラフィックス: {adapter}
+	Gravity	引力
+	Grays and Neutrals	グレーとニュートラル
+	Grays	グレー
+	Grayscale images	グレースケールイメージ
+	Grayscale	グレースケール
+	Greek & Cyrillic	ギリシャ文字とキリル文字
+	Green	グリーン
+	Grid Color & Opacity	グリッドのカラーと不透明度
+	Grid Colors:	グリッドのカラー:
+	Grid Size:	グリッドのサイズ:
+	Grid by Column	列ごとのグリッド
+	Grid by Row	行ごとのグリッド
+	Grid	グリッド
+	Gridline every	グリッド線の間隔
+	Gridline every:	グリッド線の間隔:
+	Grids In Back	グリッドを背面に表示
+	Group Selection Tool	グループ選択ツール
+	Group	グループ
+	Guides & Grid	ガイド・グリッド
+	Guides	ガイド
+	H Spacing:	水平方向の間隔:
+	H:	H:
+	Hair Space	極細スペース
+	Hand Tool	手のひらツール
+	Hand-Drawn	手描き風
+	Handles	ハンドル
+	Hard Light	ハードライト
+	Hard	強い禁則
+	Harmony Rules:	ハーモニールール:
+	Harmony Sets	ハーモニーセット
+	Height	高さ
+	Height:	高さ:
+	Help › Search Commands…	ヘルプ › コマンドを検索…
+	Help	ヘルプ
+	Hex by Column	六角形 (列)
+	Hex by Row	六角形 (行)
+	Hide Artboards	アートボードを隠す
+	Hide Bar	バーを隠す
+	Hide Bounding Box	バウンディングボックスを隠す
+	Hide Code	コードを隠す
+	Hide Corner Widget for angles greater than	次の角度より大きい場合はコーナーウィジェットを隠す
+	Hide Corner Widget	コーナーウィジェットを隠す
+	Hide Edges	エッジを隠す
+	Hide Gradient Annotator	グラデーションガイドを隠す
+	Hide Grid	グリッドを隠す
+	Hide Guides	ガイドを隠す
+	Hide Hidden Characters	制御文字を隠す
+	Hide Note	メモを隠す
+	Hide Options	オプションを隠す
+	Hide Others	その他を隠す
+	Hide Print Tiling	プリント分割を隠す
+	Hide Rulers	定規を隠す
+	Hide Slices	スライスを隠す
+	Hide TerraZone	TerraZone を隠す
+	Hide Text Threads	テキストのスレッドを隠す
+	Hide Thumbnail	サムネールを隠す
+	Hide Thumbnails	サムネールを隠す
+	Hide Transparency Grid	透明グリッドを隠す
+	Hide	隠す
+	High (300 ppi)	高 (300 ppi)
+	High Performance (discrete)	高パフォーマンス (専用 GPU)
+	High	高
+	Highlight Alternate Glyphs	代替字形をハイライト
+	Highlight Rows	行をハイライト
+	Highlight Substituted Fonts	置換フォントをハイライト
+	Highlight Substituted Glyphs	置換字形をハイライト
+	Highlight anchors on mouse over	マウスオーバー時にアンカーをハイライト
+	History Options…	ヒストリーオプション…
+	History States	ヒストリー数
+	History	履歴
+	Hold	長押し
+	Hollow	中空
+	Home	ホーム
+	Horizon Height:	水平線の高さ:
+	Horizontal %	水平方向 %
+	Horizontal Align Center	水平方向中央に整列
+	Horizontal Align Left	水平方向左に整列
+	Horizontal Align Right	水平方向右に整列
+	Horizontal Distribute Center	水平方向中央に分布
+	Horizontal Distribute Left	水平方向左に分布
+	Horizontal Distribute Right	水平方向右に分布
+	Horizontal Distribute Space	水平方向等間隔に分布
+	Horizontal Grid:	水平グリッド:
+	Horizontal Plane	水平面
+	Horizontal Scale %	水平比率 %
+	Horizontal	横書き
+	Horizontal:	水平方向:
+	Hue	色相
+	Hue/Saturation…	色相・彩度…
+	Hyphenate	ハイフネーション
+	Hyphenation	ハイフネーション
+	Hyphenation…	ハイフネーション…
+	ICC Profile	ICC プロファイル
+	ICF Bottom/Left	平均字面の下 / 左
+	ICF Top/Right	平均字面の上 / 右
+	Identify Objects By	オブジェクトの識別方法
+	Ignore Artboards (all the art as one page)	アートボードを無視 (すべてのアートを 1 ページとして扱う)
+	Ignore White	白を無視
+	Ignore	無視
+	Image Info	画像情報
+	Image Map:	イメージマップ:
+	Image Size	イメージサイズ
+	Image Trace Presets	画像トレースプリセット
+	Image Trace View	画像トレースの表示
+	Image Trace	画像トレース
+	Image Tracing	画像トレースオブジェクト
+	Image	画像
+	Image:	イメージ:
+	Images: link to the file instead of only embedding it.	画像：埋め込むだけでなく、ファイルにリンクします。
+	Images:	イメージ:
+	Import Keyboard Shortcuts…	キーボードショートカットを読み込み…
+	Import PDF Presets	PDF プリセットを読み込み
+	Import PDF	PDF を読み込み
+	Import Perspective Grid Presets	遠近グリッドプリセットを読み込み
+	Import Print Presets	プリントプリセットを読み込み
+	Import Transparency Flattener Presets	透明の分割・統合プリセットを読み込み
+	Imported {what}: {}	{what} を読み込みました：{}
+	Import…	読み込み…
+	In Tangent Handles	入る側のハンドル
+	In the selected objects	選択したオブジェクト内
+	Inches	インチ
+	Include Blacks with CMY:	CMY にブラックを含める:
+	Include Bleed	裁ち落としを含める
+	Include CMYK PostScript in RGB Files	RGB ファイルに CMYK PostScript を含める
+	Include Cmy Blacks	CMY ブラックを含める
+	Include Document Thumbnails	ドキュメントのサムネールを含める
+	Include Hidden Layers	非表示レイヤーを含む
+	Include Linked Files	リンクファイルを含める
+	Include Metadata	メタデータを含む
+	Include SVG Code	SVG コードを含める
+	Include Swatches for Tints	ティント用のスウォッチを含める
+	Include non-printing layers	印刷しないレイヤーを含む
+	Increase Font Size	フォントサイズを大きく
+	Inflate…	膨張…
+	Info	情報
+	Ink	インキ
+	Inner Glow…	光彩 (内側)…
+	Input Black	入力ブラック
+	Input White	入力ホワイト
+	Insert Break Character	分割文字を挿入
+	Insert Character	文字を挿入
+	Insert Inline Symbol	インラインシンボルを挿入
+	Insert Special Character	特殊文字を挿入
+	Insert Whitespace Character	空白文字を挿入
+	Inspect Document	ドキュメントを調査
+	Inspect Object	オブジェクトを調査
+	Install Plug-in	プラグインをインストール
+	Install Plug-in…	プラグインをインストール…
+	Installed plug-in {}	プラグイン {} をインストールしました
+	Intensity:	強度:
+	Intent:	インテント:
+	Interface Language	表示言語
+	Interlaced	インターレース
+	Internal CSS	内部 CSS
+	Internet Standard RGB (sRGB)	インターネット標準 RGB（sRGB）
+	Intersect	交差
+	Inverse	選択範囲を反転
+	Invert Colors	カラー反転
+	Invert Mask	マスクを反転
+	Invert Pie	扇形を反転
+	Invert	反転
+	Inverted Round	反転した丸型
+	Isolate Blending	描画モードを分離
+	Isolate Group	グループを分離
+	Isolate Selected Group	選択したグループを分離
+	Isolate	分離
+	Italian	イタリア語
+	Italic	斜体
+	Its graphics, colors and text styles are deleted from this machine.	グラフィック、カラー、テキストスタイルはこのコンピューターから削除されます。
+	Japanese	日本語
+	Join Tool	結合ツール
+	Join the TerraZone community (terrazon.app/community)	TerraZone コミュニティに参加 (terrazon.app/community)
+	Join the lines of each paragraph	段落内の行を連結
+	Join	連結
+	Joins	角の形状
+	Justification…	文字組み…
+	Justify all lines	両端揃え (最終行も均等配置)
+	Justify with last line aligned center	両端揃え (最終行中央揃え)
+	Justify with last line aligned left	両端揃え (最終行左揃え)
+	Justify with last line aligned right	両端揃え (最終行右揃え)
+	Keep Formatting	書式を保持
+	Keep Original	オリジナルを保持
+	Keep Plain Text	テキストのみを保持
+	Keep a link to an image file instead of only embedding it	画像ファイルを埋め込むだけでなくリンクも保持
+	Keep both sides the same width	両側を同じ幅に保つ
+	Keep graphics, colors and text styles here to use them in any document. Libraries are stored on this machine — no account required.	グラフィック、カラー、テキストスタイルをここに保存すると、どのドキュメントでも使えます。ライブラリはこのコンピューターに保存され、アカウントは不要です。
+	Keep the pasted color as a new swatch with a numbered name.	ペーストしたカラーを、番号付きの名前で新規スウォッチとして残します。
+	Keep:	保持:
+	Kerning (0 = Auto)	カーニング (0 = 自動)
+	Keyboard Increment	キー入力
+	Keyboard Shortcut Conflicts	キーボードショートカットの競合
+	Keyboard Shortcut Set	キーボードショートカットセット
+	Keyboard Shortcuts…	キーボードショートカット…
+	Keywords:	キーワード:
+	Kinsoku Set	禁則処理
+	Knife	ナイフ
+	Knockout Group	グループの抜き
+	LZW Compression	LZW 圧縮
+	Lab Spot Colors:	Lab スポットカラー:
+	Lab Values	Lab 値
+	Lab	Lab
+	Landscape	横置き
+	Language Options	言語オプション
+	Language	表示言語
+	Language:	言語:
+	Large List View	大きいリスト表示
+	Large Tabs	大きいタブ
+	Large Thumbnail View	大きいサムネール表示
+	Large Thumbnails	大きいサムネール
+	Large	大
+	Lasso Tool	なげなわツール
+	Last Effect: {name}	最後の効果：{name}
+	Last Effect: {}	最後の効果：{}
+	Last Effect…	前回の効果…
+	Last Page	最後のページ
+	Last commit	最後のコミット
+	Last	最後
+	Latin Extended	ラテン拡張
+	Latin	欧文
+	Latin-1 Supplement	ラテン 1 補助
+	Layer Names	レイヤー名
+	Layer Options	レイヤーオプション
+	Layer Options…	レイヤーオプション…
+	Layer	レイヤー
+	Layers Panel Options	レイヤーパネルオプション
+	Layers	レイヤー
+	Layout Order:	レイアウト順序:
+	Layout:	レイアウト:
+	Leader:	リーダー:
+	Leading	行送り
+	Left Grid:	左グリッド:
+	Left Indent	左インデント
+	Left Plane	左面
+	Left in Front	左が前面
+	Left	左
+	Left-Justified Tab	左揃えタブ
+	Left-to-Right Paragraph Direction	左から右への段落方向
+	Left:	左:
+	Legacy Macintosh RGB (Gamma 1.8)	従来の Macintosh RGB（ガンマ 1.8）
+	Legacy vector clipboard (no transparency)	従来のベクタークリップボード (透明なし)
+	Legacy vector clipboard	従来のベクタークリップボード
+	Less	少なく
+	Letter	レター
+	Levels…	レベル補正…
+	Libraries	ライブラリ
+	Library	ライブラリ
+	Library:	ライブラリ:
+	Ligatures are off while the text is tracked.	テキストにトラッキングが設定されている間、合字は無効です。
+	Light Blue	ライトブルー
+	Light Gray	ライトグレー
+	Light	明るい
+	Lighten	比較 (明)
+	Lightness	明度
+	Limit Color Guide to Library	カラーガイドをライブラリに限定
+	Limit colors to swatch library	カラーをスウォッチライブラリに限定
+	Limit colors to swatch library: {name}	カラーをスウォッチライブラリに限定：{name}
+	Limit to Library:	ライブラリに限定:
+	Limit:	比率:
+	Limited	限定
+	Line Art and Text Resolution:	ラインアートとテキストの解像度:
+	Line Breaks	改行
+	Line Color	線の色
+	Line Cut Tool	ラインカットツール
+	Line Cut	直線でカット
+	Line Endings:	改行コード:
+	Line Graph Tool	折れ線グラフツール
+	Line Segment Tool Options	直線ツールオプション
+	Line Segment Tool	直線ツール
+	Line Segment	直線ツール
+	Line delta	行数の増減
+	Line	直線
+	Line-end Punctuation Half Width	行末約物半角
+	Linear Gradient	線形グラデーション
+	Lines +/−	行数 +/−
+	Lines added	追加した行数
+	Lines deleted	削除した行数
+	Lines	線
+	Lines: clicks add points joined by a line	線: クリックでポイントを追加し、線で結ぶ
+	Link Info	リンク情報
+	Link Opacity Mask	不透明マスクをリンク
+	Link harmony colors	ハーモニーカラーをリンク
+	Link start and end arrowhead scales	始点と終点の矢印の拡大・縮小をリンク
+	Link the mask	マスクをリンク
+	Link	リンク
+	Linked File Not Found	リンクファイルが見つかりません
+	Linked File	リンクファイル
+	Linked	リンク済み
+	Links	リンク
+	Liquify	ゆがみ
+	List Graphic Styles	グラフィックスタイル一覧
+	List Keyboard Shortcuts	キーボードショートカットの一覧
+	List Patterns	パターン一覧
+	List Plug-ins	プラグイン一覧
+	List Preferences	環境設定一覧
+	List Slices	スライス一覧
+	List View	リスト表示
+	List Workspaces	ワークスペースの一覧
+	Live Paint Bucket (Stroke)	ライブペイントツール (線)
+	Live Paint Bucket	ライブペイントツール
+	Live Paint Info	ライブペイント情報
+	Live Paint Selection Tool	ライブペイント選択ツール
+	Live Paint	ライブペイント
+	Live Shape Properties	ライブシェイプのプロパティ
+	Load Color Profile…	カラープロファイルを読み込む…
+	Load Image into Clipboard	画像をクリップボードに読み込む
+	Load Metafile into Clipboard	メタファイルをクリップボードに読み込む
+	Load PDF into Clipboard	PDF をクリップボードに読み込む
+	Load Place Cursor	配置カーソルを読み込み
+	Load Profile…	プロファイルを読み込み…
+	Load SVG into Clipboard	SVG をクリップボードに読み込む
+	Load Text into Clipboard	テキストをクリップボードに読み込む
+	Local Libraries	ローカルライブラリ
+	Locate Object	オブジェクトを検索
+	Location	場所
+	Location:	位置:
+	Lock (⌘2)	ロック (⌘2)
+	Lock Grid	グリッドをロック
+	Lock Guides	ガイドをロック
+	Lock Others	その他をロック
+	Lock Slices	スライスをロック
+	Lock Station Point	視点をロック
+	Lock	ロック
+	Lossy:	圧縮率:
+	Low	低
+	Luminosity	輝度
+	Mac	Mac
+	Magenta	マゼンタ
+	Magic Wand Options	自動選択オプション
+	Magic Wand Settings	自動選択設定
+	Magic Wand Tool	自動選択ツール
+	Magic Wand	自動選択
+	Maintain Envelope Shape	エンベロープの形状を保持
+	Make Clipping Mask	クリッピングマスクを作成
+	Make Compound Path	複合パスを作成
+	Make Compound Shape	複合シェイプを作成
+	Make Envelope	エンベロープを作成
+	Make Guides	ガイドを作成
+	Make Mask	マスクを作成
+	Make Opacity Mask	不透明マスクを作成
+	Make Pixel Perfect	ピクセルグリッドに最適化
+	Make a theme on Create and save it.	「作成」でテーマを作成して保存します。
+	Make all bleed settings the same	すべての裁ち落とし設定を同じにする
+	Make and Expand	作成して拡張
+	Make the bleed values differ	裁ち落とし値を個別に設定
+	Make with Mesh…	メッシュで作成…
+	Make with Top Object	最前面のオブジェクトで作成
+	Make with Warp…	ワープで作成…
+	Make	作成
+	Make/Release Clipping Mask	クリッピングマスクを作成／解除
+	Manage Workspaces	ワークスペースを管理
+	Manage Workspaces…	ワークスペースを管理…
+	Manually	手動
+	Mark Older Files as [Converted] When Opened	古いファイルを開くときに[変換]と表示
+	Mark as trapped	トラップ済みとしてマーク
+	Marker…	マーカー…
+	Marks and Bleed	トンボと裁ち落とし
+	Marks and Bleeds	トンボと裁ち落とし
+	Marks	トンボ
+	Mask	マスク
+	Match User Interface Brightness	ユーザーインターフェイスの明るさに合わせる
+	Materials…	マテリアル…
+	Matte	マット
+	Matte:	マット:
+	Maximize	最大化
+	Maximum Editability	編集機能を最大限に保持
+	Maximum	最高
+	Measure Tool	ものさしツール
+	Measurement Labels	計測ラベル
+	Media	メディア
+	Medium (150 ppi)	中 (150 ppi)
+	Medium Dark	やや暗い
+	Medium Gray	ミディアムグレー
+	Medium Light	やや明るい
+	Medium Thumbnail View	中サムネール表示
+	Medium Thumbnails	中サムネール
+	Medium	中
+	Menu Dialog	メニューダイアログ
+	Merge Graphic Styles	グラフィックスタイルを統合
+	Merge Graphic Styles…	グラフィックスタイルを統合…
+	Merge Layers	レイヤーを統合
+	Merge Selected	選択レイヤーを結合
+	Merge Swatches	スウォッチを統合
+	Merge colors into one row	カラーを 1 行に統合
+	Merge	結合
+	Merged PRs	マージされた PR
+	Mesh Tool	メッシュツール
+	Message:	メッセージ:
+	Metadata:	メタデータ:
+	Metallic Gradients	メタリックグラデーション
+	Meters	メートル
+	Method	方法
+	Method:	方法:
+	Millimeters	ミリメートル
+	Minify	最小化
+	Minimal	最小
+	Minimize	最小化
+	Minus Back	背面オブジェクトで型抜き
+	Minus Front	前面オブジェクトで型抜き
+	Mirror & Cut Tool	ミラー＆カットツール
+	Mirror & Cut	ミラーしてカット
+	Mirror	ミラー
+	Missing	見つかりません
+	Missing: {path}	見つかりません：{path}
+	Miter Join	マイター結合
+	Miter Limit	角の比率
+	Miter Limit:	角の比率:
+	Miter	マイター
+	Mixed Appearances	混在したアピアランス
+	Mixed Objects	混在したオブジェクト
+	Mode:	モード:
+	Model	モデル
+	Models	モデル
+	Modified since it was read: {path}	読み込み後に変更されています：{path}
+	Modified	更新日
+	Modified:	更新日:
+	Modify	修正
+	Mojikumi Set	文字組み
+	Monitor RGB	モニター RGB
+	Mono	モノクロ
+	Monochrome images	モノクロイメージ
+	Monospaced	等幅
+	More Options	その他のオプション
+	More Pathfinder options	その他のパスファインダーオプション
+	More Settings	その他の設定
+	More	多く
+	Move All Objects	すべてのオブジェクトを移動
+	Move Anchors	アンカーポイントを移動
+	Move Appearance	アピアランスを移動
+	Move Artboard Up/Down	アートボードを上下に移動
+	Move Artboard	アートボードを移動
+	Move Artwork with Artboard	アートボードと一緒にアートワークを移動
+	Move Direction Handle	方向線を移動
+	Move Down	下へ移動
+	Move Effect	効果を移動
+	Move Envelope Mesh Point	エンベロープのメッシュポイントを移動
+	Move Graphic Style	グラフィックスタイルを移動
+	Move Guide	ガイドを移動
+	Move Locked and Hidden Artwork with Artboard	ロックおよび非表示のアートワークをアートボードと一緒に移動
+	Move Mesh Point	メッシュポイントを移動
+	Move Plane to Match Object	オブジェクトに合わせて面を移動
+	Move Plane	面を移動
+	Move Rows	行を移動
+	Move Slices	スライスを移動
+	Move Spine Point	スパインポイントを移動
+	Move Swatch	スウォッチを移動
+	Move Up	上へ移動
+	Move in Perspective	遠近で移動
+	Move	移動
+	Move…	移動…
+	Multiply	乗算
+	My Themes	マイテーマ
+	N pt per	N pt ごと
+	N slices …, evenly spaced	N 個のスライスに均等に分割
+	Name (A–Z)	名前 (A–Z)
+	Name	名前
+	Name:	名前:
+	Navigate	ナビゲート
+	Navigator	ナビゲーター
+	Needs the desktop app	デスクトップアプリが必要です
+	Neutral Gradients	ニュートラルグラデーション
+	New Art Appearance	新規アートのアピアランス
+	New Art Brush from Selection	選択範囲から新規アートブラシ
+	New Art Has Basic Appearance	新規アートに基本アピアランスを使用
+	New Artboard	新規アートボード
+	New Bristle Brush	新規剛毛ブラシ
+	New Brush…	新規ブラシ…
+	New Calligraphic Brush	新規絵筆ブラシ
+	New Character Style	新規文字スタイル
+	New Color Group	新規カラーグループ
+	New Color Group…	新規カラーグループ…
+	New Document Presets	新規ドキュメントプリセット
+	New Graphic Style (Alt-click to name it)	新規グラフィックスタイル (Alt+クリックで名前を指定)
+	New Graphic Style	新規グラフィックスタイル
+	New Graphic Style…	新規グラフィックスタイル…
+	New Layer Options…	新規レイヤーオプション…
+	New Layer…	新規レイヤー…
+	New Opacity Masks Are Clipping	新規不透明マスクをクリップに設定
+	New Opacity Masks Are Inverted	新規不透明マスクを反転に設定
+	New PDF Preset	新規 PDF プリセット
+	New Paragraph Style	新規段落スタイル
+	New Pattern Brush from Selection	選択範囲から新規パターンブラシ
+	New Print Preset	新規プリントプリセット
+	New Scatter Brush from Selection	選択範囲から新規散布ブラシ
+	New Sublayer…	新規サブレイヤー…
+	New Swatch	新規スウォッチ
+	New Swatch…	新規スウォッチ…
+	New Symbol	新規シンボル
+	New Symbol…	新規シンボル…
+	New View	新規表示
+	New View…	新規表示…
+	New Window	新規ウィンドウ
+	New Workspace	新規ワークスペース
+	New Workspace…	新規ワークスペース…
+	New file	新規ファイル
+	New from Template	テンプレートから新規作成
+	New from Template…	テンプレートから新規…
+	New theme from the current color	現在のカラーから新規テーマ
+	New {kind} Style…	新規{kind}スタイル…
+	New	新規
+	New…	新規…
+	Next Library	次のライブラリ
+	Next Object Above	前面のオブジェクト
+	Next Object Below	背面のオブジェクト
+	Next Page	次のページ
+	Next page	次のページ
+	Next	次へ
+	No Break	分割禁止
+	No CSS	CSS なし
+	No Document	ドキュメントなし
+	No Selection	選択なし
+	No Thumbnails	サムネールなし
+	No actions. Press ● to record.	アクションがありません。●を押して記録します。
+	No assets yet. Collect art with Object › Collect for Export, or drag it into the Asset Export panel.	アセットはまだありません。オブジェクト › 書き出し用に収集でアートを集めるか、アセットの書き出しパネルにドラッグしてください。
+	No assets	アセットなし
+	No brushes	ブラシなし
+	No colors to recolor (preserved colors are left out).	再配色するカラーがありません (保持されたカラーは除外されます)。
+	No contributor data was built into this copy.	このビルドには貢献者のデータが含まれていません。
+	No document open	ドキュメントが開かれていません
+	No document open.	ドキュメントが開かれていません。
+	No document	ドキュメントがありません
+	No filter plug-ins installed	フィルタープラグインはインストールされていません
+	No fonts are available.	使用できるフォントがありません。
+	No gradient swatches	グラデーションスウォッチがありません
+	No graphic styles	グラフィックスタイルがありません
+	No images	画像がありません
+	No matches.	一致する項目がありません。
+	No matching fonts	一致するフォントがありません
+	No model credits were built into this copy.	このビルドにはモデルのクレジットが含まれていません。
+	No options	オプションなし
+	No printer settings to open here	ここで開けるプリンター設定はありません
+	No saved themes	保存したテーマはありません
+	No saved views (View → New View…)	保存した表示はありません (表示 → 新規表示…)
+	No selection	選択なし
+	No symbols in this document	このドキュメントにシンボルはありません
+	No text selected	テキストが選択されていません
+	Noise	ノイズ
+	Nonbreaking Hyphen	分散禁止ハイフン
+	Nonbreaking Space	改行なしスペース
+	None (/)	なし (/)
+	None (keep transparency)	なし (透明を保持)
+	None	なし
+	None.	なし。
+	Normal Screen Mode	標準スクリーンモード
+	Normal	通常
+	Note:	メモ:
+	Nothing matches the Show filter.	表示フィルターに一致する項目がありません。
+	Nothing to print	プリントするものがありません
+	Nudge in Perspective	遠近で微調整
+	Nudge	微調整
+	Number of Artboards:	アートボードの数:
+	Number of Colors:	カラー数:
+	Number of Recent Files to Display	最近使ったファイルの表示数
+	Number of Recent Fonts	最近使ったフォントの数
+	Numbers Without Units Are Points	単位なしの数値はポイントとして扱う
+	OK	OK
+	Object Highlighting	オブジェクトのハイライト
+	Object IDs:	オブジェクト ID:
+	Object Name	オブジェクト名
+	Object Properties	オブジェクトのプロパティ
+	Object Selection by Path Only	パスのみでオブジェクトを選択
+	Object	オブジェクト
+	Objects using them keep their look but are no longer linked.	使用しているオブジェクトの見た目は変わりませんが、リンクは解除されます。
+	Objects	オブジェクト
+	Off	オフ
+	Off: an editable copy of its art, embedded in this document.	オフ：アートの編集可能なコピーをこのドキュメントに埋め込みます。
+	Offset Path	パスのオフセット
+	Offset Path…	パスのオフセット…
+	Offset X	X 軸オフセット
+	Offset	オフセット
+	Offset:	オフセット:
+	On Copy	コピー時
+	On Paste	ペースト時
+	On Screen	画面上
+	On	オン
+	On: one locked object showing the document, updated when it changes.	オン：ドキュメントを表示するロックされた 1 つのオブジェクト。ドキュメントの変更時に更新されます。
+	One Point Perspective Preset 1	1 点遠近法プリセット 1
+	One Point Perspective Preset 2	1 点遠近法プリセット 2
+	One Point Perspective Preset 3	1 点遠近法プリセット 3
+	One Point Perspective Preset 4	1 点遠近法プリセット 4
+	One Point Perspective Preset 5	1 点遠近法プリセット 5
+	One Point Perspective	1 点遠近法
+	One Point	1 点遠近法
+	One file per artboard: <name>-<artboard>.{ext}	アートボードごとに 1 ファイル：<名前>-<アートボード>.{ext}
+	One page per artboard.	アートボードごとに 1 ページ。
+	Only Web Colors	Web カラーのみ
+	Opacity & Mask Define Knockout Shape	不透明度とマスクで抜き形状を定義
+	Opacity Mask Info	不透明マスク情報
+	Opacity Mask Options	不透明マスクオプション
+	Opacity Mask	不透明マスク
+	Opacity	不透明度
+	Opacity: {value}	不透明度：{value}
+	Opacity:	不透明度:
+	Opaque	不透明
+	Open Document	ドキュメントを開く
+	Open Documents As Tabs	ドキュメントをタブで開く
+	Open Graphic Style Library	グラフィックスタイルライブラリを開く
+	Open Location after Export	書き出し後に保存先を開く
+	Open Paths	オープンパス
+	Open Recent File 1	最近使ったファイル 1
+	Open Recent File 10	最近使ったファイル 10
+	Open Recent File 11	最近使ったファイル 11
+	Open Recent File 12	最近使ったファイル 12
+	Open Recent File 13	最近使ったファイル 13
+	Open Recent File 14	最近使ったファイル 14
+	Open Recent File 15	最近使ったファイル 15
+	Open Recent File 16	最近使ったファイル 16
+	Open Recent File 17	最近使ったファイル 17
+	Open Recent File 18	最近使ったファイル 18
+	Open Recent File 19	最近使ったファイル 19
+	Open Recent File 2	最近使ったファイル 2
+	Open Recent File 20	最近使ったファイル 20
+	Open Recent File 21	最近使ったファイル 21
+	Open Recent File 22	最近使ったファイル 22
+	Open Recent File 23	最近使ったファイル 23
+	Open Recent File 24	最近使ったファイル 24
+	Open Recent File 25	最近使ったファイル 25
+	Open Recent File 26	最近使ったファイル 26
+	Open Recent File 27	最近使ったファイル 27
+	Open Recent File 28	最近使ったファイル 28
+	Open Recent File 29	最近使ったファイル 29
+	Open Recent File 3	最近使ったファイル 3
+	Open Recent File 30	最近使ったファイル 30
+	Open Recent File 4	最近使ったファイル 4
+	Open Recent File 5	最近使ったファイル 5
+	Open Recent File 6	最近使ったファイル 6
+	Open Recent File 7	最近使ったファイル 7
+	Open Recent File 8	最近使ったファイル 8
+	Open Recent File 9	最近使ったファイル 9
+	Open Recent Files	最近使用したファイルを開く
+	Open Swatch Library	スウォッチライブラリを開く
+	Open a document to edit its patterns.	ドキュメントを開くとパターンを編集できます。
+	Open a document to navigate it.	ドキュメントを開くとナビゲートできます。
+	Open a document to preview its flattening.	ドキュメントを開くと分割・統合をプレビューできます
+	Open a document to preview its pages	ドキュメントを開くとページをプレビューできます
+	Open a document to see its artboards.	ドキュメントを開くとアートボードが表示されます。
+	Open a document to see its graphic styles.	ドキュメントを開くとグラフィックスタイルが表示されます
+	Open a document to see its history.	ドキュメントを開くとヒストリーが表示されます
+	Open a document to see its swatches.	ドキュメントを開くとスウォッチが表示されます
+	Open password:	開くパスワード:
+	Open the URL in the web browser	URL を Web ブラウザーで開く
+	Open	開く
+	Opened with {} note(s): {}	開きました (注意 {} 件)：{}
+	Open…	開く…
+	Optical Margin Alignment	最適なマージン揃え
+	Optimize for fast web view	Web ビュー用に最適化
+	Optimized	最適化
+	Options for Selection…	選択項目のオプション…
+	Options	オプション
+	Options:	オプション:
+	Options…	オプション…
+	Order:	順序:
+	Ordinals	序数
+	Orientation	方向
+	Orientation:	方向:
+	Original	オリジナル
+	Original: click to restore	オリジナル: クリックで元に戻す
+	Other Layers	その他のレイヤー
+	Other Libraries	その他のライブラリ
+	Other Library…	その他のライブラリ…
+	Other Script…	その他のスクリプト…
+	Other	その他
+	Out Tangent Handles	出る側のハンドル
+	Out of Gamut Warning	色域外警告
+	Out of Web Color Warning	Web カラー外警告
+	Outer Glow…	光彩 (外側)…
+	Outline Others	その他をアウトライン
+	Outline Stroke	パスのアウトライン
+	Outline Text	テキストをアウトライン化
+	Outline	アウトライン
+	Outlines and Rules	アウトラインと罫線
+	Outlines with Source Image	アウトライン（元画像付き）
+	Outlines	アウトライン
+	Output All Blacks Accurately	すべてのブラックを正確に出力
+	Output All Blacks as Rich Black	すべてのブラックをリッチブラックで出力
+	Output Black	出力ブラック
+	Output Intent	出力インテント
+	Output White	出力ホワイト
+	Output condition:	出力条件:
+	Output intent profile:	出力インテントプロファイル:
+	Output › Mode	出力 › モード
+	Output	出力
+	Output:	出力:
+	Overlap:	重なり:
+	Overlapping	重なり
+	Overlay	オーバーレイ
+	Overprint Black…	オーバープリントブラック…
+	Overprint Fill	塗りをオーバープリント
+	Overprint Preview (separations)	オーバープリントプレビュー (分版)
+	Overprint Preview	オーバープリントプレビュー
+	Overprint Stroke	線をオーバープリント
+	Overprint and Transparency Flattener Options	オーバープリントと透明の分割・統合オプション
+	Overprint and Transparency Flattener	オーバープリントと透明の分割・統合
+	Overprint	オーバープリント
+	Overprint:	オーバープリント:
+	Overprints:	オーバープリント:
+	Override Character Color	文字カラーを上書き
+	PDF 1.3 files have no transparency: the preset flattens it.	PDF 1.3 のファイルには透明が使えないため、プリセットで分割・統合されます。
+	PDF Info	PDF 情報
+	PDF Preset	PDF プリセット
+	PDF Preset:	PDF プリセット:
+	PDF Presets	PDF プリセット
+	PDF Presets…	PDF プリセット…
+	PDF Settings	PDF 設定
+	PDF	PDF
+	PDF/A files carry their own output intent.	PDF/A のファイルには独自の出力インテントが含まれます。
+	PPI	PPI
+	PRESET DETAILS	プリセットの詳細
+	Package collects a saved document with its linked files and fonts.	パッケージは、保存済みのドキュメントをリンクファイルやフォントとともに収集します。
+	Package created	パッケージを作成しました
+	Package	パッケージ
+	Packaged {n} file(s) in {folder}{note}	{folder} に {n} 個のファイルをパッケージしました{note}
+	Packaged {n} file(s){note}	{n} 個のファイルをパッケージしました{note}
+	Package…	パッケージ…
+	Page Isolated Blending	描画モードを分離
+	Page Knockout Group	ノックアウトグループ
+	Page information	ページ情報
+	Page	ページ
+	Pages	ページ
+	Paintbrush Tool	ブラシツール
+	Paintbrush	ブラシ
+	Palette:	パレット:
+	Panel Options…	パネルオプション…
+	Panel menu	パネルメニュー
+	Panels	パネル
+	Paragraph Style Options	段落スタイルオプション
+	Paragraph Style	段落スタイル
+	Paragraph Styles	段落スタイル
+	Paragraph Symbol	段落記号
+	Paragraph	段落
+	Password	パスワード
+	Paste Offset	ペースト位置のオフセット
+	Paste Remembers Layers	ペースト時にレイヤーを記憶
+	Paste in Back	背面へペースト
+	Paste in Front	前面へペースト
+	Paste in Place	同じ位置にペースト
+	Paste on All Artboards	すべてのアートボードにペースト
+	Paste without Formatting	書式なしでペースト
+	Paste	貼り付け
+	Pasted	ペースト
+	Pastels	パステル
+	Path Eraser Tool	パスの消しゴムツール
+	Path Eraser	パス消しゴム
+	Path	パス
+	Pathfinder Options…	パスファインダーオプション…
+	Pathfinder	パスファインダー
+	Pathfinders:	パスファインダー:
+	Paths	パス
+	Paths: {paths}    Anchors: {anchors}    Colors: {colors}	パス：{paths}    アンカー：{anchors}    カラー：{colors}
+	Pattern Editing	パターン編集
+	Pattern Options	パターンオプション
+	Pattern options are available in pattern editing mode.	パターンオプションはパターン編集モードで使用できます。
+	Pattern	パターン
+	Pen Tool	ペンツール
+	Pencil Tool	鉛筆ツール
+	Pencil	鉛筆
+	Percent:	パーセント:
+	Perceptual Scales	知覚的カラースケール
+	Performance & Storage	パフォーマンスとストレージ
+	Performance	パフォーマンス
+	Permissions password:	権限パスワード:
+	Permissions	権限
+	Perspective Distort	遠近変形
+	Perspective Grid Options	遠近グリッドオプション
+	Perspective Grid Preset	遠近グリッドプリセット
+	Perspective Grid Presets	遠近グリッドプリセット
+	Perspective Grid Presets…	遠近グリッドプリセット…
+	Perspective Grid Settings	遠近グリッド設定
+	Perspective Grid Tool	遠近グリッドツール
+	Perspective Grid	遠近グリッド
+	Perspective Plane Options…	遠近面オプション…
+	Perspective Selection Tool	遠近オブジェクト選択ツール
+	Perspective grid presets	遠近グリッドプリセット
+	Perspective	遠近
+	Phone 390×844	スマートフォン 390×844
+	Picas	パイカ
+	Pie End Angle:	扇形の終了角度:
+	Pie Graph Tool	円グラフツール
+	Pie Start Angle:	扇形の開始角度:
+	Pin Bar Position	バーの位置を固定
+	Pixel Preview	ピクセルプレビュー
+	Pixels	ピクセル
+	Place DXF	DXF を配置
+	Place PDF	PDF を配置
+	Place Symbol Instance	シンボルインスタンスを配置
+	Place onto a new locked, dimmed template layer below the current layer	現在のレイヤーの下に、ロックされ淡色表示の新規テンプレートレイヤーとして配置
+	Place the pages with the placement again	位置の設定でページを再配置
+	Place	配置
+	Placed File Info	配置ファイル情報
+	Placement Options	配置オプション
+	Placement Options…	配置オプション…
+	Placement:	位置:
+	Place…	配置…
+	Plates	版
+	Platform:	プラットフォーム:
+	Play Current Selection	選択項目を再生
+	Plug-in Info	プラグイン情報
+	Plug-ins	プラグイン
+	Plug-in…	プラグイン…
+	Point Sample	ポイントサンプル
+	Point Text Objects	ポイント文字オブジェクト
+	Points	ポイント
+	Points: clicks add free points	ポイント: クリックで自由なポイントを追加
+	Polar Grid Tool	同心円グリッドツール
+	Polar Grid	同心円グリッド
+	Polygon Properties:	多角形のプロパティ:
+	Polygon Tool	多角形ツール
+	Polygon	多角形
+	Portrait	縦置き
+	Portuguese	ポルトガル語
+	Position Panel Above Text	テキストの上にパネルを配置
+	Position	位置
+	PostScript:	PostScript:
+	Postcard	ポストカード
+	Power Saving (integrated)	省電力 (内蔵 GPU)
+	Preferences	環境設定
+	Preferences…	環境設定…
+	Prefix:	接頭辞:
+	Presentation Attributes	プレゼンテーション属性
+	Presentation Mode	プレゼンテーションモード
+	Preserve Alpha Transparency	アルファ透明を保持
+	Preserve Appearance and Overprints	アピアランスとオーバープリントを保持
+	Preserve CMYK Numbers	CMYK 値を保持
+	Preserve Editing Capabilities	編集機能を保持
+	Preserve Lightness	明度を保持
+	Preserve Overprints and Spot Colors	オーバープリントと特色を保持
+	Preserve Paths	パスを保持
+	Preserve Shape Using:	形状を保持:
+	Preserve Spot Colors	スポットカラーを保持
+	Preserve Text Appearance	テキストの外観を保持
+	Preserve Text Editability	テキストの編集可能性を保持
+	Preserve editing capabilities	編集機能を保持
+	Preserve:	保持:
+	Preset Name	プリセット名
+	Preset name:	プリセット名:
+	Preset {}	プリセット {}
+	Preset:	プリセット:
+	Presets you save with the Save Preset button appear here.	「プリセットを保存」ボタンで保存したプリセットはここに表示されます。
+	Presets:	プリセット:
+	Press 	キー 
+	Preview All Layers	すべてのレイヤーをプレビュー
+	Preview Mode	プレビューモード
+	Preview in Browser needs the desktop app (the web downloads files instead)	ブラウザーでプレビューにはデスクトップアプリが必要です (Web アプリではファイルがダウンロードされます)
+	Preview in Browser	ブラウザーでプレビュー
+	Preview the document as it is now	現在のドキュメントをプレビュー
+	Preview	プレビュー
+	Previous Library	前のライブラリ
+	Previous Page	前のページ
+	Previous page	前のページ
+	Previous	前へ
+	Primary	プライマリ
+	Print Layers:	プリントするレイヤー:
+	Print Preset	プリントプリセット
+	Print Preset:	プリントプリセット:
+	Print Presets	プリントプリセット
+	Print Presets…	プリントプリセット…
+	Print Preview	プリントプレビュー
+	Print Setup	プリント設定
+	Print Tiling Pages	プリント分割ページ
+	Print Tiling Tool	プリント分割ツール
+	Print Tiling	プリント分割
+	Print as Bitmap	ビットマップとしてプリント
+	Print presets	プリントプリセット
+	Print	プリント
+	Printer Setup…	プリンター設定…
+	Printer mark type:	トンボの種類:
+	Printer profile:	プリンタープロファイル:
+	Printer	プリンター
+	Printer:	プリンター:
+	Printers	プリンター
+	Printing / Exporting	プリント／書き出し
+	Printing allowed:	許可する印刷:
+	Print…	印刷…
+	Process Color	プロセスカラー
+	Profile inclusion:	プロファイルの包含:
+	Profile:	プロファイル:
+	Progressive	プログレッシブ
+	Projecting Cap	突出線端
+	Proof Colors	色の校正
+	Proof Setup	校正設定
+	Properties	プロパティ
+	Proportional Oldstyle	プロポーショナルオールドスタイル
+	Pucker & Bloat…	パンク・膨張…
+	Pucker Tool	収縮ツール
+	Punctuation Space	句読点スペース
+	Punctuation	句読点
+	Puppet Warp Pins	パペットワープのピン
+	Puppet Warp Tool	パペットワープツール
+	Puppet Warp	パペットワープ
+	Put back in the dock	ドックに戻す
+	Put back in the toolbar	ツールバーに戻す
+	Quality {quality}	画質 {quality}
+	Quality	画質
+	Quality:	画質:
+	Quarter Space	1/4 スペース
+	Quick Actions	クイックアクション
+	Quickly start a new file	新規ファイルをすばやく作成
+	Quit TerraZone	TerraZone を終了
+	RECENT	最近使用したもの
+	RGB Color	RGB カラー
+	Radar Graph Tool	レーダーチャートツール
+	Radial Blur	ぼかし (放射状)
+	Radial Blur…	ぼかし (放射状)…
+	Radial Glows	円形グロー
+	Radial Gradient	円形グラデーション
+	Radial	ラジアル
+	Radius 1	半径 1
+	Radius 2	半径 2
+	Radius	半径
+	Radius1	半径 1
+	Radius2	半径 2
+	Radius:	半径:
+	Rainbow	虹
+	Random	ランダム
+	Randomize Colors	カラーをランダム化
+	Randomly change color order	カラーの順序をランダムに変更
+	Randomly change saturation and brightness	彩度と明度をランダムに変更
+	Range:	範囲:
+	Raster Effects	ラスター効果
+	Raster File Format:	ラスターファイル形式:
+	Raster Sample Size:	ラスターのサンプルサイズ:
+	Raster/Vector Balance:	ラスター／ベクターのバランス:
+	Rasterize Unsupported Art	非対応のアートをラスタライズ
+	Rasterize	ラスタライズ
+	Rasterize…	ラスタライズ…
+	Rasters	ラスター
+	Rating:	評価:
+	Real World:	実寸:
+	Real name	本名
+	Real-time Drawing and Editing	リアルタイム描画および編集
+	Rearrange All Artboards	すべてのアートボードを再配置
+	Rearrange All Artboards…	すべてのアートボードを再配置…
+	Rearrange All	すべて再配置
+	Recall Selection	選択範囲を呼び出し
+	Recent Colors	最近使用したカラー
+	Recent File	最近使ったファイル
+	Recent Files	最近使ったファイル
+	Recent Font 1	最近使ったフォント 1
+	Recent Font 10	最近使ったフォント 10
+	Recent Font 11	最近使ったフォント 11
+	Recent Font 12	最近使ったフォント 12
+	Recent Font 13	最近使ったフォント 13
+	Recent Font 14	最近使ったフォント 14
+	Recent Font 15	最近使ったフォント 15
+	Recent Font 2	最近使ったフォント 2
+	Recent Font 3	最近使ったフォント 3
+	Recent Font 4	最近使ったフォント 4
+	Recent Font 5	最近使ったフォント 5
+	Recent Font 6	最近使ったフォント 6
+	Recent Font 7	最近使ったフォント 7
+	Recent Font 8	最近使ったフォント 8
+	Recent Font 9	最近使ったフォント 9
+	Recent Font	最近使ったフォント
+	Recent Fonts	最近使用したフォント
+	Recent URLs	最近使った URL
+	Recent	最近使用したもの
+	Recolor Artwork	アートワークを再配色
+	Recolor Artwork…	オブジェクトを再配色…
+	Recolor this row	この行を再配色
+	Recolor with Preset	プリセットで再配色
+	Recolor	再配色
+	Recover Documents	ドキュメントを復元
+	Recovery Data	復帰用データ
+	Rectangle Cut Tool	長方形カットツール
+	Rectangle Cut	長方形でカット
+	Rectangle Properties:	長方形のプロパティ:
+	Rectangle Tool	長方形ツール
+	Rectangle	長方形
+	Rectangle…	長方形…
+	Rectangular Grid Tool	長方形グリッドツール
+	Rectangular Grid	長方形グリッド
+	Red	レッド
+	Redefine Character Style	文字スタイルを再定義
+	Redefine Graphic Style “{name}”	グラフィックスタイル「{name}」を再定義
+	Redefine Graphic Style	グラフィックスタイルを再定義
+	Redefine Paragraph Style	段落スタイルを再定義
+	Redefine Symbol	シンボルを再定義
+	Redefine {kind} Style	{kind}スタイルを再定義
+	Redo {name}	{name}をやり直す
+	Redo {}	{}をやり直す
+	Redo	やり直し
+	Reduce Colors	カラーを減らす
+	Reduce to Basic Appearance	基本アピアランスに戻す
+	Reduction:	削減:
+	Reference Point	基準点
+	Reflect Horizontal	水平方向にリフレクト
+	Reflect Tool	リフレクトツール
+	Reflect X	X 軸でリフレクト
+	Reflect Y	Y 軸でリフレクト
+	Reflect	リフレクト
+	Reflect…	リフレクト…
+	Refresh Font List	フォントリストを更新
+	Refresh	更新
+	Registered Trademark Symbol	登録商標記号
+	Registration marks	見当トンボ
+	Registry name:	レジストリ名:
+	Regular	標準
+	Release Clipping Mask	クリッピングマスクを解除
+	Release Compound Path	複合パスを解除
+	Release Compound Shape	複合シェイプを解除
+	Release Guides	ガイドを解除
+	Release Opacity Mask	不透明マスクを解除
+	Release Selection	選択部分をリリース
+	Release Shaper Group	Shaper グループを解除
+	Release to Layers (Build)	レイヤーに分配 (ビルド)
+	Release to Layers (Sequence)	レイヤーに分配 (シーケンス)
+	Release with Perspective	遠近を解除
+	Release	解除
+	Relink Linked Files to the Document	リンクファイルをドキュメントに再リンク
+	Relink to Folder…	フォルダーに再リンク…
+	Relink	再リンク
+	Relinked {n} image(s)	{n} 個の画像を再リンクしました
+	Relinked {n} image(s); not in that folder: {}	{n} 個の画像を再リンクしました。そのフォルダーに無いもの：{}
+	Relinked {} image(s)	{} 個の画像を再リンクしました
+	Relink…	再リンク…
+	Reload Plug-ins	プラグインを再読み込み
+	Remove Anchor Points	アンカーポイントの削除
+	Remove Asset	アセットを削除
+	Remove Brush Stroke	ブラシストロークを削除
+	Remove Effect	効果を削除
+	Remove Guide	ガイドを削除
+	Remove Item	項目を削除
+	Remove Plug-in	プラグインを削除
+	Remove Selected Assets	選択したアセットを削除
+	Remove Threading	スレッドを解除
+	Remove blank lines between paragraphs	段落間の空白行を削除
+	Remove “{keyword}”	「{keyword}」を削除
+	Remove	削除
+	Rename Asset	アセット名を変更
+	Rename Character Style	文字スタイル名を変更
+	Rename Graphic Style	グラフィックスタイルの名前を変更
+	Rename Library	ライブラリ名を変更
+	Rename Library…	ライブラリ名を変更…
+	Rename Paragraph Style	段落スタイル名を変更
+	Rename Workspace	ワークスペースの名前を変更
+	Rename	名前を変更
+	Render Threads (-1 = Automatic)	レンダリングスレッド数 (-1 = 自動)
+	Rendering intent:	レンダリングインテント:
+	Reorder Appearance Item	アピアランス項目の順序を変更
+	Reorder	順序を変更
+	Repeat Options	リピートオプション
+	Repeat Pathfinder	パスファインダーを繰り返し
+	Repeat Tab	タブを繰り返し
+	Repeat {name}	{name}を繰り返す
+	Repeat	リピート
+	Replace Font	フォントを置換
+	Replace Spine	ブレンド軸を置き換え
+	Replace Symbol	シンボルを置き換え
+	Replace With Font	置換するフォント
+	Replace it with another file, or ignore it: its images keep showing the preview saved with the document.	別のファイルに置き換えるか、無視してください。無視した場合、画像にはドキュメントに保存されたプレビューが表示され続けます。
+	Replace “{name}”, the file this document was opened from?	このドキュメントの開き元のファイル「{name}」を置き換えますか？
+	Replace	置換
+	Replaces the saved preset of that name.	同じ名前の保存済みプリセットを置き換えます。
+	Replace…	置換…
+	Require a password to open the document	ドキュメントを開くときにパスワードを要求
+	Reselect	再選択
+	Reset Bar Position	バーの位置をリセット
+	Reset Bounding Box	バウンディングボックスのリセット
+	Reset Envelope Mesh	エンベロープメッシュをリセット
+	Reset Envelope Shape	エンベロープの形状をリセット
+	Reset Essentials	初期設定をリセット
+	Reset Keyboard Shortcuts	キーボードショートカットをリセット
+	Reset OpenType Features	OpenType 機能をリセット
+	Reset Panel	パネルをリセット
+	Reset Preferences	環境設定をリセット
+	Reset Profiles	プロファイルをリセット
+	Reset Rotate View	ビューを回転の初期化
+	Reset to Default	初期設定に戻す
+	Reset to White, Black	白、黒にリセット
+	Reset with Mesh	メッシュでリセット
+	Reset with Mesh…	メッシュでリセット…
+	Reset with Warp	ワープでリセット
+	Reset with Warp…	ワープでリセット…
+	Reset {name}	{name}をリセット
+	Reset {}	{}をリセット
+	Reset	リセット
+	Reshape Segment	セグメントをシェイプ変形
+	Reshape Tool	リシェイプツール
+	Reshape Type Area	テキストエリアの形を変更
+	Reshape	シェイプ変形
+	Resolution:	解像度:
+	Responsive	レスポンシブ
+	Restore Recovered Documents	復帰したドキュメントを復元
+	Restore every preference to its default (applied on OK)	すべての環境設定を初期値に戻す (OK で適用)
+	Restore	復元
+	Restored documents open unsaved: save them to keep them.	復元したドキュメントは未保存の状態で開きます。保存して残してください。
+	Restored {} recovered document(s): save them to keep them	復元したドキュメント {} 個を開きました：残すには保存してください
+	Restrict printing, editing and other tasks	印刷、編集などの操作を制限
+	Reverse Front to Back	前後を反転
+	Reverse Gradient	グラデーションを反転
+	Reverse Order	逆順
+	Reverse Path Direction Off	パスの方向を反転: オフ
+	Reverse Path Direction On	パスの方向を反転: オン
+	Reverse Path Direction	パスの方向反転
+	Reverse Spine	ブレンド軸を反転
+	Reverse the order	順序を逆にする
+	Revert to the saved version of “{name}”?	「{name}」を保存済みの状態に戻しますか？
+	Revert	保存済みの状態に戻す
+	Revolve…	回転体…
+	Right Grid:	右グリッド:
+	Right Indent	右インデント
+	Right Plane	右面
+	Right in Front	右が前面
+	Right	右
+	Right-Justified Tab	右揃えタブ
+	Right-to-Left Paragraph Direction	右から左への段落方向
+	Right:	右:
+	Rise…	上昇…
+	Roman Baseline	欧文ベースライン
+	Roman Hanging Punctuation	欧文ぶら下がり
+	Rotate 90° CW	時計回りに 90°回転
+	Rotate Tool	回転ツール
+	Rotate View Tool	回転ビューツール
+	Rotate	回転
+	Rotate…	回転…
+	Rotation	回転
+	Roughen…	ラフ…
+	Round Cap	丸型線端
+	Round Corners…	角を丸くする…
+	Round Join	ラウンド結合
+	Round	丸型
+	Rounded Rectangle Tool	角丸長方形ツール
+	Rounded Rectangle	角丸長方形
+	Rounded Rectangle…	角丸長方形…
+	Rounded	丸ゴシック
+	Row Size:	行のサイズ:
+	Rows:	行数:
+	Rule:	ルール:
+	Rulers & Grids	定規とグリッド
+	Rulers	定規
+	Run Plug-in	プラグインを実行
+	SAVED	保存済み
+	SVG Filters	SVG フィルター
+	SVG Interactivity	SVG インタラクティビティ
+	SVG Options	SVG オプション
+	SVG Profile:	SVG プロファイル:
+	Same As Source	ソースと同じ
+	Same	共通
+	Sample Color	カラーをサンプリング
+	Sans Serif / Gothic	ゴシック・サンセリフ
+	Saturate	彩度を調整
+	Saturate…	彩度調整…
+	Saturation	彩度
+	Save As	別名で保存
+	Save As…	別名で保存…
+	Save Colors as Swatches	カラーをスウォッチとして保存
+	Save Document Info…	ドキュメント情報を保存…
+	Save Document	ドキュメントを保存
+	Save Graphic Style Library	グラフィックスタイルライブラリを保存
+	Save Graphic Style Library…	グラフィックスタイルライブラリを保存…
+	Save Grid as Preset	グリッドをプリセットとして保存
+	Save Grid as Preset…	グリッドをプリセットとして保存…
+	Save PDF Dialog	PDF 保存ダイアログ
+	Save PDF Preset	PDF プリセットを保存
+	Save PDF	PDF を保存
+	Save Perspective Grid Preset	遠近グリッドプリセットを保存
+	Save Preset	プリセットを保存
+	Save Preset…	保存…
+	Save Print Preset	プリントプリセットを保存
+	Save Recovery Data	復帰用データを保存
+	Save Save for Web Preset	Web 用に保存プリセットを保存
+	Save Selection…	選択範囲を保存…
+	Save Swatch Library	スウォッチライブラリを保存
+	Save Swatch Library…	スウォッチライブラリを保存…
+	Save Theme	テーマを保存
+	Save To:	保存先:
+	Save Transparency Flattener Preset	透明の分割・統合プリセットを保存
+	Save Transparency Flattener Preset…	透明の分割・統合プリセットを保存…
+	Save a Copy	コピーを保存
+	Save a Copy…	コピーを保存…
+	Save as PDF…	PDF として保存…
+	Save as Template	テンプレートとして保存
+	Save as Template…	テンプレートとして保存…
+	Save as preset:	プリセットとして保存:
+	Save changes to {name}	{name} への変更を保存
+	Save color group to Swatch panel	カラーグループをスウォッチパネルに保存
+	Save each artboard to a separate file	アートボードごとに別のファイルに保存
+	Save for Office Documents	Office ドキュメント用に保存
+	Save for Office Documents…	Office 用に保存…
+	Save for Web (Legacy)…	Web 用に保存…
+	Save for Web Presets	Web 用に保存プリセット
+	Save for Web Preview	Web 用に保存プレビュー
+	Save for Web Settings	Web 用に保存設定
+	Save for Web	Web 用に保存
+	Save selected colors as swatches	選択したカラーをスウォッチとして保存
+	Save the current layout under this name	現在のレイアウトをこの名前で保存
+	Save the document first?	先にドキュメントを保存しますか？
+	Save the selected preset to a file	選択したプリセットをファイルに保存
+	Save the settings as a preset	設定をプリセットとして保存
+	Save theme to My Themes	テーマをマイテーマに保存
+	Save these settings as a preset	この設定をプリセットとして保存
+	Save these settings as a print preset	この設定をプリントプリセットとして保存
+	Save to Swatches	スウォッチに保存
+	Save	保存
+	Saved Selection 1	保存した選択範囲 1
+	Saved Selection 10	保存した選択範囲 10
+	Saved Selection 11	保存した選択範囲 11
+	Saved Selection 12	保存した選択範囲 12
+	Saved Selection 13	保存した選択範囲 13
+	Saved Selection 14	保存した選択範囲 14
+	Saved Selection 15	保存した選択範囲 15
+	Saved Selection 16	保存した選択範囲 16
+	Saved Selection 17	保存した選択範囲 17
+	Saved Selection 18	保存した選択範囲 18
+	Saved Selection 19	保存した選択範囲 19
+	Saved Selection 2	保存した選択範囲 2
+	Saved Selection 20	保存した選択範囲 20
+	Saved Selection 21	保存した選択範囲 21
+	Saved Selection 22	保存した選択範囲 22
+	Saved Selection 23	保存した選択範囲 23
+	Saved Selection 24	保存した選択範囲 24
+	Saved Selection 25	保存した選択範囲 25
+	Saved Selection 3	保存した選択範囲 3
+	Saved Selection 4	保存した選択範囲 4
+	Saved Selection 5	保存した選択範囲 5
+	Saved Selection 6	保存した選択範囲 6
+	Saved Selection 7	保存した選択範囲 7
+	Saved Selection 8	保存した選択範囲 8
+	Saved Selection 9	保存した選択範囲 9
+	Saved Selections	保存した選択範囲
+	Saved View 1	保存した表示 1
+	Saved View 10	保存した表示 10
+	Saved View 2	保存した表示 2
+	Saved View 3	保存した表示 3
+	Saved View 4	保存した表示 4
+	Saved View 5	保存した表示 5
+	Saved View 6	保存した表示 6
+	Saved View 7	保存した表示 7
+	Saved View 8	保存した表示 8
+	Saved View 9	保存した表示 9
+	Saved Views	保存した表示
+	Saved recovery data for {title}	{title} の復帰用データを保存しました
+	Saved to User Defined: {}	ユーザー定義に保存しました：{}
+	Saved {n} files beside {path}	{path} の隣に {n} 個のファイルを保存しました
+	Saved {path} with {} note(s): {first}	{path} を保存しました (注意 {} 件：{first})
+	Saved {path}	{path} を保存しました
+	Saved	保存済み
+	Saves the current bars, toolbar and panel layout.	現在のバー、ツールバー、パネルのレイアウトを保存します。
+	Save…	保存…
+	Saving recovery data for {}	{} の復帰用データを保存中
+	Saving {}	{} を保存中
+	Saving	保存中
+	Scale Artwork with Artboard	アートボードと一緒にアートワークを拡大・縮小
+	Scale Corners	角を拡大・縮小
+	Scale Cursor Proportional to UI	カーソルを UI の拡大率に合わせる
+	Scale Lineweights	線の太さを拡大・縮小
+	Scale Strokes & Effects	線幅と効果を拡大・縮小
+	Scale Tool	拡大・縮小ツール
+	Scale to Fit Artboard	アートボードに合わせて拡大・縮小
+	Scale	拡大・縮小
+	Scale:	拡大・縮小:
+	Scale…	拡大・縮小…
+	Scaling	拡大・縮小
+	Scaling:	拡大・縮小:
+	Scallop Tool	ギザギザツール
+	Scans:	スキャン数:
+	Scatter Graph Tool	散布図ツール
+	Scatter	散布
+	Scissors Tool	はさみツール
+	Scratch Disks	仮想記憶ディスク
+	Screen (72 ppi)	スクリーン (72 ppi)
+	Screen Mode	スクリーンモード
+	Screen	スクリーン
+	Screens	スクリーン
+	Scribble…	落書き…
+	Script / Brush	筆書体・スクリプト
+	Scripts	スクリプト
+	Scrub Numeric Fields by Dragging	ドラッグで数値フィールドを調整
+	Search All	すべてを検索
+	Search Commands…	コマンドを検索…
+	Search commands and tools	コマンドとツールを検索
+	Search commands and tools…	コマンドとツールを検索…
+	Search	検索
+	Secondary	セカンダリ
+	Section Symbol	セクション記号
+	Security	セキュリティ
+	Select All Art on Layer	レイヤー上のすべてのアートを選択
+	Select All Assets	すべてのアセットを選択
+	Select All Instances	すべてのインスタンスを選択
+	Select All Pins	すべてのピンを選択
+	Select All Unused	未使用項目をすべて選択
+	Select All	すべてを選択
+	Select Anchors	アンカーを選択
+	Select Appearance Item	アピアランス項目を選択
+	Select Art	アートを選択
+	Select Freeform Point	フリーフォームポイントを選択
+	Select Gradient Stop	グラデーションの分岐点を選択
+	Select Guides	ガイドを選択
+	Select Objects	オブジェクトを選択
+	Select Same Tint %	同じ濃淡 %
+	Select Shaper Face	Shaper の面を選択
+	Select Slices	スライスを選択
+	Select Text by Font	フォントでテキストを選択
+	Select Tool	選択ツール
+	Select a text object to edit its character attributes.	テキストオブジェクトを選択して文字属性を編集します。
+	Select a text object to edit its paragraph attributes.	テキストオブジェクトを選択すると段落属性を編集できます。
+	Select a text object to set its tab stops.	タブ位置を設定するテキストオブジェクトを選択してください。
+	Select a text object	テキストオブジェクトを選択してください
+	Select an image to see its Link Info.	画像を選択するとリンク情報が表示されます。
+	Select an image to trace	トレースする画像を選択してください
+	Select art and choose Object › Pattern › Make.	アートを選択して、オブジェクト › パターン › 作成 を選びます。
+	Select art and click New Symbol to make one.	アートを選択して「新規シンボル」をクリックすると作成できます。
+	Select art and use New Brush to make one.	アートを選択し、「新規ブラシ」で作成します。
+	Select objects to see their CSS, or Generate CSS for the whole document.	オブジェクトを選択すると CSS が表示されます。または、ドキュメント全体の CSS を生成します。
+	Select styled art and click New Graphic Style.	スタイルを設定したアートを選択して、「新規グラフィックスタイル」をクリックします。
+	Select text or click into text with the Type tool to insert glyphs	字形を挿入するには、テキストを選択するか、文字ツールでテキスト内をクリックしてください
+	Select text to set its OpenType features.	テキストを選択すると OpenType 機能を設定できます。
+	Select text	テキストを選択
+	Select the art (and, on top of it, the mask object)	アートを選択してください (その上にマスクオブジェクトも)
+	Select	選択
+	Select:	選択:
+	Selected Artwork	選択したアートワーク
+	Selected Styles Only	選択したスタイルのみ
+	Selected Swatches Only	選択したスウォッチのみ
+	Selected Swatches	選択したスウォッチ
+	Selection & Anchor Display	選択範囲とアンカーの表示
+	Selection Only	選択範囲のみ
+	Selection Tool	選択ツール
+	Selection	選択
+	Send Backward	背面へ
+	Send to Back	最背面へ
+	Send to Current Layer	現在のレイヤーへ送る
+	Sentence case	文頭のみ大文字
+	Separate colors into rows	カラーを行ごとに分割
+	Separate several keywords with commas.	複数のキーワードはカンマで区切ります。
+	Separations Preview	分版プレビュー
+	Serialize Document	ドキュメントをシリアライズ
+	Serif / Mincho	明朝・セリフ
+	Server-side (.map)	サーバーサイド (.map)
+	Services	サービス
+	Set 1	セット 1
+	Set Anchors	アンカーポイントを設定
+	Set Bounds	境界を設定
+	Set Current Layer	現在のレイヤーを設定
+	Set Key Object	キーオブジェクトを設定
+	Set Keyboard Shortcut	キーボードショートカットを設定
+	Set Mesh Point Color	メッシュポイントのカラーを設定
+	Set Preference	環境設定を設定
+	Set Slice Rectangle	スライスの長方形を設定
+	Set Tab Stops	タブ位置を設定
+	Set Text	テキストを設定
+	Set Zoom	ズーム率を設定
+	Set base color to the current color	基本カラーを現在のカラーに設定
+	Set base color	基本カラーを設定
+	Set the selected color to the current color	選択したカラーを現在のカラーに設定
+	Settings	環境設定
+	Settings…	環境設定…
+	Setup…	設定…
+	Shadows and Glows	シャドウと光彩
+	Shape Builder Regions	シェイプ形成ツールの領域
+	Shape Builder Tool	シェイプ形成ツール
+	Shape Builder	シェイプ形成ツール
+	Shape Effects	シェイプ効果
+	Shape Modes:	シェイプモード:
+	Shape Properties:	シェイプのプロパティ:
+	Shape	シェイプ
+	Shaper Tool	Shaper ツール
+	Shaper	Shaper
+	Shapes	シェイプ
+	Sharpen	シャープ
+	Shear Tool	シアーツール
+	Shear	シアー
+	Shear…	シアー…
+	Shell Lower…	貝殻 (下向き)…
+	Shell Upper…	貝殻 (上向き)…
+	Shift to Color…	カラーに変更…
+	Shift	Shift
+	Shifts the tints of global and spot colors; other colors stay.	グローバルカラーと特色の濃度を変更します。他のカラーは変わりません。
+	Show Active Plane Widget	アクティブな面のウィジェットを表示
+	Show All Hidden Attributes	隠れている属性をすべて表示
+	Show All Layers	すべてのレイヤーを表示
+	Show All Plates	すべての版を表示
+	Show All Swatches	すべてのスウォッチを表示
+	Show All	すべてを表示
+	Show Artboards	アートボードを表示
+	Show Bounding Box	バウンディングボックスを表示
+	Show Brush Size	ブラシサイズを表示
+	Show Center	中心を表示
+	Show Code	コードを表示
+	Show Color Groups	カラーグループを表示
+	Show Color Swatches	カラースウォッチを表示
+	Show Corner Widget	コーナーウィジェットを表示
+	Show East Asian Options	東アジアのオプションを表示
+	Show Edges	エッジを表示
+	Show Embedded	埋め込みを表示
+	Show Find Field	検索フィールドを表示
+	Show Font Names in English	フォント名を英語で表示
+	Show Gradient Annotator	グラデーションガイドを表示
+	Show Gradient Swatches	グラデーションスウォッチを表示
+	Show Grid	グリッドを表示
+	Show Guides	ガイドを表示
+	Show Hidden Characters	制御文字を表示
+	Show Images in Outline Mode	アウトライン表示で画像を表示
+	Show Indic Options	インド系言語のオプションを表示
+	Show Layers Only	レイヤーのみを表示
+	Show Library	ライブラリを表示
+	Show Link Info	リンク情報を表示
+	Show List View	リスト表示
+	Show Mesh	メッシュを表示
+	Show Missing	見つからないものを表示
+	Show Modified	変更済みを表示
+	Show Note	メモを表示
+	Show Options	オプションを表示
+	Show Package	パッケージを表示
+	Show Panel	パネルを表示
+	Show Pattern Swatches	パターンスウォッチを表示
+	Show Perspective Grid	遠近グリッドを表示
+	Show Pixel Grid (Above 600% Zoom)	ピクセルグリッドを表示 (600% を超えるズーム時)
+	Show Print Tiling	プリント分割を表示
+	Show Properties Panel	プロパティパネルを表示
+	Show Rulers (⌘R)	定規を表示 (⌘R)
+	Show Rulers	定規を表示
+	Show Slice Numbers	スライス番号を表示
+	Show Slices	スライスを表示
+	Show Swatch Bounds	スウォッチの境界を表示
+	Show Swatch Kinds	スウォッチの種類を表示
+	Show Text Threads	テキストのスレッドを表示
+	Show The Home Screen When No Documents Are Open	ドキュメントが開かれていないときにホーム画面を表示
+	Show Thumbnail View	サムネール表示
+	Show Thumbnail	サムネールを表示
+	Show Thumbnails	サムネールを表示
+	Show Tile Edge	タイルの境界線を表示
+	Show Tints/Shades	ティント／シェードを表示
+	Show Tool Group Labels	ツールグループのラベルを表示
+	Show Tool Tips	ツールヒントを表示
+	Show Transparency Grid	透明グリッドを表示
+	Show Video Rulers	ビデオ定規を表示
+	Show Vivid/Muted	ビビッド／ソフトを表示
+	Show Warm/Cool	暖色／寒色を表示
+	Show all open documents	開いているすべてのドキュメントを表示
+	Show all plates	すべての版を表示
+	Show and separate through the working CMYK space, as in older documents.	古いドキュメントと同様に、作業用 CMYK スペースを通して表示・分版します。
+	Show handles when multiple anchors are selected	複数のアンカーを選択したときにハンドルを表示
+	Show in Folder	フォルダーに表示
+	Show {kind} Brushes	{kind}ブラシを表示
+	Show	表示
+	Show/hide plate (Alt-click: only this plate)	版の表示／非表示 (Alt+クリック: この版のみ)
+	Show:	表示:
+	Shown with the optimised preview.	最適化プレビューで表示されます。
+	Side 1:	辺 1:
+	Side 2:	辺 2:
+	Sides:	辺の数:
+	Simplify	単純化
+	Simplify:	単純化:
+	Simplify…	単純化…
+	Simulate Colored Paper	色紙をシミュレート
+	Simulate Paper	紙色をシミュレート
+	Single Left Quotation Mark	左一重引用符
+	Single Quotes:	一重引用符:
+	Single Right Quotation Mark	右一重引用符
+	Single-line Composer	1 行ずつ組む
+	Sixth Space	1/6 スペース
+	Size Tile to Art	タイルをアートワークのサイズに合わせる
+	Size	サイズ
+	Size/Leading	サイズ/行送り
+	Size: {size}  Tracking: {tracking}	サイズ：{size}  トラッキング：{tracking}
+	Size:	サイズ:
+	Skew	歪み
+	Skin Tone Ramps	肌色のグラデーション
+	Skip Blank Artboards	空白のアートボードをスキップ
+	Sky Gradients	空のグラデーション
+	Slice Options	スライスオプション
+	Slice Options…	スライスオプション…
+	Slice Selection Tool	スライス選択ツール
+	Slice Tool	スライスツール
+	Slice Type:	スライスの種類:
+	Slice	スライス
+	Slices	スライス
+	Slices:	スライス:
+	Small Caps (on the roadmap)	スモールキャップ (今後対応予定)
+	Small Caps	スモールキャップ
+	Small Caps:	スモールキャップ:
+	Small List View	小さいリスト表示
+	Small Thumbnail View	小サムネール表示
+	Small Thumbnails	小さいサムネール
+	Small	小
+	Smaller ↔ Larger	小さい ↔ 大きい
+	Smart Blur	ぼかし (詳細)
+	Smart Blur…	ぼかし (詳細)…
+	Smart Guides (View → Smart Guides)	スマートガイド (表示 → スマートガイド)
+	Smart Guides (⌘U)	スマートガイド (⌘U)
+	Smart Guides	スマートガイド
+	Smart Punctuation…	欧文用字形の自動置換…
+	Smooth Color	スムーズカラー
+	Smooth Tool	スムーズツール
+	Smooth	スムーズ
+	Snap Curves To Lines	曲線を直線にスナップ
+	Snap Options	スナップオプション
+	Snap to Glyph	グリフにスナップ
+	Snap to Grid	グリッドにスナップ
+	Snap to Pixel	ピクセルにスナップ
+	Snap to Point	ポイントにスナップ
+	Snapping Tolerance	スナップ許容値
+	Social Square Post 1080×1080	ソーシャル正方形投稿 1080×1080
+	Soft Light	ソフトライト
+	Soft	弱い禁則
+	Solid	実線
+	Sort by Kind	種類順に並べ替え
+	Sort by Name	名前順に並べ替え
+	Sort by Status	状態順に並べ替え
+	Sort	並べ替え
+	Source Image	元画像
+	Source code on GitHub	GitHub のソースコード
+	Space After Paragraph	段落後のアキ
+	Space Before Paragraph	段落前のアキ
+	Spaces	スペース
+	Spacing Guides	間隔ガイド
+	Spacing	間隔
+	Spacing:	間隔:
+	Spanish	スペイン語
+	Specified Distance	距離
+	Specified Steps	ステップ数
+	Specify:	指定:
+	Spectrum Gradients	スペクトルグラデーション
+	Spelling	スペルチェック
+	Spin	回転
+	Spiral Tool	スパイラルツール
+	Spiral	スパイラル
+	Split Freeform Line	フリーフォームラインを分割
+	Split Into Grid	グリッドに分割
+	Split Into Grid…	グリッドに分割…
+	Split Path	パスを分割
+	Spot Color	特色
+	Spot Colors	特色
+	Spot Colors…	特色…
+	Spread:	拡散:
+	Square	正方形
+	Squeeze…	絞り込み…
+	Stacked Bar Graph Tool	積み上げ横棒グラフツール
+	Stacked Column Graph Tool	積み上げ縦棒グラフツール
+	Stair Step	階段
+	Standard Ligatures	標準合字
+	Standard Vertical Roman Alignment	標準の縦組み用欧文整列
+	Standard:	規格:
+	Star Tool	スターツール
+	Star	スター
+	Start Global Edit	グローバル編集を開始
+	Start arrowhead	始点の矢印
+	Status	状態
+	Step Type	文字を段階的に調整
+	Steps:	ステップ数:
+	Stop Editing Opacity Mask	不透明マスクの編集を終了
+	Stop Playing/Recording	再生／記録を停止
+	Stop editing the opacity mask	不透明マスクの編集を終了
+	Stray Points	余分なポイント
+	Strikethrough	打ち消し線
+	Stroke (X), double-click for the Color Picker	線 (X)、ダブルクリックでカラーピッカー
+	Stroke Color	カラー (線)
+	Stroke Options	線オプション
+	Stroke Weight	線幅
+	Stroke options	線オプション
+	Stroke	線
+	Stroke: click for swatches, Shift-click for the color mixer	線: クリックでスウォッチ、Shift キーを押しながらクリックでカラーミキサー
+	Stroke:	線:
+	Strokes	線
+	Style Attributes (Entity References)	スタイル属性 (実体参照)
+	Style Attributes	スタイル属性
+	Style Name:	スタイル名:
+	Style	スタイル
+	Style:	スタイル:
+	Styling:	スタイル:
+	Stylize	スタイライズ
+	Subdivisions	分割数
+	Subscript (on the roadmap)	下付き文字 (今後対応予定)
+	Subscript	下付き文字
+	Subscript:	下付き文字:
+	Subset fonts below:	次の割合を下回る場合にフォントをサブセット化:
+	Subtract	前面オブジェクトで型抜き
+	Suffix	接尾辞
+	Summary	サマリー
+	Superscript (on the roadmap)	上付き文字 (今後対応予定)
+	Superscript	上付き文字
+	Superscript:	上付き文字:
+	Swap Fill and Stroke (Shift+X)	塗りと線を入れ替え (Shift+X)
+	Swap Fill and Stroke	塗りと線を入れ替え
+	Swap start and end arrowheads	始点と終点の矢印を入れ替え
+	Swap the selected object for the file, keeping its place and transform	選択したオブジェクトを、位置と変形を保ったままファイルに置き換え
+	Swash	スワッシュ
+	Swatch Conflict	スウォッチの競合
+	Swatch Conflicts	スウォッチの競合
+	Swatch Libraries Menu	スウォッチライブラリメニュー
+	Swatch Libraries	スウォッチライブラリ
+	Swatch Library	スウォッチライブラリ
+	Swatch Name:	スウォッチ名:
+	Swatch Options	スウォッチオプション
+	Swatch Options…	スウォッチオプション…
+	Swatch Tiles	スウォッチタイル
+	Swatch exchange files keep solid colors only.	スウォッチ交換ファイルにはベタ塗りのカラーのみが保存されます。
+	Swatches	スウォッチ
+	Switch workspace	ワークスペースを切り替え
+	Symbol Instance	シンボルインスタンス
+	Symbol Libraries (on the roadmap)	シンボルライブラリ (今後対応予定)
+	Symbol Libraries	シンボルライブラリ
+	Symbol Screener Tool	シンボルスクリーナーツール
+	Symbol Scruncher Tool	シンボルスクランチャーツール
+	Symbol Shifter Tool	シンボルシフターツール
+	Symbol Sizer Tool	シンボルリサイザーツール
+	Symbol Spinner Tool	シンボルスピンツール
+	Symbol Sprayer Tool	シンボルスプレーツール
+	Symbol Sprayer	シンボルスプレー
+	Symbol Stainer Tool	シンボルステインツール
+	Symbol Styler Tool	シンボルスタイルツール
+	Symbolism Tool	シンボルツール
+	Symbols	シンボル
+	System Layout	システムレイアウト
+	Tab Stops	タブ位置
+	Tab	タブ
+	Table	表
+	Tabs	タブ
+	Tabular Lining	等幅ライニング
+	Tabular Oldstyle	等幅オールドスタイル
+	Target Contents	内容をターゲット
+	Target	ターゲット
+	Target:	ターゲット:
+	Tate-chu-yoko	縦中横
+	Temperature	色温度
+	Temperature/Tint…	色温度・色かぶり…
+	Template	テンプレート
+	Templates Folder	テンプレートフォルダー
+	Templates	テンプレート
+	Templates…	テンプレート…
+	TerraZone Community	TerraZone コミュニティ
+	TerraZone Help…	TerraZone ヘルプ…
+	TerraZone Website	TerraZone の Web サイト
+	TerraZone documents: one locked object, updated when the file changes.	TerraZone ドキュメント：ロックされた 1 つのオブジェクト。ファイルの変更時に更新されます。
+	TerraZone on GitHub	GitHub の TerraZone
+	TerraZone. MIT OR Apache-2.0. Fonts: Source Sans 3, Inter, JetBrains Mono (OFL). Icons: Lucide (ISC) + TerraZone.	TerraZone。MIT OR Apache-2.0。フォント：Source Sans 3、Inter、JetBrains Mono (OFL)。アイコン：Lucide (ISC) + TerraZone。
+	Text Displayed in Cell:	セルに表示するテキスト:
+	Text Export Options	テキスト書き出しオプション
+	Text Fill Color	テキストカラー (塗り)
+	Text Import Options	テキスト読み込みオプション
+	Text Stroke Color	テキストカラー (線)
+	Text Wrap Options	テキストの回り込みオプション
+	Text Wrap Options…	テキストの回り込みオプション…
+	Text Wrap	テキストの回り込み
+	The Print Tiling tool placed the pages.	プリント分割ツールでページが配置されています。
+	The bounds of the visible art.	表示されているアートの範囲。
+	The document has no colour swatches.	ドキュメントにカラースウォッチがありません。
+	The page as it prints	プリントされるページ
+	The selected objects have no CSS of their own (see below).	選択したオブジェクト自体には CSS がありません (下記を参照)。
+	Thin Space	細いスペース
+	Third Space	1/3 スペース
+	Third Vanishing Point:	第 3 消失点:
+	This document already has a swatch named “{name}” with another color.	このドキュメントには、別のカラーの「{name}」という名前のスウォッチがすでにあります。
+	This library is empty	このライブラリは空です
+	This library is empty.	このライブラリは空です。
+	This panel is on the roadmap (see the parity plan).	このパネルは今後対応予定です。
+	Threaded Text	スレッドテキストオプション
+	Threads	連結
+	Three Point Perspective Preset 1	3 点遠近法プリセット 1
+	Three Point Perspective Preset 2	3 点遠近法プリセット 2
+	Three Point Perspective Preset 3	3 点遠近法プリセット 3
+	Three Point Perspective Preset 4	3 点遠近法プリセット 4
+	Three Point Perspective Preset 5	3 点遠近法プリセット 5
+	Three Point Perspective	3 点遠近法
+	Three Point	3 点遠近法
+	Threshold	しきい値
+	Thumbnail View	サムネール表示
+	Thumbnails:	サムネール:
+	Tile Edge Color	タイルの境界線の色
+	Tile Edge Color…	タイルの境界線のカラー…
+	Tile Full Pages	ページ全体を分割
+	Tile Range:	分割範囲:
+	Tile Type:	タイルの種類:
+	Tile	並べて表示
+	Tiles are numbered across, then down; leave the range empty for every tile.	タイルは左から右、上から下の順に番号が付きます。範囲を空にするとすべてのタイルが対象です。
+	Tint	濃度
+	Tip extends past the end point	先端をパスの端点より先に伸ばす
+	Tip on the end point	先端をパスの端点に合わせる
+	Title Case	単語の先頭のみ大文字
+	Toggle Fill/Stroke Focus	塗り／線の切り替え
+	Toggle Selection	選択を切り替え
+	Toggle single/double column	1 列／2 列を切り替え
+	Tolerance	許容値
+	Tolerance:	許容値:
+	Tool Option	ツールオプション
+	Tool Options…	ツールオプション…
+	Toolbar: Advanced / Basic	ツールバー: 詳細／基本
+	Toolbar: Single/Double Column	ツールバー: 1 列／2 列
+	Toolbars	ツールバー
+	Tools	ツール
+	Top in Front	上が前面
+	Top	上
+	Top-to-Top Leading	仮想ボディの上基準の行送り
+	Top:	上:
+	Total Width:	合計幅:
+	Touch Type Tool	文字タッチツール
+	Trace the image with the Default preset	「デフォルト」プリセットで画像をトレース
+	Trace	トレース
+	Tracing Presets	トレースプリセット
+	Tracing Result with Outlines	トレース結果（アウトライン付き）
+	Tracing Result	トレース結果
+	Tracking	トラッキング
+	Trademark Symbol	商標記号
+	Transform Again	変形の繰り返し
+	Transform Both	両方を変形
+	Transform Each	個別に変形
+	Transform Each…	個別に変形…
+	Transform Object Only	オブジェクトのみ変形
+	Transform Panel	変形パネル
+	Transform Pattern Only	パターンのみ変形
+	Transform Pattern Tiles	パターンタイルを変形
+	Transform Patterns	パターンを変形
+	Transform Tools	変形ツール
+	Transform in Perspective	遠近で変形
+	Transform options	変形オプション
+	Transform	変形
+	Transforms	変形
+	Transform…	変形…
+	Transparency Flattener Presets	透明の分割・統合プリセット
+	Transparency Flattener Presets…	透明の分割・統合プリセット…
+	Transparency Grid	透明グリッド
+	Transparency Info	透明情報
+	Transparency Options	透明オプション
+	Transparency is flattened with the preset. Type is written as outlines; gradients as bands of colour.	透明部分はプリセットで分割・統合されます。テキストはアウトラインで、グラデーションは帯状のカラーで書き出されます。
+	Transparency is flattened with the preset. Type is written as outlines; gradients stay smooth.	透明部分はプリセットで分割・統合されます。テキストはアウトラインで書き出され、グラデーションは滑らかなままです。
+	Transparency	透明
+	Transparent (Default)	透明 (デフォルト)
+	Transparent Background	背景を透明にする
+	Transparent	透明
+	Transverse (the page a quarter turn on the paper)	横向き回転 (用紙上でページを 90 度回転)
+	Trap…	トラップ…
+	Trim View	トリミング表示
+	Trim mark weight:	トリムマークの線幅:
+	Trim marks	トリムマーク
+	Trim	刈り込み
+	True colour needs version 2004 or later: the nearest of 256 colours is written.	True Color にはバージョン 2004 以降が必要です。256 色のうち最も近い色で書き出します。
+	Turn off Data Recovery for complex documents	複雑なドキュメントではデータ復帰をオフにする
+	Tweak…	ランダム・ひねり…
+	Twirl Rate:	ひねりの割合:
+	Twirl Tool	旋回ツール
+	Twist…	旋回…
+	Two Point Perspective Preset 1	2 点遠近法プリセット 1
+	Two Point Perspective Preset 2	2 点遠近法プリセット 2
+	Two Point Perspective Preset 3	2 点遠近法プリセット 3
+	Two Point Perspective Preset 4	2 点遠近法プリセット 4
+	Two Point Perspective Preset 5	2 点遠近法プリセット 5
+	Two Point Perspective	2 点遠近法
+	Two Point	2 点遠近法
+	Type Object Selection by Path Only	パスのみでテキストオブジェクトを選択
+	Type Orientation	組み方向
+	Type Tool	文字ツール
+	Type on a Path Options	パス上文字オプション
+	Type on a Path Options…	パス上文字オプション…
+	Type on a Path Tool	パス上文字ツール
+	Type on a Path	パス上文字オプション
+	Type stays text, and every stroke is a line with its lineweight and dashes.	テキストはテキストのまま、すべての線は線幅と破線を持つ線になります。
+	Type	書式
+	Type:	種類:
+	Type…	種類…
+	UI Brightness	UI の明るさ
+	UI Scaling	UI のスケーリング
+	UPPERCASE	すべて大文字
+	URL:	URL:
+	Underline	下線
+	Undo {name}	{name}を取り消す
+	Undo {}	{}を取り消す
+	Undo	取り消し
+	Unembed	埋め込みを解除
+	Unembedded to {}	{} に埋め込みを解除しました
+	Unembed…	埋め込みを解除…
+	Ungroup Color Group	カラーグループを解除
+	Ungroup	グループ解除
+	Unicode (UTF-16)	Unicode (UTF-16)
+	Unicode (UTF-8)	Unicode (UTF-8)
+	Unicode	Unicode
+	Uniform	縦横比を固定
+	Unique	一意
+	Unite and Simplify	合体して単純化
+	Unite	合体
+	Units	単位
+	Units: {units}	単位：{units}
+	Units:	単位:
+	Unlink Opacity Mask	不透明マスクのリンクを解除
+	Unlink harmony colors	ハーモニーカラーのリンクを解除
+	Unlink the mask	マスクのリンクを解除
+	Unlock All Layers	すべてのレイヤーのロックを解除
+	Unlock All	すべてをロック解除
+	Unlock Grid	グリッドをロック解除
+	Unlock Guides	ガイドをロック解除
+	Unlock	ロック解除
+	Unnamed Objects	名前のないオブジェクト
+	Unprintable margin:	印刷不可の余白:
+	Unsharp Mask	アンシャープマスク
+	Unsharp Mask…	アンシャープマスク…
+	Unshift	シフトを戻す
+	Untitled	名称未設定
+	Update Link	リンクを更新
+	Update Links	リンクを更新
+	Update Modified Links	変更されたリンクを更新
+	Updated {} image(s)	{} 個の画像を更新しました
+	Use 	メニュー 
+	Use Artboards	アートボードを使用
+	Use Black Point Compensation	ブラックポイントの補正を使用
+	Use Compression	圧縮を使用
+	Use Even-Odd Fill Rule	奇偶規則を使用
+	Use Japanese Crop Marks	日本式トンボを使用
+	Use Library Item	ライブラリ項目を使用
+	Use Low Resolution Proxy for Linked EPS	リンク EPS に低解像度プロキシを使用
+	Use Non-Zero Winding Fill Rule	ノンゼロワインディング規則を使用
+	Use Precise Cursors	精密カーソルを使用
+	Use Pressure Pen	筆圧を使用
+	Use Preview Bounds	プレビュー境界を使用
+	Use Registration Point for Symbol	シンボルの基準点を使用
+	Use Square for Previews	プレビューに正方形を使用
+	Use Text for Previews	プレビューにテキストを使用
+	Use document bleed settings	ドキュメントの裁ち落とし設定を使用
+	User Defined Libraries	ユーザー定義ライブラリ
+	User Defined	ユーザー定義
+	User Graphic Style Library 1	ユーザーグラフィックスタイルライブラリ 1
+	User Graphic Style Library 10	ユーザーグラフィックスタイルライブラリ 10
+	User Graphic Style Library 2	ユーザーグラフィックスタイルライブラリ 2
+	User Graphic Style Library 3	ユーザーグラフィックスタイルライブラリ 3
+	User Graphic Style Library 4	ユーザーグラフィックスタイルライブラリ 4
+	User Graphic Style Library 5	ユーザーグラフィックスタイルライブラリ 5
+	User Graphic Style Library 6	ユーザーグラフィックスタイルライブラリ 6
+	User Graphic Style Library 7	ユーザーグラフィックスタイルライブラリ 7
+	User Graphic Style Library 8	ユーザーグラフィックスタイルライブラリ 8
+	User Graphic Style Library 9	ユーザーグラフィックスタイルライブラリ 9
+	User Interface	ユーザーインターフェイス
+	User Library	ユーザーライブラリ
+	User Preset	ユーザープリセット
+	User Swatch Library 1	ユーザースウォッチライブラリ 1
+	User Swatch Library 10	ユーザースウォッチライブラリ 10
+	User Swatch Library 2	ユーザースウォッチライブラリ 2
+	User Swatch Library 3	ユーザースウォッチライブラリ 3
+	User Swatch Library 4	ユーザースウォッチライブラリ 4
+	User Swatch Library 5	ユーザースウォッチライブラリ 5
+	User Swatch Library 6	ユーザースウォッチライブラリ 6
+	User Swatch Library 7	ユーザースウォッチライブラリ 7
+	User Swatch Library 8	ユーザースウォッチライブラリ 8
+	User Swatch Library 9	ユーザースウォッチライブラリ 9
+	Username	ユーザー名
+	V Spacing:	垂直方向の間隔:
+	V:	V:
+	Variable Width Profile	可変幅プロファイル
+	Variables	変数
+	Variation:	バリエーション:
+	Vector Effects	ベクター効果
+	Vector Halftone	ベクトルハーフトーン
+	Vector Halftone…	ベクターハーフトーン…
+	Vector illustration — fast, open, scriptable.	ベクターイラスト — 高速・オープン・スクリプト対応
+	Vectors	ベクター
+	Version {version} — open-source map illustration in pure Rust.	バージョン {version} — Rust だけで書かれたオープンソースのマップイラストアプリ。
+	Version	バージョン
+	Version:	バージョン:
+	Vertical %	垂直方向 %
+	Vertical Align Bottom	垂直方向下に整列
+	Vertical Align Center	垂直方向中央に整列
+	Vertical Align Top	垂直方向上に整列
+	Vertical Area Type Tool	縦書きエリア内文字ツール
+	Vertical Distribute Bottom	垂直方向下に分布
+	Vertical Distribute Center	垂直方向中央に分布
+	Vertical Distribute Space	垂直方向等間隔に分布
+	Vertical Distribute Top	垂直方向上に分布
+	Vertical Scale %	垂直比率 %
+	Vertical Type Tool	縦書き文字ツール
+	Vertical Type on a Path Tool	縦書きパス上文字ツール
+	Vertical	縦書き
+	Vertical:	垂直方向:
+	Very High	最高
+	View Artboard Only	アートボードのみ表示
+	View Opacity Mask	不透明マスクを表示
+	View PDF after saving	保存後に PDF を表示
+	View {n}	表示 {n}
+	View	表示
+	View:	表示:
+	Viewing Angle:	視角:
+	Viewing Distance:	視距離:
+	W:	W:
+	Warnings	警告
+	Warp Options	ワープオプション
+	Warp Tool	ワープツール
+	Warp	ワープ
+	Wave…	波形…
+	Web 1920×1080	Web 1920×1080
+	Web Safe 216	Web セーフ 216
+	Web Safe RGB	Web セーフ RGB
+	Web Shift	Web シフト
+	Web Snap:	Web スナップ:
+	Weight	線幅
+	Weight:	線幅:
+	Welcome to TerraZone	TerraZone へようこそ
+	When pasting text	テキストをペーストするとき
+	White	白
+	Widget Position:	ウィジェットの位置:
+	Width Point Edit	幅ポイントを編集
+	Width Point Edit…	幅ポイントを編集…
+	Width Point	幅ポイント
+	Width Profile	幅プロファイル
+	Width Profiles	幅プロファイル
+	Width Tool	線幅ツール
+	Width and Height	幅と高さ
+	Width	幅
+	Width:	幅:
+	Window	ウィンドウ
+	Windows	Windows
+	Working CMYK	作業用 CMYK
+	Workspace {i}	ワークスペース {i}
+	Workspace	ワークスペース
+	Wrinkle Tool	しわツール
+	Write Layers	レイヤーを書き込む
+	XML ID	XML ID
+	Yards	ヤード
+	Yellow	イエロー
+	Your browser downloads the files (several as one .zip).	ブラウザーがファイルをダウンロードします (複数の場合は 1 つの.zip にまとめられます)。
+	Zig Zag…	ジグザグ…
+	Zoom In	ズームイン
+	Zoom Out	ズームアウト
+	Zoom Tool	ズームツール
+	Zoom to Selection	選択範囲にズーム
+	Zoom with Mouse Wheel	マウスホイールでズーム
+	Zoom	拡大/縮小
+	[Default] is protected: New… starts an editable copy.	[Default] は変更できません。「新規…」で編集できる複製を作ります。
+	[Normal Character Style]	[標準文字スタイル]
+	[Normal Paragraph Style]	[標準段落スタイル]
+	[Unnamed]	[名称未設定]
+	above	(対象：次を超える画像)
+	dash	線分
+	e.g. 1-3, 5	例：1-3, 5
+	fonts not copied: {fonts}	コピーされなかったフォント：{fonts}
+	gap	間隔
+	glyph {id}	グリフ {id}
+	lowercase	すべて小文字
+	of characters used	(使用文字の割合がこれ未満のとき)
+	of {count}	/ {count}
+	or more spaces with a tab	個以上のスペースをタブに置き換え
+	per slice	(スライスごと)
+	slices across, evenly spaced	個のスライスに均等に分割 (横方向)
+	slices down, evenly spaced	個のスライスに均等に分割 (縦方向)
+	spot	特色
+	the preset	プリセット
+	tile {number}	タイル {number}
+	to	→
+	{count} file(s) in {folder}{note}. Show the package folder?	{folder} に {count} 個のファイル{note}。パッケージフォルダーを表示しますか？
+	{count} linked file(s) not found	リンクファイルが {count} 個見つかりません
+	{count} linked image(s) changed since this document was saved. Show the new versions?	保存後に {count} 個のリンク画像が変更されています。新しいバージョンを表示しますか？
+	{count} more rules: Export writes every one.	ほかに {count} 個のルールがあります。書き出しにはすべて含まれます。
+	{count} unnamed objects left out: name them, or turn on Unnamed Objects in the panel menu.	名前のないオブジェクト {count} 個を除外しました。名前を付けるか、パネルメニューで「名前のないオブジェクト」をオンにしてください。
+	{effect} is already applied	{effect} はすでに適用されています
+	{format} Options	{format} オプション
+	{kind} Gradient	{kind}グラデーション
+	{kind} Style Options…	{kind}スタイルオプション…
+	{kind}, {model}	{kind}、{model}
+	{name} (spot)	{name} (特色)
+	{pages} in all, {count} per copy	合計 {pages}、1 部あたり {count}
+	{page} of {count}	{page} / {count}
+	{people} contributors · {commits} commits	コントリビューター {people} 人 · コミット {commits} 件
+	{percent}% opacity	不透明度 {percent}%
+	{secs} sec	{secs} 秒
+	{shortcut} with the tool sizes the brush	ツールで {shortcut}：ブラシサイズを変更
+	{title} (selection)	{title} (選択範囲)
+	{tool} Options	{tool} オプション
+	{tool} Tool Options	{tool}ツールオプション
+	{warning}: click to correct to the closest color ({hex})	{warning}：クリックすると最も近いカラー ({hex}) に補正します
+	“{file}” is protected by a password.	「{file}」はパスワードで保護されています。
+	● Recording	● 記録中
+@msg	Couldn't copy to the system clipboard: {e}	システムのクリップボードにコピーできませんでした: {e}
+@msg	Couldn't open {name}: {e}	{name} を開けませんでした: {e}
+@msg	Couldn't paste from the clipboard: {e}	クリップボードから貼り付けられませんでした: {e}
+@msg	Couldn't place {name}: the document it was dropped on was closed	{name} を配置できませんでした: ドロップ先のドキュメントは閉じられています
+@msg	Couldn't place {name}: {e}	{name} を配置できませんでした: {e}
+@msg	Couldn't read {name}: {e}	{name} を読み込めませんでした: {e}
+@msg	Couldn't save recovery data: {e}	復帰用データを保存できませんでした: {e}
+@msg	The graphics processor tried first couldn't show the window, so TerraZone started again on {summary}	最初に試したグラフィックスプロセッサーではウィンドウを表示できなかったため、{summary} で TerraZone を再起動しました
+@msg	The graphics were lost and couldn't be restarted.	グラフィックス機能が利用できなくなり、再起動できませんでした。
+@msg	`{name}` isn't a colour swatch	`{name}` はカラースウォッチではありません
+@msg	`{tool}` isn't a Liquify tool	`{tool}` はゆがみツールではありません
+@msg	`{tool}` isn't a freehand tool	`{tool}` はフリーハンドツールではありません
+@msg	`{what}` closes something it didn't open	`{what}` が対応しない開始部分を閉じています
+@msg	a layer couldn't be read	読み込めなかったレイヤーがあります
+@msg	a page tree kid isn't a reference	ページツリーの子要素が参照になっていません
+@msg	a page's placement is not finite	ページの配置に無効な数値が含まれています
+@msg	a stream's length is wrong	ストリームの長さが正しくありません
+@msg	a stream's length isn't a number	ストリームの長さが数値ではありません
+@msg	an image TerraZone can't read was left out	TerraZone で読み込めない画像は除外されました
+@msg	an object can't be read	読み込めないオブジェクトがあります
+@msg	can't encode the document: {0}	ドキュメントをエンコードできません: {0}
+@msg	can't parse shortcut `{c}`	ショートカット `{c}` を解釈できません
+@msg	can't parse shortcut `{s}` for `{k}`	`{k}` のショートカット `{s}` を解釈できません
+@msg	can't save version {0}: TerraZone writes versions {MIN_VERSION} to {VERSION}	バージョン {0} では保存できません: TerraZone で保存できるのはバージョン {MIN_VERSION} から {VERSION} までです
+@msg	can't write .{ext} images	.{ext} 画像は書き出せません
+@msg	compressed (RLE) bitmaps can't be read yet	圧縮 (RLE) されたビットマップはまだ読み込めません
+@msg	gradient “{name}” isn't defined in the file: a plain colour stands in for it	グラデーション「{name}」はファイル内で定義されていません: 代わりに単色を使用しています
+@msg	image '{key}' has no pixels and was left out	画像「{key}」はピクセルがないため省略しました
+@msg	it has {_1}, which TerraZone doesn't read from it yet	{_1} が含まれていますが、TerraZone はまだこのファイルからは読み込めません
+@msg	it uses `{at}`, which TerraZone's PostScript reader doesn't know	TerraZone の PostScript 読み込み機能が対応していない `{at}` を使用しています
+@msg	it uses `{at}`, which TerraZone's PostScript reader doesn't know, in {procs}	{procs} 内で、TerraZone の PostScript 読み込み機能が対応していない `{at}` を使用しています
+@msg	its editing data doesn't say where its art is	編集データにアートの位置が記録されていません
+@msg	its editing data doesn't say where its artboard is	編集データにアートボードの位置が記録されていません
+@msg	its layers use {_1}, which aren't read yet	レイヤーで使用されている {_1} はまだ読み込めません
+@msg	its section ending with `%{end}` doesn't end	`%{end}` で終わるはずのセクションが終わっていません
+@msg	layers can't be wrap objects	レイヤーは回り込みオブジェクトにできません
+@msg	objects with several fills or strokes, effects or brushes came in as their drawn look ({_1}): their appearance isn't editable yet	塗りや線が複数ある、または効果やブラシを適用したオブジェクト {_1} 個は見た目のまま読み込まれました: アピアランスはまだ編集できません
+@msg	printing isn't available here	この環境ではプリントできません
+@msg	select (or target) objects whose appearance isn't basic	基本アピアランスではないオブジェクトを選択するか、ターゲットに指定してください
+@msg	the Save PDF dialog didn't open	PDF 保存ダイアログが開きませんでした
+@msg	the art on them differs from the page's in {_1}% of it	レイヤー上のアートの {_1}% がページのアートと異なります
+@msg	the file's preview header points outside the file	ファイルのプレビューヘッダーがファイルの範囲外を指しています
+@msg	the image's pixels don't match its size	画像のピクセル数がサイズと一致しません
+@msg	the object is beyond the plane's horizon	オブジェクトが面の水平線を越えた位置にあります
+@msg	the object isn't in perspective	オブジェクトが遠近グリッド上にありません
+@msg	the object isn't on a perspective plane	オブジェクトが遠近グリッドの面上にありません
+@msg	the pointer is beyond the plane's horizon	ポインターが面の水平線を越えた位置にあります
+@msg	the selected stroke's profile is already listed as {_1}	選択した線のプロファイルは、すでに {_1} として登録されています
+@msg	the selection isn't in perspective	選択範囲が遠近グリッド上にありません
+@msg	this PostScript file can't be read ({_1}): save it as PDF or SVG in the app that made it	この PostScript ファイルは読み込めません ({_1}): 作成したアプリで PDF または SVG として保存してください
+@msg	this file was saved without PDF compatibility, and its editing data can't be read ({why})	このファイルは PDF 互換性なしで保存されており、編集データを読み込めません ({why})
+@msg	this file's PostScript couldn't be read ({why}): {what}	このファイルの PostScript を読み込めませんでした ({why}): {what}
+@msg	this is a DWG drawing, which can't be read: save it from the CAD app as an ASCII DXF and open that	DWG 図面は読み込めません: CAD アプリで ASCII DXF として保存し、そのファイルを開いてください
+@msg	this is a PostScript file (an .ai saved in an older format or without PDF compatibility, or an EPS file), which can't be opened yet: save it as PDF, PDF-compatible .ai or SVG	これは PostScript ファイル (古い形式または PDF 互換なしで保存された .ai、または EPS ファイル) のため、まだ開けません: PDF、PDF 互換の .ai、または SVG として保存してください
+@msg	this isn't a flat-colour logo ({_1}% of its solid areas match a few flat colours), so Flat Logo mode would turn its gradients into patches: use Color mode instead	フラットカラーのロゴではないため (ベタ塗り部分のうち少数の単色に一致するのは {_1}% のみ)、フラットロゴモードではグラデーションがまだらになります: 代わりにカラーモードを使用してください
+@msg	version {0} files can't be compressed: only version {COMPRESSED_SINCE} and later open compressed files	バージョン {0} のファイルは圧縮できません: 圧縮ファイルを開けるのはバージョン {COMPRESSED_SINCE} 以降のみです
+@msg	workspace name can't be empty	ワークスペース名を入力してください
+@msg	{_1} linked file(s) can't be read here: their previews show	この環境では {_1} 個のリンクファイルを読み込めません: 代わりにプレビューを表示しています
+@msg	{bpp}-bit bitmaps can't be read	{bpp} ビットのビットマップは読み込めません
+@msg	{command} didn't create an object	{command} でオブジェクトが作成されませんでした
+@msg	{label}: lost track of a shape's style	{label}: シェイプのスタイル情報が失われました
+@msg	{path} can't be found: relink it first	{path} が見つかりません: 先に再リンクしてください
+@msg	{tool} isn't in a toolbar group of several tools	{tool} は複数のツールからなるツールグループに含まれていません
+@msg	"{0}" is not a colour: write it as #rrggbb	「{0}」はカラーではありません: #rrggbb の形式で指定してください
+@msg	A browser with WebGPU or WebGL2 is required.	WebGPU または WebGL2 に対応したブラウザーが必要です。
+@msg	BMP files are RGB or grayscale: colorModel rgb or gray	BMP ファイルが対応するのは RGB とグレースケールのみです: colorModel には rgb または gray を指定してください
+@msg	Blend colors: select at least three objects with filled colours	カラーのブレンド: カラーの塗りがあるオブジェクトを 3 つ以上選択してください
+@msg	Combine Slices: the slices have no bounds	スライスを結合: スライスに境界がありません
+@msg	Convert to Artboards: selection has no area	アートボードに変換: 選択範囲に面積がありません
+@msg	Convert to Shape: no rectangles or ellipses selected	シェイプに変換: 長方形または楕円形が選択されていません
+@msg	Copied the CSS of {rules} object(s)	{rules} 個のオブジェクトの CSS をコピーしました
+@msg	Corners edits the corners of a path	「コーナー」で編集できるのはパスの角だけです
+@msg	Create Outlines: select text objects	アウトラインを作成: テキストオブジェクトを選択してください
+@msg	Create from Guides: the document has no artboard	ガイドから作成: ドキュメントにアートボードがありません
+@msg	Create from Guides: the guides make more than {MAX_PIECES} slices	ガイドから作成: ガイドで区切るとスライスが {MAX_PIECES} 個を超えます
+@msg	Create from Selection: the selection has no area	選択範囲から作成: 選択範囲に面積がありません
+@msg	Data Recovery has nowhere to keep copies: set Preferences → File Handling → Data Recovery → Folder (recoveryFolder)	データ復帰のコピーを保存する場所がありません: 環境設定 → ファイル管理 → データ復帰 → フォルダー (recoveryFolder) を設定してください
+@msg	Discarded {_1} recovered document(s)	復帰用データのドキュメントを {_1} 件破棄しました
+@msg	Divide Objects Below: select a path	背面のオブジェクトで型抜き: パスを選択してください
+@msg	Divide Objects Below: select exactly one path	背面のオブジェクトで型抜き: パスを 1 つだけ選択してください
+@msg	Downloaded {_1} file(s)	{_1} 個のファイルをダウンロードしました
+@msg	Downloaded {what}	{what} をダウンロードしました
+@msg	Embedded {n} image(s)	画像を {n} 枚埋め込みました
+@msg	Embedded {n} image(s); {missing} missing: relink them first	画像を {n} 枚埋め込みましたが、{missing} 枚は見つかりません: 先に再リンクしてください
+@msg	Expand Appearance: the selection has a basic appearance	アピアランスを分割: 選択範囲は基本アピアランスです
+@msg	Expand: no brush strokes selected	拡張: ブラシストロークが選択されていません
+@msg	Expand: no gradient fills	拡張: グラデーションの塗りがありません
+@msg	Expand: nothing to expand	拡張: 拡張するものがありません
+@msg	Exported {count} file(s) to {folder}	{count} 個のファイルを {folder} に書き出しました
+@msg	Exported {path}	{path} を書き出しました
+@msg	Exported {what} with {_1} note(s): {first}	{what} を書き出しましたが、注意事項が {_1} 件あります: {first}
+@msg	Exported {what}	{what} を書き出しました
+@msg	Exporting {_1}	{_1} を書き出し中
+@msg	Flatten Transparency: select objects to flatten	透明部分を分割・統合: 分割・統合するオブジェクトを選択してください
+@msg	Flatten Transparency: {e}	透明部分を分割・統合: {e}
+@msg	Image Trace: the traced image is missing	画像トレース: トレース元の画像が見つかりません
+@msg	Imported {what}: {_1}	{what} を読み込みました: {_1}
+@msg	Installed plug-in {_1}	プラグイン {_1} をインストールしました
+@msg	Internal error: {msg} (please report this bug)	内部エラー: {msg} (このバグを報告してください)
+@msg	Live Paint Merge: select a Live Paint group and the paths to add	ライブペイントの結合: ライブペイントグループと、追加するパスを選択してください
+@msg	Live Paint: select paths or compound paths	ライブペイント: パスまたは複合パスを選択してください
+@msg	Live Paint: these paths are too degenerate to paint	ライブペイント: これらのパスは形状がつぶれすぎていてペイントできません
+@msg	Loading TerraZone…	TerraZone を読み込んでいます…
+@msg	Make Guides: select paths	ガイドを作成: パスを選択してください
+@msg	No saved selections (Select → Save Selection…)	保存した選択範囲はありません (選択 → 選択範囲を保存…)
+@msg	No saved views (View → New View…)	保存した表示はありません (表示 → 新規表示…)
+@msg	Offset Path: select paths	パスのオフセット: パスを選択してください
+@msg	Opened with {_1} note(s): {_2}	ドキュメントを開きました (注意 {_1} 件): {_2}
+@msg	Opened {url}	{url} を開きました
+@msg	Outline Stroke: no stroked paths selected	パスのアウトライン: 線のあるパスが選択されていません
+@msg	PDF settings are not an object	PDF 設定がオブジェクト形式ではありません
+@msg	PDF writer error: {0}	PDF の書き出し中にエラーが発生しました: {0}
+@msg	Packaged {n} file(s) in {folder}{note}	{n} 個のファイルを {folder} にパッケージしました{note}
+@msg	Packaged {n} file(s){note}	{n} 個のファイルをパッケージしました{note}
+@msg	Preview in Browser needs the desktop app (the web downloads files instead)	「ブラウザーでプレビュー」にはデスクトップアプリが必要です (Web 版では代わりにファイルをダウンロードします)
+@msg	Release Guides: no guides	ガイドを解除: ガイドがありません
+@msg	Release: no layer to put the rectangle in	解除: 長方形を追加するレイヤーがありません
+@msg	Relinked {_1} image(s)	画像を {_1} 枚再リンクしました
+@msg	Relinked {n} image(s)	画像を {n} 枚再リンクしました
+@msg	Relinked {n} image(s); not in that folder: {_1}	画像を {n} 枚再リンクしましたが、次の画像はそのフォルダーにありません: {_1}
+@msg	Reload the page to go on (changes not saved yet may be lost).	続けるにはページを再読み込みしてください (未保存の変更は失われる場合があります)。
+@msg	Replace Spine: select a blend and a path	ブレンド軸を置き換え: ブレンドとパスを選択してください
+@msg	Reset {_1}	{_1} をリセットしました
+@msg	Restored {_1} recovered document(s): save them to keep them	復帰用データからドキュメントを {_1} 件復元しました: 残すには保存してください
+@msg	SVG parse error: {0}	SVG を解析できませんでした: {0}
+@msg	Save for Web: the image is empty	Web 用に保存: 画像が空です
+@msg	Save writes {_1}, not {_2}: use document.export for other formats	保存できる形式は {_1} のみで、{_2} 形式では保存できません: ほかの形式には document.export を使用してください
+@msg	Saved recovery data for {title}	{title} の復帰用データを保存しました
+@msg	Saved to User Defined: {_1}	「ユーザー定義」に保存しました: {_1}
+@msg	Saved {n} files beside {path}	{path} と同じ場所にファイルを {n} 個保存しました
+@msg	Saved {path} with {_1} note(s): {first}	{path} を保存しましたが、注意事項が {_1} 件あります: {first}
+@msg	Saved {path}	{path} を保存しました
+@msg	Saving recovery data for {_1}	{_1} の復帰用データを保存中
+@msg	Saving {_1}	{_1} を保存中
+@msg	Saving	保存中
+@msg	Select text or click into text with the Type tool to insert glyphs	字形を挿入するには、テキストを選択するか、文字ツールでテキスト内をクリックしてください
+@msg	Sent to {_1}	{_1} に送信しました
+@msg	Shape Builder: no region under the pointer	シェイプ形成ツール: ポインターの下に領域がありません
+@msg	Shape Builder: select paths or compound paths	シェイプ形成ツール: パスまたは複合パスを選択してください
+@msg	Show All Hidden Attributes: nothing is hidden	非表示の属性をすべて表示: 非表示の属性はありません
+@msg	Split Into Grid: select paths large enough for the grid	グリッドに分割: グリッドが収まる大きさのパスを選択してください
+@msg	Targa files are RGB: colorModel rgb	Targa ファイルが対応するのは RGB のみです: colorModel には rgb を指定してください
+@msg	Text Wrap: select a wrap object	テキストの回り込み: 回り込みオブジェクトを選択してください
+@msg	The graphics were lost and have been restarted	グラフィックス機能が利用できなくなったため、再起動しました
+@msg	Unembedded to {_1}	埋め込みを解除して {_1} に保存しました
+@msg	Updated {_1} image(s)	画像を {_1} 枚更新しました
+@msg	TerraZone failed to start: {e}	TerraZone を起動できませんでした: {e}
+@msg	Your unsaved changes are kept in this browser: reload the page to get them back.	未保存の変更はこのブラウザーに残っています: 復元するにはページを再読み込みしてください。
+@msg	`aspect` must be a number (%)	`aspect` には数値 (%) を指定してください
+@msg	`at` must be [x, y]	`at` は [x, y] の形式で指定してください
+@msg	`color` must be a colour	`color` にはカラーを指定してください
+@msg	`command` must be a command whose menu item opens a dialog (see ui.menuDialog)	`command` には、メニュー項目がダイアログを開くコマンドを指定してください (ui.menuDialog を参照)
+@msg	`freeform.points` must be an array	`freeform.points` には配列を指定してください
+@msg	`gradient` must be an object	`gradient` にはオブジェクトを指定してください
+@msg	`library` is a library id or name (see {list})	`library` にはライブラリの ID または名前を指定してください ({list} を参照)
+@msg	`mode` applies to freeform gradients	`mode` はフリーフォームグラデーションにのみ適用されます
+@msg	`sampleSize` must be 1, 3 or 5	`sampleSize` は 1、3、5 のいずれかにしてください
+@msg	`stops` must be an array	`stops` には配列を指定してください
+@msg	`svg` must be an object of SVG options (see document.formats)	`svg` には SVG オプションのオブジェクトを指定してください (document.formats を参照)
+@msg	`to` must be "corner" or "smooth"	`to` には "corner" または "smooth" を指定してください
+@msg	`{_1}` is no save command	`{_1}` は保存コマンドではありません
+@msg	`{area}` is no recovery area name	`{area}` は復帰用領域の名前として使えません
+@msg	`{color}` is not a colour (#rrggbb or a preset name)	`{color}` はカラーではありません (#rrggbb またはプリセット名で指定してください)
+@msg	`{id}` has no envelope dialog	`{id}` にはエンベロープのダイアログがありません
+@msg	`{keep}` is not a side of this axis	`{keep}` はこの軸のどちら側でもありません
+@msg	`{key}` must be `auto` or a language code such as `en` or `zh-hant`	`{key}` は `auto` か、`en` や `zh-hant` などの言語コードにしてください
+@msg	`{key}` must be a #rrggbb colour	`{key}` は #rrggbb 形式のカラーにしてください
+@msg	`{key}` must be a number	`{key}` には数値を指定してください
+@msg	`{key}` must be a string	`{key}` は文字列にしてください
+@msg	`{key}` must be a whole number between {min} and {max} (got {x})	`{key}` は {min} から {max} までの整数にしてください (指定値: {x})
+@msg	`{key}` must be a whole number	`{key}` は整数にしてください
+@msg	`{key}` must be between {min} and {max} (got {x})	`{key}` は {min} から {max} までの値にしてください (指定値: {x})
+@msg	`{key}` must be one of {_1}	`{key}` は {_1} のいずれかにしてください
+@msg	`{key}` must be true or false	`{key}` には true または false を指定してください
+@msg	`{k}` must be [x, y]	`{k}` は [x, y] の形式で指定してください
+@msg	`{name}` has no options	`{name}` にはオプションがありません
+@msg	`{name}` is a built-in workspace; choose another name	`{name}` は組み込みのワークスペースなので、別の名前を指定してください
+@msg	`{name}` is a process colour: tints apply to global and spot colours	`{name}` はプロセスカラーです: 濃淡を適用できるのはグローバルカラーと特色だけです
+@msg	`{name}` is no recovery entry name	`{name}` は復帰用エントリの名前として使えません
+@msg	`{path}` must be a bool or an object of bools	`{path}` はブール値、またはブール値からなるオブジェクトにしてください
+@msg	`{s}` is not a colour (#rrggbb or a preset name)	`{s}` はカラーではありません (#rrggbb またはプリセット名で指定してください)
+@msg	`{to}` is not an available name	`{to}` という名前は使用できません
+@msg	`{what}` closes nothing	`{what}` に対応する開始部分がありません
+@msg	a PostScript error ({name} in `{op}`)	PostScript エラー (`{op}` での {name})
+@msg	a PostScript error ({name} in `{op}`), in {procs}	{procs} 内の PostScript エラー (`{op}` での {name})
+@msg	a PostScript error ({name} in `{op}`: {at})	PostScript エラー (`{op}` での {name}: {at})
+@msg	a PostScript error ({name} in `{op}`: {at}), in {procs}	{procs} 内の PostScript エラー (`{op}` での {name}: {at})
+@msg	a PostScript error ({name})	PostScript エラー ({name})
+@msg	a bitmap is empty	ビットマップが空です
+@msg	a bitmap is too large to read	ビットマップが大きすぎて読み込めません
+@msg	a colour index is 0 to {_1}, not {n}	カラーのインデックスは 0 から {_1} までにしてください ({n} は指定できません)
+@msg	a colour is an index, #rrggbb or a preset name, not {v}	カラーはインデックス、#rrggbb、プリセット名のいずれかで指定してください ({v} は指定できません)
+@msg	a document needs at least one artboard	ドキュメントには少なくとも 1 つのアートボードが必要です
+@msg	a document needs at least one layer	ドキュメントには少なくとも 1 つのレイヤーが必要です
+@msg	a freeform gradient keeps at least one point	フリーフォームグラデーションには少なくとも 1 つのポイントが必要です
+@msg	a gradient needs at least two stops	グラデーションには 2 つ以上の分岐点が必要です
+@msg	a graphic style named `{to}` already exists	`{to}` という名前のグラフィックスタイルはすでに存在します
+@msg	a page is missing	見つからないページがあります
+@msg	a page out of range	範囲外のページがあります
+@msg	a page tree node has no kids	ページツリーのノードに子要素がありません
+@msg	a path has too many points	ポイントが多すぎるパスがあります
+@msg	a preset named `{_1}` exists	`{_1}` という名前のプリセットはすでに存在します
+@msg	a slice size must be a positive number of points	スライスのサイズはポイント単位の正の数にしてください
+@msg	a stream runs past the end	ストリームがファイルの末尾を超えています
+@msg	add a format to export	書き出す形式を追加してください
+@msg	already editing a pattern	すでにパターンを編集中です
+@msg	an image whose data is cut short was left out	データが途中で切れている画像は除外されました
+@msg	an object in perspective would leave the edited grid	遠近グリッド上のオブジェクトが編集後のグリッドの外に出てしまいます
+@msg	antiAlias `{id}`: none, art or type	antiAlias に `{id}` は指定できません: none、art、type のいずれかを指定してください
+@msg	artboard {0} does not exist	アートボード {0} は存在しません
+@msg	at this scale the drawing is {w} × {h} pt, more than the canvas holds: choose a smaller scale or fit it to the artboard	この縮尺では図面が {w} × {h} pt になり、カンバスに収まりません: 縮尺を小さくするか、アートボードに合わせてください
+@msg	background {other}: transparent, white, black or a colour such as "#ff8800"	背景に {other} は指定できません: transparent、white、black、または「#ff8800」のようなカラーを指定してください
+@msg	bad color {v}	カラー {v} が正しくありません
+@msg	bad colour `{hex}` (#rrggbb)	カラー `{hex}` が正しくありません (#rrggbb の形式で指定してください)
+@msg	bad page tree	ページツリーが無効です
+@msg	bad shortcut	ショートカットが正しくありません
+@msg	bad stream length	ストリームの長さが無効です
+@msg	bad trailer	トレーラーが無効です
+@msg	balance must be between 0 and 100	バランスは 0 から 100 までの値にしてください
+@msg	batch step {_1} (`{id}`) failed: {e}	バッチのステップ {_1} (`{id}`) が失敗しました: {e}
+@msg	brightness must be dark|mediumDark|mediumLight|light	brightness には dark|mediumDark|mediumLight|light のいずれかを指定してください
+@msg	cannot distort a zero-size bounding box	サイズが 0 のバウンディングボックスは変形できません
+@msg	cannot read PDF: {0}	PDF を読み込めません: {0}
+@msg	cannot split an open path at its end point	オープンパスは端点で分割できません
+@msg	check an asset to export	書き出すアセットにチェックを入れてください
+@msg	choice must be "merge" or "add", not `{choice}`	choice には "merge" または "add" を指定してください (`{choice}` は指定できません)
+@msg	choose a direction to divide in	分割する方向を選択してください
+@msg	choose a folder to export to	書き出し先のフォルダーを選択してください
+@msg	choose a location for the package	パッケージの保存場所を選択してください
+@msg	clipboard is empty	クリップボードが空です
+@msg	colorTable.{what}: `{h}` is not a colour such as "#ff8800"	colorTable.{what}: `{h}` は「#ff8800」のような形式のカラーではありません
+@msg	colorTable.{what}: at most {MAX_TABLE} colours	colorTable.{what}: 指定できるカラーは {MAX_TABLE} 色までです
+@msg	command `{0}` is not available right now: {1}	コマンド `{0}` は現在使用できません: {1}
+@msg	compound paths can only contain paths	複合パスに含められるのはパスだけです
+@msg	could not decode image: {0}	画像をデコードできませんでした: {0}
+@msg	damaged	破損しています
+@msg	decimals must be {_1}–{_2} (got {_3})	小数点以下の桁数は {_1} から {_2} までにしてください (指定値: {_3})
+@msg	direct-select anchor points to cut at (not the end points of open paths)	ダイレクト選択ツールで、カットする位置のアンカーポイントを選択してください (オープンパスの端点を除く)
+@msg	divide into 1 to {MAX_PIECES} slices	スライスの分割数は 1 から {MAX_PIECES} までにしてください
+@msg	effect {k} is `{_1}`, not `{id}`	インデックス {k} の効果は `{id}` ではなく `{_1}` です
+@msg	empty brush stroke	ブラシストロークが空です
+@msg	empty cutter	型抜きに使うパスが空です
+@msg	empty path	パスが空です
+@msg	file version {0} is newer than this TerraZone supports ({VERSION})	ファイルのバージョン {0} は、この TerraZone が対応するバージョン ({VERSION}) より新しいものです
+@msg	freeform point {i} needs `at` [x, y] and a valid `color`	フリーフォームのポイント {i} には `at` [x, y] と有効な `color` が必要です
+@msg	give both `start` and `end` [x, y] (or neither)	`start` と `end` は両方とも [x, y] で指定するか、どちらも省略してください
+@msg	give corners of the path: anchors between two straight sides	パスの角 (2 本の直線の辺に挟まれたアンカーポイント) を指定してください
+@msg	give the path `id` and the width point `index`	パスの `id` と幅ポイントの `index` を指定してください
+@msg	guides are locked	ガイドがロックされています
+@msg	image data `{_1}` is missing	画像データ `{_1}` が見つかりません
+@msg	image is empty	画像が空です
+@msg	image would be too large; lower the resolution	画像が大きくなりすぎるため、解像度を下げてください
+@msg	index must be a number or first, previous, next or last	index には数値、または first、previous、next、last のいずれかを指定してください
+@msg	index must be a number or first, previous, next or last, not `{other}`	index には数値、または first、previous、next、last のいずれかを指定してください (`{other}` は指定できません)
+@msg	installing from a path is not available on the web; pass the module as `dataBase64`	Web 版ではファイルパスからはインストールできないため、モジュールは `dataBase64` で渡してください
+@msg	internal error in `{cmd}`: {msg} (the document was left as it was before; please report this bug)	`{cmd}` で内部エラーが発生しました: {msg} (ドキュメントは変更されていません。このバグを報告してください)
+@msg	internal error: {msg} (please report this bug)	内部エラー: {msg} (このバグを報告してください)
+@msg	invalid PDF setting: {0}	PDF の設定が正しくありません: {0}
+@msg	invalid image data for `{0}`	`{0}` の画像データが正しくありません
+@msg	invalid parameters for `{cmd}`: {msg}	`{cmd}` のパラメーターが正しくありません: {msg}
+@msg	is not an image TerraZone reads	TerraZone で読み込める画像ではありません
+@msg	it ends inside a layer	レイヤーの途中で終わっています
+@msg	it has art outside its layers	レイヤーの外にアートがあります
+@msg	it has more than one artboard	アートボードが複数あります
+@msg	it has more than {MAX_NODES} objects	オブジェクトが {MAX_NODES} 個を超えています
+@msg	it has no layers	レイヤーがありません
+@msg	it has no page	ページがありません
+@msg	it has too many text objects	テキストオブジェクトが多すぎます
+@msg	it has too many values in a row	連続する値が多すぎます
+@msg	it has too much text	テキストが多すぎます
+@msg	its Windows metafile preview was opened instead, which may simplify the art	代わりに Windows メタファイルのプレビューを開いたため、アートが簡略化されている場合があります
+@msg	its editing data has no layers	編集データにレイヤーがありません
+@msg	its editing data is damaged	編集データが破損しています
+@msg	its editing data is for a different page	編集データが別のページのものです
+@msg	its objects are nested too deeply	オブジェクトの入れ子が深すぎます
+@msg	its page has text, and its layers have no text objects to put it in	ページにテキストがありますが、レイヤーにはそれを入れるテキストオブジェクトがありません
+@msg	its preview was placed instead, at screen resolution	代わりにプレビューを画面解像度で配置しました
+@msg	join needs open paths	連結にはオープンパスが必要です
+@msg	lang must be one of {_1}	lang には {_1} のいずれかを指定してください
+@msg	missing `folder`	`folder` が指定されていません
+@msg	missing `id` (see plugin.list)	`id` が指定されていません (plugin.list を参照)
+@msg	missing `name`	`name` が指定されていません
+@msg	missing `tool`	`tool` が指定されていません
+@msg	missing index	index が指定されていません
+@msg	multiple windows land with M11.5	複数ウィンドウは M11.5 で対応予定です
+@msg	name the file	ファイル名を入力してください
+@msg	no CSS to copy: select objects with CSS of their own	コピーする CSS がありません: 独自の CSS を持つオブジェクトを選択してください
+@msg	no Live Paint edge near that point	その位置の近くにライブペイントのエッジがありません
+@msg	no Live Paint face at that point	その位置にライブペイントの面がありません
+@msg	no PNG encoder	PNG エンコーダーがありません
+@msg	no active document	アクティブなドキュメントがありません
+@msg	no active perspective plane	アクティブな遠近面がありません
+@msg	no anchor points selected	アンカーポイントが選択されていません
+@msg	no app to open files here	この環境にはファイルを開くアプリがありません
+@msg	no artboard {i} (0-based; the document has {_1})	アートボード {i} はありません (番号は 0 始まり、このドキュメントには {_1} 個あります)
+@msg	no artboard {i} (0-based; the document has {count})	アートボード {i} はありません (番号は 0 始まり、このドキュメントには {count} 個あります)
+@msg	no artboard	アートボードがありません
+@msg	no artboards named	アートボードが指定されていません
+@msg	no artwork	アートワークがありません
+@msg	no blend options	ブレンドオプションがありません
+@msg	no bounds	境界がありません
+@msg	no brush named `{name}`	`{name}` という名前のブラシが見つかりません
+@msg	no catalog	カタログがありません
+@msg	no changes since the last save	前回の保存以降、変更はありません
+@msg	no clock to keep a heartbeat by	ハートビートの記録に必要な時刻を取得できません
+@msg	no colour group `{g}`	カラーグループ `{g}` が見つかりません
+@msg	no cross-reference table	相互参照テーブルがありません
+@msg	no current layer	現在のレイヤーがありません
+@msg	no data	データがありません
+@msg	no dialog open	ダイアログが開かれていません
+@msg	no document open	ドキュメントが開かれていません
+@msg	no document	ドキュメントがありません
+@msg	no effect applied yet	まだ効果を適用していません
+@msg	no effect at index {k}	インデックス {k} に効果がありません
+@msg	no end record	終端レコードがありません
+@msg	no file manager here	この環境にはファイルマネージャーがありません
+@msg	no file reader	ファイルの読み込み機能がありません
+@msg	no file system here	この環境にはファイルシステムがありません
+@msg	no file writer	ファイルの書き込み機能がありません
+@msg	no files to place	配置するファイルがありません
+@msg	no format to export to	書き出し形式が指定されていません
+@msg	no free recovery area	空いている復帰用領域がありません
+@msg	no gradient stop or freeform point is selected	グラデーションの分岐点またはフリーフォームポイントが選択されていません
+@msg	no graphic style `{name}`	グラフィックスタイル `{name}` が見つかりません
+@msg	no graphic style `{n}`	グラフィックスタイル `{n}` が見つかりません
+@msg	no interaction in progress	進行中の操作がありません
+@msg	no key object	キーオブジェクトが設定されていません
+@msg	no library `{id}`	ライブラリ `{id}` が見つかりません
+@msg	no library `{key}` (see {list})	ライブラリ `{key}` が見つかりません ({list} を参照)
+@msg	no native format	ネイティブ形式がありません
+@msg	no pages	ページがありません
+@msg	no pattern `{name}`	パターン `{name}` が見つかりません
+@msg	no perspective grid preset named `{name}`	`{name}` という名前の遠近グリッドプリセットが見つかりません
+@msg	no plug-in {0} is installed	プラグイン {0} はインストールされていません
+@msg	no plug-in {id} is installed	プラグイン {id} はインストールされていません
+@msg	no point {i} (the gradient has {_1})	ポイント {i} はありません (このグラデーションのポイントは {_1} 個です)
+@msg	no preset editor	プリセットの編集ダイアログが開いていません
+@msg	no previous transform	前回の変形がありません
+@msg	no print preset named `{base}`	`{base}` という名前のプリントプリセットが見つかりません
+@msg	no print preset named `{name}`	`{name}` という名前のプリントプリセットが見つかりません
+@msg	no print service	プリントサービスがありません
+@msg	no revert command	「保存済みの状態に戻す」コマンドがありません
+@msg	no saved PDF preset named `{name}` (built-in presets are read-only: start a new one from them)	`{name}` という名前の保存済み PDF プリセットが見つかりません (組み込みのプリセットは読み取り専用です: それを元に新しいプリセットを作成してください)
+@msg	no saved presets	保存したプリセットはありません
+@msg	no saved print preset named `{name}` ({DEFAULT_PRESET} is protected: start a new one from it)	`{name}` という名前の保存済みプリントプリセットが見つかりません ({DEFAULT_PRESET} は保護されています: これを元に新しいプリセットを作成してください)
+@msg	no saved profiles	保存したプロファイルはありません
+@msg	no saved selections	保存した選択範囲はありません
+@msg	no saved themes	保存したテーマはありません
+@msg	no segment {segment} on line {line}	ライン {line} にセグメント {segment} はありません
+@msg	no selected slice in the image: select slices, or save all of them	画像内に選択されたスライスがありません: スライスを選択するか、すべてのスライスを保存してください
+@msg	no selection bounds	選択範囲に境界がありません
+@msg	no slice selected	スライスが選択されていません
+@msg	no such action	指定されたアクションが見つかりません
+@msg	no such anchor	指定されたアンカーポイントが見つかりません
+@msg	no such artboard	指定されたアートボードが見つかりません
+@msg	no such document	指定されたドキュメントが見つかりません
+@msg	no such layer or object	指定されたレイヤーまたはオブジェクトが見つかりません
+@msg	no such object {0}	オブジェクト {0} が見つかりません
+@msg	no such perspective grid preset	指定された遠近グリッドプリセットが見つかりません
+@msg	no such recent file	指定された最近使ったファイルが見つかりません
+@msg	no such recent font	指定された最近使ったフォントが見つかりません
+@msg	no such saved selection	指定された選択範囲は保存されていません
+@msg	no such segment	指定されたセグメントが見つかりません
+@msg	no such subpath	指定されたサブパスが見つかりません
+@msg	no such user library	指定されたユーザーライブラリが見つかりません
+@msg	no such view	指定された表示が見つかりません
+@msg	no such width point	指定された幅ポイントが見つかりません
+@msg	no swatch `{name}`	スウォッチ `{name}` が見つかりません
+@msg	no swatch library `{l}` (see swatch.library.list)	スウォッチライブラリ `{l}` が見つかりません (swatch.library.list を参照)
+@msg	no symbol instances selected	シンボルインスタンスが選択されていません
+@msg	no target object has an opacity mask: select one or give `id`	不透明マスクのあるターゲットオブジェクトがありません: 該当するオブジェクトを選択するか、`id` を指定してください
+@msg	no threaded text selected	スレッドテキストが選択されていません
+@msg	no user workspace `{from}`	ユーザーワークスペース `{from}` が見つかりません
+@msg	node {_1} is not text	ノード {_1} はテキストではありません
+@msg	not a DXF drawing	DXF 図面ではありません
+@msg	not a TerraZone file: {0}	TerraZone ファイルではありません: {0}
+@msg	not a TerraZone shortcut set (missing `overrides`)	TerraZone のショートカットセットではありません (`overrides` がありません)
+@msg	not a graphic style library (format `{_1}`)	グラフィックスタイルライブラリではありません (形式: `{_1}`)
+@msg	not a stored central record	無圧縮のセントラルディレクトリレコードではありません
+@msg	not a valid plug-in module: {0}	有効なプラグインモジュールではありません: {0}
+@msg	not an EMF or WMF file	EMF ファイルでも WMF ファイルでもありません
+@msg	not found	見つかりません
+@msg	not in pattern editing mode	パターン編集モードではありません
+@msg	nothing encoded	何もエンコードされませんでした
+@msg	nothing selected	何も選択されていません
+@msg	nothing to align	整列するものがありません
+@msg	nothing to distort	変形するものがありません
+@msg	nothing to export: the document has no visible art (or turn on Use Artboards)	書き出すものがありません: ドキュメントに表示されているアートがありません (または「アートボードを使用」をオンにしてください)
+@msg	nothing to preview	プレビューするものがありません
+@msg	nothing to print	プリントするものがありません
+@msg	nothing to redo	やり直す操作がありません
+@msg	nothing to save: the document has no visible art	保存するものがありません: ドキュメントに表示されているアートがありません
+@msg	nothing to undo	取り消す操作がありません
+@msg	nothing to warp	ワープするものがありません
+@msg	nothing to wrap	まとめるものがありません
+@msg	object {0} cannot have children	オブジェクト {0} には子オブジェクトを含められません
+@msg	object {id} is not a path	オブジェクト {id} はパスではありません
+@msg	onto must name a panel floating in another group	onto には、別のグループでフローティングしているパネルを指定してください
+@msg	page size {w} × {h}	ページサイズ {w} × {h} は無効です
+@msg	page {0} does not exist (the PDF has {1})	ページ {0} は存在しません (この PDF のページ数は {1} です)
+@msg	paste unavailable	貼り付けを使用できません
+@msg	path is already closed	パスはすでに閉じています
+@msg	paths contain invalid coordinates	パスに無効な座標が含まれています
+@msg	paths: give at least one file	paths: ファイルを 1 つ以上指定してください
+@msg	pattern missing	パターンが見つかりません
+@msg	patterns nested too deeply are filled with mid-grey	入れ子が深すぎるパターンは中間のグレーで塗りつぶされています
+@msg	percent must be above 0 and at most 6400, not {p}	パーセントは 0 より大きく 6400 以下にしてください ({p} は指定できません)
+@msg	pick a colour, gradient or pattern to save as a swatch	スウォッチとして保存するカラー、グラデーション、またはパターンを選択してください
+@msg	plane must be left, right or ground	plane には left、right、ground のいずれかを指定してください
+@msg	plug-in ABI: {0}	プラグインの ABI に問題があります: {0}
+@msg	plug-in exceeded its {0}	プラグインが {0} を超えました
+@msg	plug-in failed: {0}	プラグインの実行に失敗しました: {0}
+@msg	plug-in manifest: {0}	プラグインのマニフェストに問題があります: {0}
+@msg	plug-in output: {0}	プラグインの出力に問題があります: {0}
+@msg	plug-in parameters: {0}	プラグインのパラメーターに問題があります: {0}
+@msg	plug-in trapped: {0}	プラグインが異常終了しました: {0}
+@msg	print settings are not an object	プリント設定がオブジェクト形式ではありません
+@msg	range `{s}` is empty	範囲 `{s}` が空です
+@msg	range `{s}`: `{part}` names no number	範囲 `{s}`: `{part}` に番号が指定されていません
+@msg	range `{s}`: `{part}` runs backwards	範囲 `{s}`: `{part}` が逆順になっています
+@msg	range `{s}`: `{t}` is not a number from 1 to {count}	範囲 `{s}`: `{t}` は 1 から {count} までの数値ではありません
+@msg	recovery copy `{file}`: {e}	復帰用コピー `{file}` を読み込めませんでした: {e}
+@msg	resolutions must be between 1 and 2400 ppi	解像度は 1 から 2400 ppi までの値にしてください
+@msg	result would exceed the canvas (coordinates out of range)	結果がカンバスの範囲を超えます (座標が範囲外です)
+@msg	scale must be a number from {_1} to {_2}, not {_3}	縮尺は {_1} から {_2} までの数値にしてください ({_3} は指定できません)
+@msg	scale must be a number from {_1} to {_2}, not {s}	縮尺は {_1} から {_2} までの数値にしてください ({s} は指定できません)
+@msg	select a Live Paint group	ライブペイントグループを選択してください
+@msg	select a blend	ブレンドを選択してください
+@msg	select a clip group	クリップグループを選択してください
+@msg	select a gradient mesh	グラデーションメッシュを選択してください
+@msg	select a linked image: an embedded one has no file	リンク画像を選択してください: 埋め込み画像にはファイルがありません
+@msg	select a repeat	リピートを選択してください
+@msg	select a stroke with a variable width	可変幅の線を選択してください
+@msg	select a symbol instance	シンボルインスタンスを選択してください
+@msg	select an Image Trace object	画像トレースオブジェクトを選択してください
+@msg	select an envelope	エンベロープを選択してください
+@msg	select an image	画像を選択してください
+@msg	select an object in perspective	遠近グリッド上のオブジェクトを選択してください
+@msg	select artwork (or a colour group) to recolor	再配色するアートワーク (またはカラーグループ) を選択してください
+@msg	select at least two objects	オブジェクトを 2 つ以上選択してください
+@msg	select objects, not layers	レイヤーではなくオブジェクトを選択してください
+@msg	select one path, or give its `id`	パスを 1 つ選択するか、その `id` を指定してください
+@msg	select paths or anchor points	パスまたはアンカーポイントを選択してください
+@msg	select paths to join	連結するパスを選択してください
+@msg	select some type first	先にテキストを選択してください
+@msg	select the art to repeat	リピートするアートを選択してください
+@msg	select the artwork to warp	ワープするアートワークを選択してください
+@msg	select the objects to transform in perspective	遠近グリッド上で変形するオブジェクトを選択してください
+@msg	select two or more graphic styles to merge	統合するグラフィックスタイルを 2 つ以上選択してください
+@msg	select two or more objects to distribute	分布させるオブジェクトを 2 つ以上選択してください
+@msg	select type in perspective	遠近グリッド上のテキストを選択してください
+@msg	selection has no bounds	選択範囲に境界がありません
+@msg	shadings of an unknown type were left out	種類が不明なシェーディングは除外されました
+@msg	shadings of more than 4096 patches or triangles were left out	パッチまたは三角形が 4096 個を超えるシェーディングは除外されました
+@msg	shadings whose functions are of an unknown type are filled with their middle colour	関数の種類が不明なシェーディングは中間の色で塗りつぶされています
+@msg	shortcut for `{k}` must be a string	`{k}` のショートカットは文字列で指定してください
+@msg	stop {i} needs `offset`	分岐点 {i} には `offset` が必要です
+@msg	stop {i} needs a valid `color`	分岐点 {i} には有効な `color` が必要です
+@msg	stop {i}: `{k}` must be a number	分岐点 {i}: `{k}` には数値を指定してください
+@msg	the EMF header is damaged	EMF ヘッダーが破損しています
+@msg	the PDF has no pages	PDF にページがありません
+@msg	the PDF is no longer loaded	PDF はもう読み込まれていません
+@msg	the PDF is password-protected: give its password	この PDF はパスワードで保護されています: パスワードを入力してください
+@msg	the PDF password is wrong	PDF のパスワードが正しくありません
+@msg	the WMF header is damaged	WMF ヘッダーが破損しています
+@msg	the art could not be sampled	アートをサンプリングできませんでした
+@msg	the art has no bounds	アートに境界がありません
+@msg	the art is too light for any dots	アートが明るすぎて網点を生成できません
+@msg	the artboard to fit must be a positive size up to {_1} pt	合わせる先のアートボードのサイズは 0 より大きく {_1} pt 以下にしてください
+@msg	the background worker stopped	バックグラウンド処理が停止しました
+@msg	the compressed file unpacks to more than {_1} MB	圧縮ファイルを展開すると {_1} MB を超えます
+@msg	the document has never been saved	ドキュメントはまだ一度も保存されていません
+@msg	the document has no artboard	ドキュメントにアートボードがありません
+@msg	the document has no artboards	ドキュメントにアートボードがありません
+@msg	the document has no patterns	ドキュメントにパターンがありません
+@msg	the document has no slices	ドキュメントにスライスがありません
+@msg	the document has no symbols	ドキュメントにシンボルがありません
+@msg	the drawing has no layout `{_1}` (it has {_2})	図面にレイアウト `{_1}` はありません (含まれるレイアウト: {_2})
+@msg	the drawing is no longer loaded	図面はもう読み込まれていません
+@msg	the drawing is too large to open	図面が大きすぎて開けません
+@msg	the export region is empty	書き出し範囲が空です
+@msg	the export region is not finite	書き出し範囲に無効な数値が含まれています
+@msg	the export returned unreadable data	書き出し処理から読み取れないデータが返されました
+@msg	the export wrote no file	書き出しでファイルが作成されませんでした
+@msg	the file holds only a placeholder page, not its art (it was saved without PDF compatibility): save it again with PDF compatibility on, or as PDF or SVG	ファイルには仮のページだけが含まれ、アートは含まれていません (PDF 互換なしで保存されています): PDF 互換をオンにして保存し直すか、PDF または SVG として保存してください
+@msg	the file was read up to an error ({why}): what follows it was left out	ファイルはエラーが発生した箇所まで読み込まれました ({why}): それ以降の内容は除外されました
+@msg	the image is {width} × {height} pixels, more than Image Trace takes ({max} megapixels)	画像が {width} × {height} ピクセルで、画像トレースで扱える上限 ({max} メガピクセル) を超えています
+@msg	the layer has no objects to clip by	レイヤーにクリッピングマスクとして使えるオブジェクトがありません
+@msg	the layer or group is locked	レイヤーまたはグループがロックされています
+@msg	the layer to flatten into is hidden	統合先のレイヤーが非表示になっています
+@msg	the object already has an opacity mask	オブジェクトにはすでに不透明マスクがあります
+@msg	the object has no geometry	オブジェクトに形状がありません
+@msg	the object has no opacity mask	オブジェクトに不透明マスクがありません
+@msg	the object has no stroke	オブジェクトに線がありません
+@msg	the object would cross the horizon of the perspective plane	オブジェクトが遠近グリッドの面の水平線をまたいでしまいます
+@msg	the objects would leave the grid	オブジェクトがグリッドの外に出てしまいます
+@msg	the package came back damaged	返されたパッケージのデータが破損しています
+@msg	the preview image is empty	プレビュー画像が空です
+@msg	the print job has no data	プリントジョブにデータがありません
+@msg	the scale is not a usable number	縮尺が有効な数値ではありません
+@msg	the selection has no URL (or they differ)	選択したオブジェクトに URL がありません (または URL がそれぞれ異なります)
+@msg	the stroke has no weight	線に線幅がありません
+@msg	the thumbnail image is malformed	サムネール画像の形式が正しくありません
+@msg	the top object must be a path, compound path or text object to use as a clipping mask	クリッピングマスクとして使うには、最前面のオブジェクトがパス、複合パス、テキストオブジェクトのいずれかである必要があります
+@msg	the {tool} tool has no options	{tool} ツールにはオプションがありません
+@msg	there are no objects to release	レイヤーに分配するオブジェクトがありません
+@msg	there are no printer settings to open here	この環境では開けるプリンター設定がありません
+@msg	this format holds one artboard: export several as PDF or with document.exportForScreens	この形式で書き出せるアートボードは 1 つだけです: 複数のアートボードは PDF として書き出すか、document.exportForScreens を使用してください
+@msg	this is not a PostScript file	PostScript ファイルではありません
+@msg	this trace would make more than {max} anchor points, more than the document can show smoothly: raise Noise, lower Paths or Colors, or pick a lower-fidelity preset	このトレースではアンカーポイントが {max} 個を超え、ドキュメントを滑らかに表示できなくなります: 「ノイズ」を上げる、「パス」か「カラー」を下げる、または精度の低いプリセットを選択してください
+@msg	tool (a tool id) is required	tool (ツール ID) を指定してください
+@msg	tool shortcuts must be a single key (optionally with Shift)	ツールのショートカットには 1 つのキーを指定してください (Shift との組み合わせも可)
+@msg	truncated	データが途中で切れています
+@msg	unknown command `{0}`	`{0}` は不明なコマンドです
+@msg	unknown effect `{id}`	`{id}` は不明な効果です
+@msg	unknown format `{f}` (Save writes {_1})	`{f}` は不明な形式です (保存できる形式: {_1})
+@msg	unknown format	不明な形式です
+@msg	unknown freeform mode `{m}` (points, lines)	`{m}` は不明なフリーフォームのモードです (points、lines)
+@msg	unknown gradient kind `{k}` (linear, radial, freeform)	`{k}` は不明なグラデーションの種類です (linear、radial、freeform)
+@msg	unknown highlight `{h}`	`{h}` は不明なハイライトの指定です
+@msg	unknown option `{path}.{k}`	`{path}.{k}` は不明なオプションです
+@msg	unknown overprints `{o}` (preserve, simulate or discard)	`{o}` は不明なオーバープリントの指定です (preserve、simulate、discard のいずれか)
+@msg	unknown panel `{raw}`	`{raw}` は不明なパネルです
+@msg	unknown preference `{key}`	`{key}` は不明な環境設定の項目です
+@msg	unknown preset (one of {_1})	不明なプリセットです ({_1} のいずれかを指定してください)
+@msg	unknown preset `{name}` (high, medium, low or a saved one: see flattener.presets.list)	`{name}` は不明なプリセットです (high、medium、low、または保存したプリセット: flattener.presets.list を参照してください)
+@msg	unknown preset `{name}` (see flattener.presets.list)	`{name}` は不明なプリセットです (flattener.presets.list を参照してください)
+@msg	unknown preset `{name}` (see webExport.presets.list)	`{name}` は不明なプリセットです (webExport.presets.list を参照してください)
+@msg	unknown side `{other}` (left|right|top|bottom)	`{other}` は不明な側の指定です (left|right|top|bottom)
+@msg	unknown tool `{tool}`	`{tool}` は不明なツールです
+@msg	unknown tool `{t}`	`{t}` は不明なツールです
+@msg	unknown tool or command `{key}`	`{key}` は不明なツールまたはコマンドです
+@msg	unknown workspace (one of {_1})	不明なワークスペースです ({_1} のいずれかを指定してください)
+@msg	unsupported: {0}	対応していません: {0}
+@msg	width and height are at least 1 pixel	幅と高さは 1 ピクセル以上にしてください
+@msg	x and y must both be numbers	x と y はどちらも数値で指定してください
+@msg	{C}: no effect at index {from}	{C}: インデックス {from} に効果がありません
+@msg	{_1} failed: {e}	{_1} に失敗しました: {e}
+@msg	{_1} files can be opened but not written (see document.formats)	{_1} ファイルは開けますが、保存や書き出しはできません (document.formats を参照してください)
+@msg	{_1} files	{_1} 個のファイル
+@msg	{_1} font families available	{_1} 個のフォントファミリーを使用できます
+@msg	{_1} has no {_2} style	{_1} には {_2} スタイルがありません
+@msg	{_1} is a live effect (Effect › Plug-ins)	{_1} はライブ効果です (「効果 › プラグイン」から使用してください)
+@msg	{_1} is already used by {_2}	{_1} はすでに {_2} で使用されています
+@msg	{_1} linked image(s) changed on disk: Update Links shows the new versions	{_1} 個のリンク画像がディスク上で変更されました: 「リンクを更新」で新しいバージョンを表示できます
+@msg	{_1}: not saved, so not closed	{_1}: 保存されていないため、閉じませんでした
+@msg	{label} produced an empty result	{label} の結果が空になりました
+@msg	{label}: select paths	{label}: パスを選択してください
+@msg	{label}: select paths, compound paths, groups or text	{label}: パス、複合パス、グループ、テキストのいずれかを選択してください
+@msg	{label}…	{label}…
+@msg	{name}: CRC mismatch	{name}: CRC が一致しません
+@msg	{name}: no local header	{name}: ローカルヘッダーがありません
+@msg	{name}: no such recovery entry	{name}: 復帰用エントリが見つかりません
+@msg	{path}: no file system here (pass dataBase64 to open; omit the path to get dataBase64)	{path}: この環境にはファイルシステムがありません (開くには dataBase64 を渡し、dataBase64 を受け取るにはパスを省略してください)
+@msg	{path}: {e}	{path}: {e}
+@msg	{status} ({e})	{status} ({e})
+@plural	Color Table ({n} color)|Color Table ({n} colors)	カラーテーブル ({n} 色)
+@plural	Delete this {n} graphic style?|Delete these {n} graphic styles?	{n} 個のグラフィックスタイルを削除しますか？
+@plural	{n} Layer|{n} Layers	{n} レイヤー
+@plural	{n} Object|{n} Objects	{n} オブジェクト
+@plural	{n} area highlighted|{n} areas highlighted	{n} 個の範囲を強調表示
+@plural	{n} color|{n} colors	{n} 色
+@plural	{n} fill|{n} fills	{n} 個の塗り
+@plural	{n} glyph|{n} glyphs	{n} 個の字形
+@plural	{n} item|{n} items	{n} 項目
+@plural	{n} object highlighted|{n} objects highlighted	{n} 個のオブジェクトを強調表示
+@plural	{n} star|{n} stars	{n} つ星
+@plural	{n} step|{n} steps	{n} ステップ
+@plural	{n} stroke|{n} strokes	{n} 本の線
+axis	Both	両方
+axis	Horizontal	水平方向
+axis	Vertical	垂直方向
+theme	Appearance	外観
+	API Key	API キー
+	Add Connection	接続を追加
+	An XYZ template: {z}, {x}, {y}; {s} subdomains and {key} where the API key goes. Vector tiles: the .mvt URL.	XYZ テンプレート:{z}、{x}、{y};{s} はサブドメイン、{key} は API キーの位置です。ベクタータイル:.mvt の URL。
+	Attribution:	帰属:
+	Basemap	ベースマップ
+	Connect	接続
+	Draw on the world — map zones, paths and labels on OpenStreetMap and any tile source.	世界の上に描く — OpenStreetMap や好きなタイルソースの上に、地図のゾーン・パス・ラベルを。
+	Hide Add Connection	接続を追加を隠す
+	Hide Tiles	タイルを隠す
+	Kind	種類
+	MAP TEMPLATES	マップテンプレート
+	Make Tile Source	タイルソースを作成
+	New map	新規マップ
+	Open a document to see its tiles.	ドキュメントを開くとタイルが表示されます。
+	Put {key} in the URL where the key goes — a Mapbox access token, say.	URL のキーを置く位置に {key} を入れてください — Mapbox のアクセストークンなど。
+	Remove connection	接続を削除
+	Show Tiles	タイルを表示
+	Map Style	マップスタイル
+	Pin Tiles	タイルをピン留め
+	Tile Layers	タイルレイヤー
+	Tile Layer Options	タイルレイヤー設定
+	Remove Tile Layers	タイルレイヤーを削除
+	Show tiles under the art	アートの下にタイルを表示
+	Start a new map on	新しいマップの開始元
+	The URL needs {z}, {x} and {y} in an https template.	URL には https テンプレートの {z}、{x}、{y} が必要です。
+	The template needs {z}, {x} and {y} in an https URL.	テンプレートには https URL の {z}、{x}、{y} が必要です。
+	Tile Sources	タイルソース
+	URL	URL
+	URL template:	URL テンプレート:
+	optional	省略可
+	Dark (Esri)	ダーク (Esri)
+	Export as GeoJSON…	GeoJSON として書き出す…
+	Import GeoJSON…	GeoJSON を読み込む…
+	Import Shapefile…	シェープファイルを読み込む…
+	Light (Esri)	ライト (Esri)
+	Map	マップ
+	OpenStreetMap	OpenStreetMap
+	Remove Tile Source	タイルソースを削除
+	Satellite (Esri)	サテライト (Esri)
+	Tile Source	タイルソース
+	Tile Sources…	タイルソース…
+	Tiles	タイル
+	Topographic (OpenTopoMap)	地形図 (OpenTopoMap)
+	Source	ソース
+	Data	データ
+	Tile Sub-layers	タイルサブレイヤー
+	Unpin Tile	タイルのピン留めを解除
+	Basemap Style	ベースマップスタイル
+	Hide Tile Layer	タイルレイヤーを隠す
+	Show Tile Layer	タイルレイヤーを表示
+	Lock Tile Layer	タイルレイヤーをロック
+	Unlock Tile Layer	タイルレイヤーのロックを解除
+	Edit tile data (name, source, position, opacity, style)	タイルデータを編集（名前、ソース、位置、不透明度、スタイル）
+	Pin tiles from the view above and they show here, and in the Layers panel under the Map layer.	ビューのタイルをピン留めすると、ここともレイヤーパネルのマップレイヤーの下にも表示されます。
+	Make this the basemap	これをベースマップにする
+	Edit tile source	タイルソースを編集
+	Nothing selected — press a row's pencil to edit it here.	何も選択されていません — 行の鉛筆アイコンを押すと、ここで編集できます。
+	Locked — unlock the tile first.	ロックされています — 先にタイルのロックを解除してください。
+	Attribution	帰属
+	The URL needs to start with https.	URL は https で始まる必要があります。
+	Built-ins can't be changed. Duplicate it as a connection to edit a copy.	組み込みソースは変更できません — 接続として複製すれば、そのコピーを編集できます。
+	Duplicate as Connection	接続として複製
+	All tile sources	すべてのタイルソース
+	A pinned tile's own style lives on its Edit tab.	ピン留めしたタイル自体のスタイルは、その「編集」タブにあります。
+	Locked — edit tiles in the Tiles panel	ロック中 — タイルはタイルパネルで編集します
+	Pin Visible Tiles	表示中のタイルをピン留め
+	Tile Sub-layers…	タイルサブレイヤー…
+@msg	no map to pin tiles from	ピン留めするタイルのあるマップがありません
+@msg	no tiles in the view to pin	ビューにピン留めできるタイルがありません
+	Coordinate System:	座標系:
+	Extent:	範囲:
+	the whole Web Mercator world	Web メルカトル世界全体
+	Tile Basemap	タイル背景地図
+	Sources, their keys and the pinned tile sub-layers live in Map › Tile Sources… and the Tiles panel.	ソースとそのキー、ピン留めしたタイルサブレイヤーは「マップ › タイルソース…」とタイルパネルにあります。
+	3D Tiles: the meshes draw in a 3D viewport; until then the 2D canvas shows Google's session 2D tiles as the imagery.	3D タイル: メッシュは 3D ビューポートで描画されます。それまでは 2D キャンバスに Google のセッション 2D タイルを画像として表示します。
+@msg	Google Map Tiles refused the key — check it in Map › Tile Sources…	Google Map Tiles がキーを拒否しました。「マップ › タイルソース…」で確認してください
+@msg	Imported {name}: {landed} feature(s) onto one layer	{name} を読み込みました: {landed} フィーチャーを 1 レイヤーに
+@msg	{n} empty feature(s) skipped	空のフィーチャー {n} 件をスキップしました
+@msg	{path}: {_1} features is past the {_2}-feature import cap — split the file and import the parts	{path}: {_1} フィーチャーはインポート上限 {_2} 件を超えています。ファイルを分割して読み込んでください
+	Import Vector Data	ベクターデータを読み込む
+	Tile Source Session	タイルソースのセッション
+	Disk cache	ディスクキャッシュ
+	tiles on disk	タイルをディスクに保存
+	tiles loading	タイルを読み込み中
+	Clear cache	キャッシュを消去
+	Tile cache cleared	タイルキャッシュを消去しました
+	3D Environment	3D 環境
+	Terrain	地形
+	Terrain loading	地形を読み込み中
+	no DEM fetcher	DEM フェッチャなし
+	Click to place · Esc to finish	クリックで配置 · Esc で終了
+	Placement finished	配置を終了しました
+	3D environment — drag to orbit · Shift-drag to pan · wheel to zoom	3D 環境 — ドラッグで回転 · Shift+ドラッグで移動 · ホイールでズーム
+@msg	3D anchors the map view centre — open water here; zoom the 2D map to an area to bring it into 3D	3D はマップビューの中心にアンカーします — ここは外洋です。2D マップを目的の地域にズームすると 3D に表示されます
+	Triangle budget reached — showing the closest {n} tris	三角形の上限に達しました — 近い {n} 個のみ表示
+	Array Point	配列ポイント
+	Array Point Tool	配列ポイントツール
+	Line Point	ラインポイント
+	Line Point Tool	ラインポイントツール
+	Place Asset	アセットを配置
+	Placed Assets	配置済みアセット
+	Scene 3D Settings	3D シーン設定
+@msg	Placed {_1} at {_2}°, {_3}°	{_1} を {_2}°, {_3}° に配置しました
+@msg	id required	id が必要です
+@msg	kind must be one of house, building, tree, stadium, pin	kind は house、building、tree、stadium、pin のいずれかです
+	3D Terrain	3D 地形
+	3D Scene	3D シーン
+	3D Assets	3D アセット
+	3D Camera	3D カメラ
+	Open a map document to shape its 3D terrain.	地図ドキュメントを開くと 3D 地形を調整できます。
+	The terrain starts when the 3D environment opens.	地形は 3D 環境を開くと始まります。
+	The elevation tiles (AWS Terrarium, no key) download once and cache on disk.	標高タイル（AWS Terrarium、キー不要）は一度だけダウンロードされディスクに保存されます。
+	Contours (m)	等高線 (m)
+	Imagery zoom	画像ズーム
+	Open a map document to see its 3D scene.	地図ドキュメントを開くと 3D シーンが表示されます。
+	Nothing placed yet — pick an asset in the Assets 3D panel and click the 3D ground.	まだ何もありません — 3D アセットパネルでアセットを選び、3D の地面をクリックしてください。
+	Remove all	すべて削除
+	Open a map document to place assets on it.	地図ドキュメントを開くとアセットを配置できます。
+	Stop placing	配置を停止
+	Pick an asset, then click the 3D ground — the ghost shows where it lands.	アセットを選び、3D の地面をクリックします — ゴーストが設置位置を示します。
+	A textured house — walls, gable roof, door and windows	質感のある家 — 壁、切妻屋根、扉、窓
+	A block building; floors set its height	ブロック建物。層数で高さが決まります
+	A conifer for streets and gardens	街路や庭園向けの針葉樹
+	A stadium — pitch, track, stands and wall	スタジアム — ピッチ、トラック、スタンド、外壁
+	A marker pin on the terrain	地形上のマーカーピン
+	Open a map document to fly its 3D environment.	地図ドキュメントを開くと 3D 環境を飛び回れます。
+	Orbit	オービット
+	Pitch	ピッチ
+	Distance	距離
+	Presets	プリセット
+	Aerial	空撮
+	Street	ストリート
+	Top-down	真上から
+	Fit terrain	地形に合わせる
+	Drag orbits on the canvas, Shift-drag pans, the wheel zooms, double-click recentres.	キャンバス上でドラッグして回転、Shift+ドラッグで移動、ホイールでズーム、ダブルクリックで中心合わせ。
+	Fleet	フリート
+	Open a map document to see its fleet.	地図ドキュメントを開くとフリートが表示されます。
+	Connecting	接続中
+	Live	ライブ
+	Demo feed	デモフィード
+	Session token	セッショントークン
+	Managed automatically — TerraZone obtains and rotates this feed's session itself; no cookie to paste.	自動管理 — TerraZone がこのフィードのセッションを自分で取得・更新します。Cookie を貼る必要はありません。
+	Requesting a session…	セッションを要求中…
+	Session active.	セッションは有効です。
+	Reset session	セッションをリセット
+	Save endpoint	エンドポイントを保存
+	The session token Bolt's API expects in Authorization.	Bolt の API が Authorization に求めるセッショントークン。
+	Endpoint ({res}, {cells}, {z}, {bbox})	エンドポイント ({res}, {cells}, {z}, {bbox})
+	The request URL template; empty keeps the provider's default.	リクエスト URL テンプレート。空で既定を使用します。
+	Sign in	サインイン
+	Sign out	サインアウト
+	Poll	ポーリング
+	Poll every {n} s	{n} 秒ごとにポーリング
+	Fetch now	今すぐ取得
+	Asking {n} feeds…	{n} 個のフィードに問い合わせ中…
+	A feed draws its markers only while its session is live and answering. Bolt keeps your sign-in; the radars' sessions manage themselves.	フィードはセッションが有効で応答している間だけマーカーを描きます。Bolt はあなたのサインインをそのまま使い、レーダーのセッションは自動で管理されます。
+	Fleet Demo Feed	フリートのデモフィード
+	Fleet Poll Interval	フリートのポーリング間隔
+	Fleet Sign-in	フリートのサインイン
+	Fleet System Session	フリートのシステムセッション
+	Fleet Layer Sync	フリートのレイヤー同期
+	Fleet Sign-out	フリートのサインアウト
+	Fleet Status	フリートの状態
+	Poll Fleet Now	今すぐフリートをポーリング
+	Show Fleet Feed	フリートフィードの表示
+	fleet	fleet
+	Assets Tool	アセットツール
+	Brush Assets	アセットをブラシで配置
+	Clear Assets	すべてのアセットを削除
+	Send code	コードを送信
+	Verify	確認
+	Change number	番号を変更
+	Use another number	別の番号を使う
+	Phone number (e.g. +255 700 000 000)	電話番号（例: +255 700 000 000）
+	Bolt sends a 4-digit code to this number to verify it.	Bolt が確認用の 4 桁のコードをこの番号に送ります。
+	Type the 4-digit code sent to {phone}.	{phone} に送られた 4 桁のコードを入力してください。
+	4-digit code	4 桁のコード
+	The 4 digits from Bolt's SMS.	Bolt の SMS に届いた 4 桁です。
+	Signed in as {phone}. The session is kept in the settings.	{phone} でサインイン中。セッションは設定に保存されています。
+	The code is on its way — type the 4 digits Bolt sent	コードを送信しました — Bolt から届いた 4 桁を入力してください
+	Bolt verified — the session is saved in the settings	Bolt を確認しました — セッションは設定に保存されました
+	Timetable for {date}	{date} の時刻表
+	{n} stations · {m} trains	駅 {n} · 列車 {m}
+	Running now	運行中
+	Next: {name} in {m} min	次: {name} まで {m} 分
+	Arrives {name} in {m} min	{name} に {m} 分後に到着
+	Mapping the SGR line — one station pair per poll; trains appear as the timetable fills in.	SGR 路線を調査中 — ポールごとに 1 区間ずつ問い合わせ、時刻表が埋まるにつれ列車が現れます。
+	No train on the line right now — the sweep keeps the timetable current.	現在線路上に列車はいません — スイープが時刻表を最新に保ちます。
+	The timetable rides the document — a saved map keeps it.	時刻表はドキュメントに保存されます — マップを保存すると一緒に残ります。
+	Vehicle icons download from Bolt automatically.	車両アイコンは Bolt から自動的にダウンロードされます。
+	SGR Timetable	SGR 時刻表
+	Today's trains	今日の列車
+	Seats	座席
+	Seats…	座席…
+	No seat available	空席なし
+	Selected	選択済み
+	Seat picked — booking needs an SGR account, so the flow ends here.	座席を選択しました。予約にはSGRアカウントが必要なため、ここで終わります。
+	{name} — {free} of {total} seats free	{name} — 空席 {free}/{total}
+	The vendor hasn't reported this set's coaches yet — the sweep keeps asking.	この編成の客車はまだ報告されていません — 取得を続けます。
+	The ground drapes the basemap flat; contours (0 = off) draw the relief with their heights.	地面はベースマップを平らに敷きます。等高線（0 = オフ）が高さ付きで起伏を描きます。
+	The 3D environment — the basemap draped flat, contour lines and placed assets, in their own panels.	3D 環境 — ベースマップを平らに敷き、等高線と配置アセットを、それぞれのパネルに。
+
+	Bolt signed in from the deployment's own trust ({uid})	Bolt はデプロイのトラストからサインインしました（{uid}）
+	Auth code {code} (generated, Basic {uid})	認証コード {code}（生成済み、Basic {uid}）
+	Device {device}	デバイス {device}
