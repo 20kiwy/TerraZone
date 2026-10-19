@@ -196,7 +196,12 @@ default-members = ["crates/*", "apps/terrazon", "apps/terrazon-cli", "xtask"]
 # (v0.22.0 shipped there first: the ELF executes, the PE imports only system DLLs with zero
 # schannel — the rustls story — and the checksums all match). Free unlimited Actions minutes
 # on the public repo; the README now carries the live-fleet story with the rig screenshots.
-version = "0.23.0"
+# 0.24.0: the tag lane is the release train now — v0.23.0 proved the second consecutive
+# build-through-a-push (Windows x64 portable zip + Linux x86_64 tar.gz + the tagged source
+# zip + SHA256SUMS.txt, all checksum-verified anonymously off the public repo, the ELF
+# executing "terrazon 0.23.0"). No app code changed in this round; the version moves so
+# every release keeps its own tag, its own binaries and its own checksums.
+version = "0.24.0"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 rust-version = "1.95"
