@@ -3600,3 +3600,6 @@ axis	Both	两者
 	Bolt signed in from the deployment's own trust ({uid})	Bolt 已通过部署信任自动登录（{uid}）
 	Auth code {code} (generated, Basic {uid})	认证码 {code}（已生成，Basic {uid}）
 	Device {device}	设备 {device}
+	Map Grid Lines	地图网格线
+	Show Map Grid Lines	显示地图网格线
+	Hide Map Grid Lines	隐藏地图网格线

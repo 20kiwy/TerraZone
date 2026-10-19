@@ -3916,3 +3916,6 @@ axis	Vertical	Вертикальна
 	Bolt signed in from the deployment's own trust ({uid})	Bolt увійшов через довіру розгортання ({uid})
 	Auth code {code} (generated, Basic {uid})	Код доступу {code} (згенеровано, Basic {uid})
 	Device {device}	Пристрій {device}
+	Map Grid Lines	Лінії сітки карти
+	Show Map Grid Lines	Показати лінії сітки карти
+	Hide Map Grid Lines	Сховати лінії сітки карти

@@ -1920,7 +1920,6 @@
 	Rounded Rectangle…	Retângulo Arredondado…
 	Rows:	Linhas:
 	Rule:	Regra:
-	Rulers	Réguas
 	Rulers & Grids	Réguas e Grades
 	Run Plug-in	Executar Plug-in
 	SAVED	SALVO
@@ -2798,3 +2797,6 @@
 	Bolt signed in from the deployment's own trust ({uid})	Bolt conectado pela confiança da implantação ({uid})
 	Auth code {code} (generated, Basic {uid})	Código de auth {code} (gerado, Basic {uid})
 	Device {device}	Dispositivo {device}
+	Map Grid Lines	Linhas de grade do mapa
+	Show Map Grid Lines	Mostrar linhas de grade do mapa
+	Hide Map Grid Lines	Ocultar linhas de grade do mapa

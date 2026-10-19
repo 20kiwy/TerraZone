@@ -3384,3 +3384,6 @@ axis	Vertical	垂直
 	Bolt signed in from the deployment's own trust ({uid})	Bolt 已透過部署信任自動登入（{uid}）
 	Auth code {code} (generated, Basic {uid})	認證碼 {code}（已產生，Basic {uid}）
 	Device {device}	裝置 {device}
+	Map Grid Lines	地圖網格線
+	Show Map Grid Lines	顯示地圖網格線
+	Hide Map Grid Lines	隱藏地圖網格線

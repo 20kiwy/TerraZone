@@ -1173,8 +1173,8 @@ fn graticule(p: &egui::Painter, rect: egui::Rect, xf: &Xf, t: &Tokens) {
     let view = corners.iter().fold(Rect::from_points(corners[0], corners[0]), |b, c| b.union_pt(*c));
     let pad = 24.0 / xf.zoom;
     let (y0, y1) = (view.y0 - pad, view.y1 + pad);
-    let underlay = Stroke::new(1.0, Color32::from_black_alpha(60));
-    let light = Stroke::new(1.0, Color32::from_white_alpha(60));
+    let underlay = Stroke::new(1.2, Color32::from_black_alpha(95));
+    let light = Stroke::new(1.0, Color32::from_white_alpha(105));
     // A sampled ground line from `a` to `b`, underlay first.
     let line = |a: Point, b: Point, overlay: Stroke| {
         let n = ((xf.to_screen(a).distance(xf.to_screen(b)) / 24.0).ceil() as usize).clamp(2, 64);
@@ -1201,7 +1201,7 @@ fn graticule(p: &egui::Painter, rect: egui::Rect, xf: &Xf, t: &Tokens) {
         let lon = k as f64 * lon_step;
         let x = WORLD_PT / 2.0 + lon * per_deg;
         // Longitude 0 is the prime meridian: a stronger halo.
-        let overlay = if k == 0 { Stroke::new(1.0, Color32::from_white_alpha(110)) } else { light };
+        let overlay = if k == 0 { Stroke::new(1.4, Color32::from_white_alpha(165)) } else { light };
         line(Point::new(x, y0), Point::new(x, y1), overlay);
         k += 1;
     }
@@ -1217,7 +1217,7 @@ fn graticule(p: &egui::Painter, rect: egui::Rect, xf: &Xf, t: &Tokens) {
     while j <= last {
         let lat = j as f64 * lat_step;
         let y = lonlat_to_doc(0.0, lat).1;
-        let overlay = if j == 0 { Stroke::new(1.4, t.accent.gamma_multiply(0.55)) } else { light };
+        let overlay = if j == 0 { Stroke::new(1.6, t.accent.gamma_multiply(0.72)) } else { light };
         line(Point::new(view.x0 - pad, y), Point::new(view.x1 + pad, y), overlay);
         j += 1;
     }

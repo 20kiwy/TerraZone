@@ -269,6 +269,7 @@ pub(crate) fn read_vehicle(provider: Provider, id: &str, item: &serde_json::Valu
                     category: (!type_code.is_empty()).then(|| type_code.to_string()),
                     icon_url: None,
                     alt_m,
+                    scheduled: false,
                 });
             }
         }
@@ -314,6 +315,7 @@ pub(crate) fn read_vehicle(provider: Provider, id: &str, item: &serde_json::Valu
         icon_url: None,
         // The flight fields report feet (FR24's alt / alt_geom); everything else metres.
         alt_m: f_of(item, &["alt", "altitude", "alt_geom"]).map(|a| if a > 2_000.0 { (a * 0.3048) as f32 } else { a as f32 }),
+        scheduled: false,
     })
 }
 
@@ -389,6 +391,7 @@ pub fn demo_markers(view: ViewBox, zoom: f64, tick: u64) -> Vec<Vehicle> {
                 category: None,
                 icon_url: None,
                 alt_m: alt_m.map(|a| a + 40.0 * j as f32),
+                scheduled: false,
             });
         }
     }

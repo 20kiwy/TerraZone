@@ -99,6 +99,7 @@ pub fn parse_poll(bytes: &[u8]) -> Result<Vec<Vehicle>, String> {
                     category: (!category_id.is_empty() && category_id.parse::<u64>().is_err()).then(|| prettify_category(category_id)),
                     icon_url,
                     alt_m: None,
+                    scheduled: false,
                 });
             }
         }

@@ -610,7 +610,7 @@ pub fn tick(app: &mut TerrazoneApp, view: Option<FleetView>) {
                 continue;
             }
             cache.icons_pending.insert(url.clone());
-            fetcher.get(format!("icon/{url}"), url, vec![("User-Agent".into(), "TerraZone/0.21.0 (Bolt vehicle artwork)".into())], cache.tx.clone());
+            fetcher.get(format!("icon/{url}"), url, vec![("User-Agent".into(), "TerraZone/0.22.0 (Bolt vehicle artwork)".into())], cache.tx.clone());
         }
     }
 }
@@ -937,7 +937,26 @@ fn draw_markers(
     zoom_scale: f32,
 ) {
     for v in markers {
-        let centre = to_screen(v.lon, v.lat, xf);
+        let mut centre = to_screen(v.lon, v.lat, xf);
+        // Scheduled events stack at their origin station by definition (five departures from
+        // Dar es Salaam draw five marks on the same point) — a deterministic spread fans them
+        // out round the station so the count reads: same id, same offset, every frame.
+        if v.scheduled {
+            let mut h: u32 = 0x811c_9dc5;
+            for b in v.id.bytes() {
+                h = (h ^ u32::from(b)).wrapping_mul(0x0100_0193);
+            }
+            let ring = (h % 8) as f32;
+            let step = fleetlib::sizing::px(fleetlib::sizing::class_of(v.kind, v.length_m)) * 1.1 * zoom_scale;
+            let (dx, dy) = match ring as u32 {
+                0 => (0.0, 0.0), // the first wait sits on the station itself
+                n => {
+                    let a = (n as f32) * std::f32::consts::TAU / 7.0;
+                    (a.sin() * 2.2 * step, -a.cos() * 2.2 * step)
+                }
+            };
+            centre += egui::vec2(dx, dy);
+        }
         if !rect.expand(60.0).contains(centre) {
             continue;
         }
@@ -1043,11 +1062,14 @@ fn icon_shape(out: &mut Vec<Shape>, v: &Vehicle, centre: Pos2, color: Color32, i
     let (sin, cos) = rad.sin_cos();
     let pts: Vec<Pos2> =
         v.kind.icon().iter().map(|(ix, iy)| pos2(centre.x + (ix * cos + iy * sin) * size, centre.y + (ix * sin - iy * cos) * size)).collect();
-    out.push(Shape::circle_filled(centre, size * 0.85, Color32::from_white_alpha(150)));
-    out.push(Shape::Path(egui::epaint::PathShape {
-        points: pts,
-        closed: true,
-        fill: color,
-        stroke: Stroke::new(1.0, Color32::from_black_alpha(190)).into(),
-    }));
+    // A scheduled event (the SGR's trips still waiting for their departure) draws dimmed —
+    // clearly data, clearly not running yet; the live markers carry the full colour.
+    let (r, g, b) = (color.r(), color.g(), color.b());
+    let (fill, halo, edge) = if v.scheduled {
+        (Color32::from_rgba_unmultiplied(r, g, b, 115), Color32::from_white_alpha(90), Stroke::new(1.0, Color32::from_black_alpha(110)))
+    } else {
+        (color, Color32::from_white_alpha(150), Stroke::new(1.0, Color32::from_black_alpha(190)))
+    };
+    out.push(Shape::circle_filled(centre, size * 0.85, halo));
+    out.push(Shape::Path(egui::epaint::PathShape { points: pts, closed: true, fill, stroke: edge.into() }));
 }

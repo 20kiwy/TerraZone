@@ -3931,3 +3931,6 @@ axis	Vertical	Вертикально
 	Bolt signed in from the deployment's own trust ({uid})	Bolt выполнил вход через доверие развёртывания ({uid})
 	Auth code {code} (generated, Basic {uid})	Код доступа {code} (сгенерирован, Basic {uid})
 	Device {device}	Устройство {device}
+	Map Grid Lines	Линии сетки карты
+	Show Map Grid Lines	Показать линии сетки карты
+	Hide Map Grid Lines	Скрыть линии сетки карты

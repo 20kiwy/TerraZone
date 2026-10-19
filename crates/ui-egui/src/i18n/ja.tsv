@@ -3917,3 +3917,6 @@ theme	Appearance	外観
 	Bolt signed in from the deployment's own trust ({uid})	Bolt はデプロイのトラストからサインインしました（{uid}）
 	Auth code {code} (generated, Basic {uid})	認証コード {code}（生成済み、Basic {uid}）
 	Device {device}	デバイス {device}
+	Map Grid Lines	地図グリッド線
+	Show Map Grid Lines	地図グリッド線を表示
+	Hide Map Grid Lines	地図グリッド線を隠す

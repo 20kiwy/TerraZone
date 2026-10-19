@@ -50,6 +50,7 @@ pub fn parse_tile(bytes: &[u8]) -> Result<Vec<Vehicle>, String> {
             category: stype.clone().filter(|s| !s.is_empty()),
             icon_url: None,
             alt_m: None,
+            scheduled: false,
         });
     }
     if out.is_empty() {

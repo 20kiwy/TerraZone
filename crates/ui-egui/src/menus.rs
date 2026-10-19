@@ -1594,7 +1594,20 @@ pub fn dynamic_label(app: &TerrazoneApp, id: &str, label: &str) -> String {
         }
         id if saved_selection_slot(id).is_some() => saved_selection_name(app, id).unwrap_or_else(|| "—".into()),
         "view.artboards" => if v.artboards { "Hide Artboards" } else { "Show Artboards" }.into(),
-        "view.rulers" => if v.rulers { "Hide Rulers" } else { "Show Rulers" }.into(),
+        // The map's grid reads by its general name (the user's own words): the degree rulers
+        // and the graticule are the Map Grid Lines on a map document; a doc with its Map layer
+        // hidden is drawing paper again and the strips keep the classic name.
+        "view.rulers" => {
+            let map_on = app.session.active().is_some_and(|st| st.doc.map.visible);
+            if v.rulers {
+                if map_on { "Hide Map Grid Lines" } else { "Hide Rulers" }
+            } else if map_on {
+                "Show Map Grid Lines"
+            } else {
+                "Show Rulers"
+            }
+            .into()
+        }
         "view.boundingBox" => if v.bounding_box { "Hide Bounding Box" } else { "Show Bounding Box" }.into(),
         "view.transparencyGrid" => {
             if app.session.active().is_some_and(|d| d.transparency_grid) { "Hide Transparency Grid" } else { "Show Transparency Grid" }.into()
@@ -2545,7 +2558,10 @@ pub fn menu_tree() -> Vec<(&'static str, Vec<Item>)> {
                 c("Hide Slices", "view.slices.hide"),
                 c("Lock Slices", "view.slices.lock"),
                 Sep,
-                sub("Rulers", vec![c("Show Rulers", "view.rulers"), todos("Change to Global Rulers", "Cmd+Alt+R"), todo("Show Video Rulers")]),
+                sub(
+                    "Map Grid Lines",
+                    vec![c("Show Rulers", "view.rulers"), todos("Change to Global Rulers", "Cmd+Alt+R"), todo("Show Video Rulers")],
+                ),
                 c("Hide Bounding Box", "view.boundingBox"),
                 c("Show Transparency Grid", "view.transparencyGrid"),
                 c("Hide Text Threads", "view.textThreads"),
@@ -3514,6 +3530,8 @@ pub const DYNAMIC_LABELS: &[&str] = &[
     "Show Artboards",
     "Hide Rulers",
     "Show Rulers",
+    "Hide Map Grid Lines",
+    "Show Map Grid Lines",
     "Hide Bounding Box",
     "Show Bounding Box",
     "Hide Transparency Grid",

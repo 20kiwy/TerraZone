@@ -206,6 +206,11 @@ pub struct Vehicle {
     /// under the marker at higher zooms.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub category: Option<String>,
+    /// A scheduled event, not a live one: the SGR's trips still waiting for their departure
+    /// draw dimmed at the origin station, so the map carries the day's whole timetable (the
+    /// data the vendor published) and not just whatever the clock has on the rails now.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub scheduled: bool,
     /// The vendor's artwork URL for this vehicle's class (Bolt's `icons` block): the runtime
     /// downloads it once per id, caches the PNG and draws the real pin instead of the glyph.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -220,7 +225,7 @@ pub struct Vehicle {
 impl Vehicle {
     /// A marker with only the required fields (the rest is the feed's own data).
     pub fn at(id: impl Into<String>, kind: VehicleKind, lon: f64, lat: f64, heading_deg: f32) -> Self {
-        Self { id: id.into(), kind, lon, lat, heading_deg, length_m: None, name: None, category: None, icon_url: None, alt_m: None }
+        Self { id: id.into(), kind, lon, lat, heading_deg, length_m: None, name: None, category: None, icon_url: None, alt_m: None, scheduled: false }
     }
 }
 
@@ -598,6 +603,7 @@ mod tests {
                 category: None,
                 icon_url: None,
                 alt_m: None,
+                scheduled: false,
             });
         }
         assert_eq!(st.live(), vec![Provider::Flight]);

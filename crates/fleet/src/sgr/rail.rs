@@ -193,6 +193,13 @@ pub fn parse_clock(s: &str) -> Option<u32> {
     Some(h * 60 + m)
 }
 
+/// Minutes since midnight → the `HH:MM` the panel and the map's scheduled markers show
+/// (a minutes value of the next day's small hours keeps its own wall clock: 1470 → "00:30").
+pub fn clock_label(min: u32) -> String {
+    let m = min % 1440;
+    format!("{:02}:{:02}", m / 60, m % 60)
+}
+
 /// `YYYY-MM-DD` for the given unix seconds in East Africa Time (UTC+3, no DST) — the
 /// schedule day the sweep builds.
 pub fn today_eat(unix_secs: i64) -> String {
@@ -738,6 +745,7 @@ impl SgrTimetable {
                     category: Some(last.name.clone()),
                     icon_url: None,
                     alt_m: None,
+                    scheduled: false,
                 });
                 continue;
             };
@@ -756,6 +764,36 @@ impl SgrTimetable {
                 category: Some(next.name.clone()),
                 icon_url: None,
                 alt_m: None,
+                scheduled: false,
+            });
+        }
+        // The day's WHOLE data, not just what the clock has on the rails: a trip still
+        // waiting for its departure draws dimmed at the origin station (the draw reads
+        // `scheduled`), so the map carries the timetable the sweep published from frame one —
+        // early morning, midday or after the last service, the data is the whole day's. A
+        // trip that has finished its run drops off the map (it is history; the panel's day
+        // list keeps the row).
+        for train in self.trains.iter() {
+            if Self::now_on_board(train, now_min).is_some() {
+                continue; // already drawn above, riding its segment
+            }
+            let Some(first) = train.stops.first() else { continue };
+            if now_min >= first.time_min {
+                continue; // the run is over (a midnight-crossing trip off the board here reads below)
+            }
+            let Some(p) = atlas.station(&first.name) else { continue };
+            out.push(Vehicle {
+                id: format!("sgr-{}-scheduled", train.trips_no),
+                kind: VehicleKind::Train,
+                lon: p.lon,
+                lat: p.lat,
+                heading_deg: -1.0,
+                length_m: None,
+                name: Some(train.name.clone()),
+                category: Some(format!("departs {} · {}", clock_label(first.time_min), first.name)),
+                icon_url: None,
+                alt_m: None,
+                scheduled: true,
             });
         }
         out
@@ -911,7 +949,7 @@ pub fn sweep_headers() -> Vec<(String, String)> {
     vec![
         ("Accept".into(), "application/json".into()),
         ("Accept-Language".into(), "en-GB,en;q=0.9".into()),
-        ("User-Agent".into(), "TerraZone/0.21.0 (SGR schedule sweep)".into()),
+        ("User-Agent".into(), "TerraZone/0.22.0 (SGR schedule sweep)".into()),
     ]
 }
 
@@ -1236,13 +1274,21 @@ mod tests {
         assert!((m.heading_deg - 180.0).abs() < 1.0, "headed south: {}", m.heading_deg);
         assert_eq!(m.category.as_deref(), Some("Kilosa"), "the next stop rides the marker");
 
-        // Before the first departure and after the arrival: nothing runs.
-        assert!(t.project(&atlas, 5 * 60).is_empty());
+        // Before the first departure the trip stands at the origin as a scheduled event —
+        // the day's whole data stays on the map (dimmed by the draw), not just what runs now.
+        let early = t.project(&atlas, 5 * 60);
+        assert_eq!(early.len(), 1, "the not-yet-departed trip waits at its origin");
+        assert!(early[0].scheduled, "it reads as a scheduled event");
+        assert_eq!(early[0].id, "sgr-0011904-scheduled", "a distinct id from the running marker");
+        assert!((early[0].lat - (-6.0)).abs() < 1e-6, "parked at Dar Es Salaam");
+        assert_eq!(early[0].category.as_deref(), Some("departs 06:00 · Dar Es Salaam"));
+        // After the arrival the run is history — off the map (the panel's day list keeps it).
         assert!(t.project(&atlas, 10 * 60).is_empty());
 
         // At the terminal minute the train parks at the last station.
         let end = t.project(&atlas, 9 * 60 + 50);
         assert_eq!(end.len(), 1);
+        assert!(!end[0].scheduled, "arrived reads live (parked at the terminal)");
         assert!((end[0].lat - (-7.0)).abs() < 1e-6, "parked at Dodoma");
     }
 

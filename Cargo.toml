@@ -181,7 +181,16 @@ default-members = ["crates/*", "apps/terrazon", "apps/terrazon-cli", "xtask"]
 # own (polls, markers and trains move while the mouse sits still), and Bolt's downloaded pin
 # rides the vehicle's bearing — rotated round its tip over a ground shadow with a heading
 # needle, floored so it is always seen.
-version = "0.21.0"
+# 0.22.0: one TLS story on every target — Windows rides the pure-Rust RustCrypto provider
+# (rustls-rustcrypto + webpki roots) instead of the OS's schannel, whose handshake the
+# radars' CDN kept refusing (the user's "Marine never works in Windows"); the connector is
+# compiled everywhere so the Linux tests drive the exact code the Windows binary ships.
+# The View menu's Rulers read by their general name — Map Grid Lines — and the graticule
+# (the map's own degree grid) draws stronger, so the lines read on pale and busy basemaps
+# alike. The SGR shows the day's WHOLE data: trips still waiting for their departure draw
+# dimmed at the origin station, fanned out round it so the count reads, and the map carries
+# the timetable from frame one instead of only whatever the clock has on the rails now.
+version = "0.22.0"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 rust-version = "1.95"

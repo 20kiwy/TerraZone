@@ -427,7 +427,6 @@
 	Hide Slices	Skrýt řezy
 	Show Slices	Zobrazit řezy
 	Lock Slices	Zamknout řezy
-	Rulers	Pravítka
 	Show Rulers	Zobrazit pravítka
 	Hide Rulers	Skrýt pravítka
 	Change to Global Rulers	Přepnout na globální pravítka
@@ -770,3 +769,6 @@
 	Bolt signed in from the deployment's own trust ({uid})	Bolt přihlášen z důvěry nasazení ({uid})
 	Auth code {code} (generated, Basic {uid})	Auth kód {code} (vygenerován, Basic {uid})
 	Device {device}	Zařízení {device}
+	Map Grid Lines	Čáry mapové sítě
+	Show Map Grid Lines	Zobrazit čáry mapové sítě
+	Hide Map Grid Lines	Skrýt čáry mapové sítě

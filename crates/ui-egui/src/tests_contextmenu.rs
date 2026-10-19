@@ -95,7 +95,7 @@ fn right_click_on_empty_canvas_offers_the_view_and_a_dismissing_click_does_nothi
     frame(&mut app, &ctx, vec![]);
     let p = screen(&app, 300.0, 250.0);
     let texts = click(&mut app, &ctx, p, PointerButton::Secondary);
-    for label in ["Zoom In", "Zoom Out", "Fit Artboard in Window", "Show Rulers", "Select All"] {
+    for label in ["Zoom In", "Zoom Out", "Fit Artboard in Window", "Show Map Grid Lines", "Select All"] {
         assert!(has(&texts, label), "{label} in {texts:?}");
     }
     assert!(!has(&texts, "Cut") && !has(&texts, "Arrange"));

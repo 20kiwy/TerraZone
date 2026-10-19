@@ -3933,3 +3933,6 @@ axis	Vertical	Vertical
 	Bolt signed in from the deployment's own trust ({uid})	Bolt conectado con la confianza del despliegue ({uid})
 	Auth code {code} (generated, Basic {uid})	Código de auth {code} (generado, Basic {uid})
 	Device {device}	Dispositivo {device}
+	Map Grid Lines	Líneas de cuadrícula del mapa
+	Show Map Grid Lines	Mostrar las líneas de cuadrícula del mapa
+	Hide Map Grid Lines	Ocultar las líneas de cuadrícula del mapa
