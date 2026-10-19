@@ -1,0 +1,197 @@
+# Per-version binary releases: push a tag shaped like v0.22.0 and this workflow builds the
+# desktop app on Windows x64 and Linux x86_64 and attaches the archives to the GitHub Release
+# for that tag (plus the tagged source zip and a SHA256SUMS.txt).
+#
+# This is the plain per-tag binary lane: two hosted runners, no signing, no paid/larger
+# runners, no external font checkout — a plain clone already carries everything it needs
+# (the fonts fall back to the embedded UI set, the same as a local build; the craft-fonts
+# lane belongs to release.yml). The full installer pipeline (macOS, MSI, AppImage, Flatpak,
+# FreeBSD, web) stays in release.yml, driven by the `release` branch — see docs/releasing.md.
+name: Release binaries
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-binaries-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+  # The small-machine recipe from README › Building (the release profile is already wired
+  # for it): LTO off, wide codegen units, symbols stripped. Keeps the hosted runners
+  # comfortably inside RAM and disk, and the binary is the same story as the sandbox ships.
+  CARGO_PROFILE_RELEASE_LTO: "off"
+  CARGO_PROFILE_RELEASE_CODEGEN_UNITS: "16"
+  CARGO_PROFILE_RELEASE_STRIP: symbols
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-x86_64
+            os: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+          - name: windows-x64
+            os: windows-latest
+            target: x86_64-pc-windows-msvc
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive # none today; a plain clone carries everything (futureproof)
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: bin-${{ matrix.name }}
+
+      - name: Resolve version
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_REF_TYPE:-}" = "tag" ]; then
+            V="${GITHUB_REF_NAME#v}"
+          else
+            V="$(sed -n '/^\[workspace.package\]/,/^\[/{s/^version *= *"\(.*\)".*/\1/p}' Cargo.toml | head -n1)"
+          fi
+          if [ -z "$V" ]; then echo "::error::could not resolve the version"; exit 1; fi
+          echo "VERSION=$V" >>"$GITHUB_ENV"
+          echo "Building TerraZone $V for ${{ matrix.target }}"
+
+      - name: Build (Windows x64, static CRT — no redist needed)
+        if: matrix.target == 'x86_64-pc-windows-msvc'
+        run: cargo build --release --target x86_64-pc-windows-msvc -p terrazon
+        env:
+          # packaging/windows/package.ps1's flag, scoped to the target triple so host build
+          # scripts are not affected.
+          CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_RUSTFLAGS: "-C target-feature=+crt-static"
+
+      - name: Build (Linux x86_64)
+        if: matrix.target == 'x86_64-unknown-linux-gnu'
+        run: cargo build --release --target x86_64-unknown-linux-gnu -p terrazon
+
+      - name: Package (Linux)
+        if: matrix.target == 'x86_64-unknown-linux-gnu'
+        shell: bash
+        run: |
+          set -euo pipefail
+          V="$VERSION"
+          mkdir "TerraZone-$V"
+          cp "target/x86_64-unknown-linux-gnu/release/terrazon" "TerraZone-$V/"
+          cat > "TerraZone-$V/README.txt" <<EOF
+          TerraZone $V — Linux x86_64
+
+          Run:
+            tar xzf terrazon-$V-linux-x86_64.tar.gz
+            ./TerraZone-$V/terrazon
+
+          Built on Ubuntu 24.04 — needs glibc 2.39 or newer. The binary is self-contained
+          beyond that (tiles and the live fleet fetch over HTTPS with the embedded rustls).
+
+          Source, licence and the other releases: see the repository (MIT OR Apache-2.0, NOTICE).
+          EOF
+          tar czf "terrazon-$V-linux-x86_64.tar.gz" "TerraZone-$V"
+          echo "ASSET=terrazon-$V-linux-x86_64.tar.gz" >>"$GITHUB_ENV"
+
+      - name: Package (Windows)
+        if: matrix.target == 'x86_64-pc-windows-msvc'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $v = $env:VERSION
+          $dir = "TerraZone-$v"
+          New-Item -ItemType Directory -Force $dir | Out-Null
+          Copy-Item "target/x86_64-pc-windows-msvc/release/terrazon.exe" $dir
+          $readme = @"
+          TerraZone $v — Windows x64
+
+          Run:
+            Unzip terrazon-$v-windows-x64-portable.zip
+            Double-click TerraZone-$v\terrazon.exe
+
+          The exe is a GUI-subsystem PE32+ with a static CRT — no Visual C++ redist, no
+          mingw runtime, only Windows system DLLs. TLS rides the embedded rustls (pure Rust).
+
+          Source, licence and the other releases: see the repository (MIT OR Apache-2.0, NOTICE).
+          "@
+          Set-Content -Path "$dir/README.txt" -Value $readme -Encoding utf8
+          Compress-Archive -Path $dir -DestinationPath "terrazon-$v-windows-x64-portable.zip"
+          "ASSET=terrazon-$v-windows-x64-portable.zip" | Add-Content $env:GITHUB_ENV
+
+      - name: Check the artifact
+        shell: bash
+        run: |
+          test -n "$ASSET"
+          test -f "$ASSET"
+          ls -lh "$ASSET"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.name }}
+          path: ${{ env.ASSET }}
+          if-no-files-found: error
+          retention-days: 14
+
+  release:
+    name: Attach binaries to the release
+    needs: build
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Source zip + checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          V="${GITHUB_REF_NAME#v}"
+          git archive --format=zip -o "dist/terrazon-$V-source.zip" HEAD
+          cd dist
+          sha256sum --binary * > SHA256SUMS.txt
+          ls -lh
+      - name: Create or update the release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          V="${GITHUB_REF_NAME#v}"
+          cat > notes.md <<EOF
+          TerraZone $V — desktop builds for **Windows x64** and **Linux x86_64**, built by
+          the tag-driven \`release-binaries\` workflow from this exact commit.
+
+          - \`terrazon-$V-windows-x64-portable.zip\` — unzip, double-click \`terrazon.exe\`
+            (self-contained: static CRT, no redist; icon + version info embedded).
+          - \`terrazon-$V-linux-x86_64.tar.gz\` — \`tar xzf\`, run \`./terrazon\` (Ubuntu 24.04 build,
+            glibc 2.39+).
+          - \`terrazon-$V-source.zip\` — the exact tagged source tree (GitHub also keeps its own
+            automatic source archives).
+          - \`SHA256SUMS.txt\` — checksums for everything above.
+
+          The full installer pipeline (macOS, MSI, AppImage, Flatpak, FreeBSD, web) runs from
+          the \`release\` branch — see docs/releasing.md.
+          EOF
+          if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" --clobber dist/* notes.md
+          else
+            gh release create "$GITHUB_REF_NAME" \
+              --title "TerraZone $V" \
+              --notes-file notes.md \
+              dist/* notes.md
+          fi

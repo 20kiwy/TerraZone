@@ -13,8 +13,8 @@ zoom 4, y pointing south). Every vector object lives in world coordinates, so a 
 Amsterdam stays over Amsterdam, imports land where their longitude/latitude says, and exports back
 out as GeoJSON in WGS84.
 
-TerraZone lives at [github.com/terrazon-app/terrazon](https://github.com/terrazon-app/terrazon);
-its community hub is [terrazon.app/community](https://terrazon.app/community). Code and assets are
+TerraZone lives in this repository; its community hub is
+[terrazon.app/community](https://terrazon.app/community). Code and assets are
 MIT OR Apache-2.0 (NOTICE).
 
 ## The map
@@ -28,6 +28,43 @@ MIT OR Apache-2.0 (NOTICE).
 - **Zoom like a map app**: the whole world fitted in the window down to street level (tile zoom 19),
   with the editor's zoom stops extended to reach it.
 - Tiles render on screen only; exports contain your vector art (zones, labels), not the basemap.
+
+## The fleet
+
+The document is also a live operations view. The Fleet feeds poll the vendors themselves and
+register everything they draw in the Layers panel — the **Fleet group is the events system**
+(one locked row per artifact: Bolt Vehicles + H3 Cells, Marine Vessels, Flight Aircraft, the
+SGR's Rail Atlas + Stations + Trains, each with its own eye), while the **Map group is the
+XYZ tile view** — the two systems read independently, and an eye gates exactly its artifact.
+
+- **Bolt** — vehicles as bearing-rotated pins over a ground shadow with a heading needle;
+  signs in with the deployment's own trust pair (or your phone number + 4-digit code).
+- **Marine Traffic** — the vessels in view, managing its own cookie session.
+- **Flight Radar** — the aircraft in the current view's share.
+- **SGR trains** — the day's whole timetable drawn on the rail: running trains ride their
+  segment, departures still waiting sit dimmed at their origin station, finished runs drop
+  off while the panel's day list keeps them.
+
+| ![Live fleet](docs/images/TerraZone-0.21.0-fleet-live.png) |
+|---|
+| Live fleet — Bolt pins over Dar es Salaam, Marine vessels in the bay, the SGR rail highlight
+  running to the Central Railway Station. |
+
+View ▸ **Map Grid Lines** draws the degree graticule (strengthened so it reads on pale and busy
+basemaps alike), and the SGR panel keeps the vendor's published day — running trains riding the
+rail, waiting departures fanned at their origins:
+
+| ![Map Grid Lines](docs/images/TerraZone-0.22.0-map-grid-lines.png) |
+|---|
+| The Map Grid Lines graticule over a pale basemap. |
+
+| ![SGR whole day](docs/images/TerraZone-0.22.0-sgr-whole-day.png) |
+|---|
+| The SGR's whole day — running trains + waiting departures dimmed at their origin stations. |
+
+| ![Network z8](docs/images/TerraZone-0.22.0-network-z8.png) |
+|---|
+| Fleet artifacts drawing while the basemap tiles load at z8. |
 
 ## Files
 
@@ -58,6 +95,12 @@ On small machines (2 cores, little disk) the same binary builds faster with
 `CARGO_PROFILE_RELEASE_LTO=off CARGO_PROFILE_RELEASE_CODEGEN_UNITS=16` — the profile is already
 wired for it. A GL (glow) build exists for machines where wgpu has no adapter:
 `cargo build --release -p terrazon --no-default-features --features windows7`.
+
+**Download a build:** every `v*` tag gets runnable **Windows x64** and **Linux x86_64**
+archives attached to its GitHub Release by `.github/workflows/release-binaries.yml` —
+unzip and run, no redist on Windows (static CRT), rustls TLS everywhere. The full installer
+pipeline (macOS, MSI, AppImage, Flatpak, FreeBSD, web) lives in `release.yml` on the
+`release` branch — see `docs/releasing.md`.
 
 The web (WASM) build stays upstream-compatible (`apps/terrazon-web`, Trunk); it draws the map's
 placeholder grid until tiles are fetched for it — the desktop binary fetches tiles itself over
