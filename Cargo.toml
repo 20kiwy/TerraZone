@@ -190,11 +190,17 @@ default-members = ["crates/*", "apps/terrazon", "apps/terrazon-cli", "xtask"]
 # alike. The SGR shows the day's WHOLE data: trips still waiting for their departure draw
 # dimmed at the origin station, fanned out round it so the count reads, and the map carries
 # the timetable from frame one instead of only whatever the clock has on the rails now.
-version = "0.22.0"
+# 0.23.0: the source lives on GitHub (20kiwy/TerraZone, public) and every v* tag builds
+# its own Windows x64 + Linux x86_64 archives through .github/workflows/release-binaries.yml —
+# the release carries the portable zip, the tar.gz, the tagged source zip and SHA256SUMS.txt
+# (v0.22.0 shipped there first: the ELF executes, the PE imports only system DLLs with zero
+# schannel — the rustls story — and the checksums all match). Free unlimited Actions minutes
+# on the public repo; the README now carries the live-fleet story with the rig screenshots.
+version = "0.23.0"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 rust-version = "1.95"
-repository = "https://github.com/terrazon-app/terrazon"
+repository = "https://github.com/20kiwy/TerraZone"
 
 [workspace.dependencies]
 # internal
