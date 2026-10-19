@@ -13,7 +13,10 @@
 //! * [`terrain`] — marching-squares contours over a [`dem::DemGrid`] (with each major line's
 //!   height for its label): the one terrain render the 3D environment does — the ground itself
 //!   drapes flat, and the relief reads from the contour lines.
-//! * [`camera`] — the orbit camera and picking rays, framework-free (a port of ArchCraft's).
+//! * [`camera`] — the cameras and picking rays, framework-free (a port of ArchCraft's): the
+//!   orbit arm, the EffectCraft viewer's first-person walk rig ([`camera::WalkCam`], WASD +
+//!   drag look), the [`camera::CamMode`] pair and the [`camera::CameraRig`] that renders
+//!   either of them.
 //! * [`mesh`] — [`mesh::Mesh3d`] and its builders: textured ground quads, extruded building
 //!   rings, boxes.
 //! * [`prim`] — parametric asset meshes: the textured house, the stadium, trees, pins.
@@ -30,7 +33,7 @@ pub mod mesh;
 pub mod prim;
 pub mod terrain;
 
-pub use camera::{OrbitCamera, Ray, ray_aabb, ray_plane_y};
+pub use camera::{CamMode, CameraRig, OrbitCamera, Ray, WalkCam, ray_aabb, ray_plane_y};
 pub use dem::{DEM_ZOOM, DemFetcher, DemGrid, DemMsg};
 pub use mercator::{EARTH_C, Mercator, lonlat_to_tile, tile_span_m};
 pub use mesh::{Mesh3d, MeshLayer};

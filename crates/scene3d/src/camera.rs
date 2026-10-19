@@ -1,8 +1,21 @@
-//! Framework-free orbit camera + picking math — ported from the ArchCraft (effect) project's
+//! Framework-free cameras + picking math — ported from the ArchCraft (effect) project's
 //! `arch-arch/camera.rs` (which itself ported the whylia viewer): no egui types, so the same
-//! model drives the 3D viewport, the Camera panel and the control protocol.
+//! model drives the 3D viewport, the Camera panel and the control protocol. The EffectCraft
+//! viewer's own two camera modes ride along: the orbit arm and the first-person walk rig.
 
 use glam::{Mat4, Vec3};
+
+/// The 3D environment's camera mode — the EffectCraft viewer's pair: [`CamMode::Orbit`] swings
+/// the orbit arm around its target, [`CamMode::Walk`] stands the camera on the ground and
+/// drives it (WASD + drag look, Q/E down/up).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum CamMode {
+    /// The orbit arm ([`OrbitCamera`]) — the environment's original camera.
+    #[default]
+    Orbit,
+    /// The first-person walk rig ([`WalkCam`]) — the EffectCraft camera.
+    Walk,
+}
 
 /// An orbit camera: `target` on the ground, `dist` back along a yaw/pitch arm, `fov_y` wide.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -101,6 +114,186 @@ impl OrbitCamera {
         }
         self.dist = (self.dist + d * 0.35).clamp(5.0, 200_000.0);
         true
+    }
+
+    /// Stand a walk camera where the orbit eye is, looking the way the orbit looks — the
+    /// EffectCraft viewer's orbit→walk handover, so switching modes doesn't jump the view.
+    pub fn from_walk(w: &WalkCam) -> Self {
+        let yaw = w.yaw + std::f32::consts::PI;
+        let pitch = (-w.pitch).clamp(0.06, 1.5533);
+        let f = w.forward_xz();
+        let dist = (w.pos[1] * 2.5).clamp(25.0, 20_000.0);
+        Self {
+            target: [w.pos[0] + f[0] * dist, 0.0, w.pos[2] + f[1] * dist],
+            dist,
+            yaw,
+            pitch,
+            fov_y: w.fov_y,
+            far_plane: 30_000.0,
+            target_dist: None,
+        }
+    }
+}
+
+/// The first-person walk camera — the EffectCraft viewer's drive rig (ported from the
+/// ArchCraft `WalkCam`): a position on/over the ground, a look yaw/pitch, one wide fov.
+/// `yaw`/`pitch` follow the reference exactly (`yaw` 0 faces `+z`, `pitch` up is positive);
+/// TerraZone's frame puts `+z` south, so the default faces north at `yaw = π`.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct WalkCam {
+    /// The camera's position (world metres; `y` the eye height above the datum).
+    pub pos: [f32; 3],
+    /// Look yaw (radians; 0 faces `+z` — south in TerraZone's frame).
+    pub yaw: f32,
+    /// Look pitch (radians; positive looks up, clamped ±[`Self::PITCH_LIMIT`] by [`Self::look`]).
+    pub pitch: f32,
+    /// Vertical field of view (radians; the reference walks with a wide 65°).
+    pub fov_y: f32,
+}
+
+impl Default for WalkCam {
+    fn default() -> Self {
+        Self { pos: [0.0, 1.6, 0.0], yaw: std::f32::consts::PI, pitch: 0.0, fov_y: 65.0f32.to_radians() }
+    }
+}
+
+impl WalkCam {
+    /// The look pitch clamp (±83°, the reference's ±1.45 rad).
+    pub const PITCH_LIMIT: f32 = 1.45;
+    /// The lowest eye height (metres) — the camera never sinks under the datum.
+    pub const MIN_HEIGHT: f32 = 0.4;
+
+    /// The unit look direction (`yaw`/`pitch` applied, the reference's own math).
+    pub fn dir(&self) -> Vec3 {
+        Vec3::new(self.yaw.sin() * self.pitch.cos(), self.pitch.sin(), self.yaw.cos() * self.pitch.cos()).normalize_or_zero()
+    }
+
+    /// The look direction flattened onto the ground (`[x, z]`, unit length).
+    pub fn forward_xz(&self) -> [f32; 2] {
+        [self.yaw.sin(), self.yaw.cos()]
+    }
+
+    /// The screen-right direction flattened onto the ground (`[x, z]`, unit length) — facing
+    /// south (`yaw` 0) the right hand points west, exactly as the reference walks it.
+    pub fn right_xz(&self) -> [f32; 2] {
+        [-self.yaw.cos(), self.yaw.sin()]
+    }
+
+    /// Drag look: `dx`/`dy` in radians (the reference's `yaw += dx`, `pitch += dy` — dragging
+    /// down looks up, the grab-the-world feel), pitch clamped.
+    pub fn look(&mut self, dx: f32, dy: f32) {
+        self.yaw += dx;
+        self.pitch = (self.pitch + dy).clamp(-Self::PITCH_LIMIT, Self::PITCH_LIMIT);
+    }
+
+    /// Walk the ground: `forward`/`right` are the key axes (−1..1 each) scaled by `metres`.
+    /// The height stays — walking doesn't fly.
+    pub fn walk(&mut self, forward: f32, right: f32, metres: f32) {
+        let f = self.forward_xz();
+        let r = self.right_xz();
+        self.pos[0] += (f[0] * forward + r[0] * right) * metres;
+        self.pos[2] += (f[1] * forward + r[1] * right) * metres;
+    }
+
+    /// Lift or lower the camera (`metres` up positive), never under [`Self::MIN_HEIGHT`].
+    pub fn lift(&mut self, metres: f32) {
+        self.pos[1] = (self.pos[1] + metres).max(Self::MIN_HEIGHT);
+    }
+
+    /// The view matrix (right-handed look-at along [`Self::dir`], `y` up).
+    pub fn view(&self) -> Mat4 {
+        Mat4::look_at_rh(Vec3::from(self.pos), Vec3::from(self.pos) + self.dir(), Vec3::Y)
+    }
+
+    /// The perspective projection: the near plane hugs the eye, the far plane reaches past
+    /// TerraZone's 60 km ground slab so the horizon stays drawn while walking.
+    pub fn proj(&self, aspect: f32) -> Mat4 {
+        Mat4::perspective_rh(self.fov_y, aspect, 0.1, 120_000.0)
+    }
+
+    /// Stand a walk camera at the orbit eye looking the orbit's way — the orbit→walk handover.
+    pub fn from_orbit(c: &OrbitCamera) -> Self {
+        let eye = c.eye();
+        Self {
+            pos: [eye.x, eye.y.max(Self::MIN_HEIGHT), eye.z],
+            yaw: c.yaw + std::f32::consts::PI,
+            pitch: (-c.pitch).clamp(-Self::PITCH_LIMIT, Self::PITCH_LIMIT),
+            fov_y: c.fov_y.max(50.0f32.to_radians()),
+        }
+    }
+}
+
+/// The camera the 3D frame renders through: one of the two EffectCraft modes behind one
+/// interface (the viewport, the pick rays and the ground grid read the rig, never the mode).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum CameraRig {
+    /// The orbit arm.
+    Orbit(OrbitCamera),
+    /// The first-person walk rig.
+    Walk(WalkCam),
+}
+
+impl CameraRig {
+    /// The rig for a mode and its two cameras.
+    pub fn of(mode: CamMode, orbit: OrbitCamera, walk: WalkCam) -> Self {
+        match mode {
+            CamMode::Orbit => CameraRig::Orbit(orbit),
+            CamMode::Walk => CameraRig::Walk(walk),
+        }
+    }
+
+    /// The view matrix.
+    pub fn view(&self) -> Mat4 {
+        match self {
+            CameraRig::Orbit(c) => c.view(),
+            CameraRig::Walk(c) => c.view(),
+        }
+    }
+
+    /// The perspective projection for one aspect ratio.
+    pub fn proj(&self, aspect: f32) -> Mat4 {
+        match self {
+            CameraRig::Orbit(c) => c.proj(aspect),
+            CameraRig::Walk(c) => c.proj(aspect),
+        }
+    }
+
+    /// The eye position (the walk rig's position itself).
+    pub fn eye(&self) -> Vec3 {
+        match self {
+            CameraRig::Orbit(c) => c.eye(),
+            CameraRig::Walk(c) => Vec3::from(c.pos),
+        }
+    }
+
+    /// The look direction flattened onto the ground (`[x, z]`) — the ground grid's horizon
+    /// marching reads it.
+    pub fn forward_xz(&self) -> [f32; 2] {
+        match self {
+            CameraRig::Orbit(c) => {
+                let e = c.eye();
+                let f = [c.target[0] - e.x, c.target[2] - e.z];
+                let l = (f[0] * f[0] + f[1] * f[1]).sqrt().max(1e-6);
+                [f[0] / l, f[1] / l]
+            }
+            CameraRig::Walk(c) => c.forward_xz(),
+        }
+    }
+
+    /// A pick ray through an NDC point (`ndc` −1..1, y up) at one aspect, built from the
+    /// camera's own basis (the proven TerraZone route — inverting the view-projection at
+    /// sampled depths is convention-dependent).
+    pub fn ray_from_ndc(&self, ndc: [f32; 2], aspect: f32) -> Ray {
+        let (forward, origin, fov_y) = match self {
+            CameraRig::Orbit(c) => ((Vec3::from(c.target) - c.eye()).normalize_or_zero(), c.eye(), c.fov_y),
+            CameraRig::Walk(c) => (c.dir(), Vec3::from(c.pos), c.fov_y),
+        };
+        let right = forward.cross(Vec3::Y).normalize_or_zero();
+        let up = right.cross(forward);
+        let ty = (fov_y * 0.5).tan();
+        let tx = ty * aspect;
+        let dir = (forward + right * (ndc[0] * tx) + up * (ndc[1] * ty)).normalize_or_zero();
+        Ray { origin, dir }
     }
 }
 
@@ -214,6 +407,74 @@ mod tests {
         cam.pan(100.0, 0.0);
         assert_eq!(cam.target[1], before[1], "pan stays on the ground");
         assert!((cam.target[0] - before[0]).abs() > 0.0);
+    }
+
+    #[test]
+    fn the_walk_cam_faces_where_its_math_says() {
+        // yaw 0 faces +z (south in TerraZone's frame); +90° turns toward +x (east); pitch up
+        // is positive.
+        let south = WalkCam { yaw: 0.0, ..Default::default() };
+        let d = south.dir();
+        assert!(d.z > 0.99 && d.x.abs() < 1e-4 && d.y.abs() < 1e-4, "yaw 0 looks south: {d:?}");
+        let f = south.forward_xz();
+        let r = south.right_xz();
+        assert!(f[1] > 0.99, "forward is +z: {f:?}");
+        assert!(r[0] < -0.99, "facing south the right hand is west (−x): {r:?}");
+        let east = WalkCam { yaw: std::f32::consts::FRAC_PI_2, ..south };
+        assert!(east.dir().x > 0.99, "yaw +90° looks east: {:?}", east.dir());
+        let up = WalkCam { pitch: 1.0, ..south };
+        assert!(up.dir().y > 0.8, "positive pitch looks up: {:?}", up.dir());
+    }
+
+    #[test]
+    fn walk_keys_move_along_the_look_not_the_axes() {
+        // Facing east (yaw 90°), W must walk east and D must walk south — the view's own
+        // forward/right, never the world's.
+        let mut cam = WalkCam { pos: [0.0, 1.6, 0.0], yaw: std::f32::consts::FRAC_PI_2, pitch: 0.0, fov_y: 1.0 };
+        cam.walk(1.0, 0.0, 10.0);
+        assert!(cam.pos[0] > 9.9 && cam.pos[2].abs() < 1e-3, "W walks the look direction: {:?}", cam.pos);
+        assert_eq!(cam.pos[1], 1.6, "walking keeps the height");
+        cam.walk(0.0, 1.0, 10.0);
+        assert!(cam.pos[2] > 9.9, "D strafes screen-right (south when facing east): {:?}", cam.pos);
+        // The height never sinks under the floor.
+        cam.lift(-100.0);
+        assert_eq!(cam.pos[1], WalkCam::MIN_HEIGHT, "lift clamps at the floor");
+    }
+
+    #[test]
+    fn switching_modes_hands_the_view_over_without_a_jump() {
+        // Orbit → walk: the walk camera stands at the orbit eye looking the orbit's way.
+        let orbit = OrbitCamera { target: [500.0, 0.0, -300.0], dist: 900.0, yaw: 0.6, pitch: 0.62, ..Default::default() };
+        let mut walk = WalkCam::from_orbit(&orbit);
+        let look_o = (Vec3::from(orbit.target) - orbit.eye()).normalize_or_zero();
+        let look_w = walk.dir();
+        assert!(look_o.dot(look_w) > 0.99, "the walk looks where the orbit looked: {look_o:?} vs {look_w:?}");
+        let e = orbit.eye();
+        assert!((walk.pos[0] - e.x).abs() < 0.01 && (walk.pos[2] - e.z).abs() < 0.01, "the walk stands at the eye");
+        // Walk → orbit: the orbit looks where the walk looked, pivoting just ahead of it.
+        walk.walk(1.0, 0.0, 40.0);
+        walk.look(0.3, 0.1);
+        let back = OrbitCamera::from_walk(&walk);
+        let look_w2 = walk.dir();
+        let look_b = (Vec3::from(back.target) - back.eye()).normalize_or_zero();
+        assert!(look_w2.dot(look_b) > 0.95, "the orbit looks where the walk looked: {look_w2:?} vs {look_b:?}");
+        assert!(back.pitch >= 0.06, "the orbit pitch stays in its clamp: {}", back.pitch);
+    }
+
+    #[test]
+    fn the_walk_rigs_rays_pick_the_ground_it_looks_at() {
+        // A walk camera looking slightly down: the centre ray lands ahead of the camera, and
+        // two different screen points land apart (the tools' pick the 3D canvas rides on).
+        let rig = CameraRig::Walk(WalkCam { pos: [0.0, 40.0, 0.0], yaw: std::f32::consts::PI, pitch: -0.35, fov_y: 65.0f32.to_radians() });
+        let ray = rig.ray_from_ndc([0.0, 0.0], 1.6);
+        let hit = ray.plane_y(0.0).expect("a pitched-down walk ray must meet the ground");
+        assert!(hit.z < -5.0, "facing north (−z) the hit is ahead: {hit:?}");
+        let left = rig.ray_from_ndc([-0.5, 0.0], 1.6).plane_y(0.0).unwrap();
+        assert!((left - hit).length() > 5.0, "different screen points pick apart: {left:?} vs {hit:?}");
+        // The orbit rig's rays still work through the same door.
+        let orbit = CameraRig::Orbit(OrbitCamera::default());
+        let hit_o = orbit.ray_from_ndc([0.0, 0.0], 1.6).plane_y(0.0).expect("orbit ray hits");
+        assert!(hit_o.length().is_finite());
     }
 }
 

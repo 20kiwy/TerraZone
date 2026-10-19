@@ -3273,7 +3273,7 @@ axis	Vertical	垂直
 	no DEM fetcher	無 DEM 擷取器
 	Click to place · Esc to finish	點擊放置 · Esc 結束
 	Placement finished	放置已結束
-	3D environment — drag to orbit · Shift-drag to pan · wheel to zoom	3D 環境——拖曳環繞 · Shift+拖曳平移 · 滾輪縮放
+	3D environment — drag to orbit · Shift-drag to pan · wheel to zoom · the Camera panel switches to Walk (WASD)	3D 環境——拖曳環繞 · Shift+拖曳平移 · 滾輪縮放 · 相機面板可切換漫遊（WASD）
 @msg	3D anchors the map view centre — open water here; zoom the 2D map to an area to bring it into 3D	3D 以地圖檢視中心為錨點——這裡是開闊水域；將 2D 地圖縮放到目標區域，即可在 3D 中看到它
 	Triangle budget reached — showing the closest {n} tris	已達三角形上限——僅顯示最近的 {n} 個
 	Array Point	陣列點
@@ -3387,3 +3387,9 @@ axis	Vertical	垂直
 	Map Grid Lines	地圖網格線
 	Show Map Grid Lines	顯示地圖網格線
 	Hide Map Grid Lines	隱藏地圖網格線
+	Eye height	視點高度
+	Look	視線
+	Orbit camera — drag to orbit · Shift-drag to pan · wheel to zoom · double-click recentres	環繞相機——拖曳環繞 · Shift+拖曳平移 · 滾輪縮放 · 按兩下重新置中
+	W/A/S/D walks · Q/E sinks or lifts · Shift runs · the wheel lifts · drag with Space (or Alt) looks	W/A/S/D 移動 · Q/E 下降或上升 · Shift 加速奔跑 · 滾輪升降 · 按住空白鍵（或 Alt）拖曳轉動視線
+	Walk	漫遊
+	Walk mode — W/A/S/D to move · Space-drag to look · Q/E down/up · Shift runs · the wheel lifts	漫遊模式——W/A/S/D 移動 · 空白鍵+拖曳轉動視線 · Q/E 下降或上升 · Shift 加速奔跑 · 滾輪調整高度

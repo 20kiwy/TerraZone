@@ -51,6 +51,37 @@ fn scene3d_set_clamps_the_settings() {
 }
 
 #[test]
+fn scene3d_set_drives_the_camera_modes_and_the_walk_rig() {
+    // The EffectCraft viewer's mode pair rides the command surface: "walk" stands the rig at
+    // the orbit eye (the view hands over, no jump), "orbit" re-aims the arm from the walk.
+    let mut app = app_with_map();
+    app.ui.cam3d.dist = 500.0;
+    let eye = app.ui.cam3d.eye();
+    let r = app.run("scene3d.set", json!({ "camMode": "walk" })).unwrap();
+    assert_eq!(r["camMode"], json!("walk"));
+    assert_eq!(app.ui.cam_mode, terrazon_scene3d::CamMode::Walk);
+    assert!((app.ui.walk3d.pos[0] - eye.x).abs() < 0.01 && (app.ui.walk3d.pos[2] - eye.z).abs() < 0.01);
+    // The walk rig's own params drive it (clamped like the panel's sliders).
+    app.run("scene3d.set", json!({ "walkX": 40.0, "walkY": -3.0, "walkZ": -20.0, "walkYaw": 90.0, "walkPitch": 120.0 })).unwrap();
+    assert_eq!(app.ui.walk3d.pos[0], 40.0);
+    assert_eq!(app.ui.walk3d.pos[2], -20.0);
+    assert_eq!(app.ui.walk3d.pos[1], terrazon_scene3d::WalkCam::MIN_HEIGHT, "the floor clamps");
+    assert!((app.ui.walk3d.yaw.to_degrees() - 90.0).abs() < 0.01);
+    assert_eq!(app.ui.walk3d.pitch, terrazon_scene3d::WalkCam::PITCH_LIMIT, "the pitch clamps at ±83°");
+    // Back to orbit: the arm looks where the walk looked (a level-ish look — an orbit arm
+    // always pivots down at its target, so the handover matches the look it can mirror).
+    app.run("scene3d.set", json!({ "walkPitch": -20.0 })).unwrap();
+    let look_w = app.ui.walk3d.dir();
+    let r = app.run("scene3d.set", json!({ "camMode": "orbit" })).unwrap();
+    assert_eq!(r["camMode"], json!("orbit"));
+    let look_o = (glam::Vec3::from(app.ui.cam3d.target) - app.ui.cam3d.eye()).normalize_or_zero();
+    assert!(look_w.dot(look_o) > 0.95, "the orbit looks where the walk looked");
+    // A nonsense mode string changes nothing.
+    app.run("scene3d.set", json!({ "camMode": "sideways" })).unwrap();
+    assert_eq!(app.ui.cam_mode, terrazon_scene3d::CamMode::Orbit);
+}
+
+#[test]
 fn assets_place_at_doc_points_and_the_list_reports_them() {
     let mut app = app_with_map();
     let r = app.run("placements.place", json!({ "kind": "house", "x": 1234.5, "y": 987.0 })).unwrap();

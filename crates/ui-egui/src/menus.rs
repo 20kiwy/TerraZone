@@ -1136,12 +1136,14 @@ pub fn run_ui_command(app: &mut TerrazoneApp, id: &str, p: &Value) -> Option<Res
         }
         // The 3D scene: settings the Terrain panel edits and the placement tool.
         "scene3d.set" => {
-            let scene = &mut app.ui.terrain3d;
-            if let Some(x) = p.get("contourInterval").and_then(Value::as_f64) {
-                scene.contour_interval = (x as f32).clamp(0.0, 500.0);
-            }
-            if let Some(x) = p.get("imageryZoom").and_then(Value::as_u64) {
-                scene.imagery_zoom = (x as u8).clamp(10, 19);
+            {
+                let scene = &mut app.ui.terrain3d;
+                if let Some(x) = p.get("contourInterval").and_then(Value::as_f64) {
+                    scene.contour_interval = (x as f32).clamp(0.0, 500.0);
+                }
+                if let Some(x) = p.get("imageryZoom").and_then(Value::as_u64) {
+                    scene.imagery_zoom = (x as u8).clamp(10, 19);
+                }
             }
             // The camera (the Camera 3D panel and the verification driver set these).
             if let Some(x) = p.get("camDist").and_then(Value::as_f64) {
@@ -1154,13 +1156,42 @@ pub fn run_ui_command(app: &mut TerrazoneApp, id: &str, p: &Value) -> Option<Res
             if let Some(x) = p.get("camPitch").and_then(Value::as_f64) {
                 app.ui.cam3d.pitch = (x as f32).to_radians().clamp(0.06, 1.5533);
             }
+            // The camera mode pair (the EffectCraft viewer's): "orbit" or "walk". The switch
+            // hands the view over (the walk stands at the orbit eye, the orbit re-aims from
+            // where the walk stood), so a scripted mode change never jumps the scene.
+            if let Some(s) = p.get("camMode").and_then(Value::as_str) {
+                let mode = match s {
+                    "walk" => Some(terrazon_scene3d::CamMode::Walk),
+                    "orbit" => Some(terrazon_scene3d::CamMode::Orbit),
+                    _ => None,
+                };
+                if let Some(mode) = mode {
+                    crate::view3d::set_cam_mode(app, mode);
+                }
+            }
+            if let Some(x) = p.get("walkYaw").and_then(Value::as_f64) {
+                app.ui.walk3d.yaw = (x as f32).to_radians();
+            }
+            if let Some(x) = p.get("walkPitch").and_then(Value::as_f64) {
+                app.ui.walk3d.pitch = (x as f32).to_radians().clamp(-terrazon_scene3d::WalkCam::PITCH_LIMIT, terrazon_scene3d::WalkCam::PITCH_LIMIT);
+            }
+            if let Some(x) = p.get("walkX").and_then(Value::as_f64) {
+                app.ui.walk3d.pos[0] = x as f32;
+            }
+            if let Some(x) = p.get("walkY").and_then(Value::as_f64) {
+                app.ui.walk3d.pos[1] = (x as f32).max(terrazon_scene3d::WalkCam::MIN_HEIGHT);
+            }
+            if let Some(x) = p.get("walkZ").and_then(Value::as_f64) {
+                app.ui.walk3d.pos[2] = x as f32;
+            }
             // Any setting change retraces the contours next frame.
             if let Some(rt) = app.canvas.dem.as_mut() {
                 rt.invalidate_mesh();
             }
             Ok(json!({
-                "contourInterval": scene.contour_interval,
-                "imageryZoom": scene.imagery_zoom,
+                "contourInterval": app.ui.terrain3d.contour_interval,
+                "imageryZoom": app.ui.terrain3d.imagery_zoom,
+                "camMode": if app.ui.cam_mode == terrazon_scene3d::CamMode::Walk { "walk" } else { "orbit" },
             }))
         }
         "window.control" => flag(&mut app.ui.control_bar),

@@ -532,6 +532,15 @@ pub struct UiState {
     /// it starts at the default framing every launch and is shared by the documents).
     #[serde(skip)]
     pub cam3d: terrazon_scene3d::OrbitCamera,
+    /// The 3D environment's camera mode — the EffectCraft viewer's pair: the orbit arm or the
+    /// first-person walk rig. Both cameras live here ([`Self::cam3d`] above, [`Self::walk3d`]
+    /// below) so switching modes hands the view over instead of resetting it.
+    #[serde(skip)]
+    pub cam_mode: terrazon_scene3d::CamMode,
+    /// The walk rig ([`terrazon_scene3d::WalkCam`], the EffectCraft camera): WASD moves it,
+    /// drag looks, Q/E or the wheel lifts. Starts at the scene centre eye-high.
+    #[serde(skip)]
+    pub walk3d: terrazon_scene3d::WalkCam,
 }
 
 /// The desktop window's geometry, kept across launches.
@@ -700,6 +709,8 @@ impl Default for UiState {
             terrain3d: Default::default(),
 
             cam3d: Default::default(),
+            cam_mode: Default::default(),
+            walk3d: Default::default(),
         }
     }
 }

@@ -66,6 +66,24 @@ rail, waiting departures fanned at their origins:
 |---|
 | Fleet artifacts drawing while the basemap tiles load at z8. |
 
+## The 3D environment
+
+The `2D`/`3D` canvas switch opens the second canvas: the basemap's imagery draped flat on the
+datum in perspective, the terrain's contour lines with their heights, the document's own drawing
+draped as-is, the placed assets standing on the ground, and the fleet's live markers.
+
+- **The endless grid** — the ground grid copies the EffectCraft viewer's: it un-projects the
+  screen corners onto the datum, marches horizon rays out to a far clamp ring, adapts its
+  1-2-5 step to the zoom (minor/major/super hierarchy, minor lines dropped under 4 px), clips
+  every segment against the camera frustum and melts the far ends into the sky with a horizon
+  haze — so the grid fills the viewport at every camera and never visibly ends.
+- **Two camera modes** (the EffectCraft pair, switchable in the Camera 3D panel): **Orbit**,
+  the drag-to-orbit arm with Shift-pan, wheel dolly and double-click recentre; and **Walk**,
+  the first-person rig — W/A/S/D walks forward/left/back/right, Space-drag (or Alt-drag with a
+  tool up) looks, Q/E sinks or lifts, Shift runs, the wheel raises or lowers. Switching hands
+  the view over — the walk stands where the orbit stood, the orbit re-aims from where the walk
+  ended — so the scene never jumps.
+
 ## Files
 
 | Task | How |

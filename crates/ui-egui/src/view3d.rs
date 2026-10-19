@@ -32,7 +32,7 @@ use terrazon_scene3d::dem::{DEM_ZOOM, DemGrid, DemLoader};
 use terrazon_scene3d::mesh::Mesh3d;
 use terrazon_scene3d::prim;
 use terrazon_scene3d::terrain::{Contours, contours};
-use terrazon_scene3d::{Mercator, OrbitCamera, Ray};
+use terrazon_scene3d::{CamMode, CameraRig, Mercator, OrbitCamera, Ray, WalkCam, ray_plane_y};
 
 use crate::TerrazoneApp;
 use crate::tiles::{TileFetcher, TileMsg, TileTx};
@@ -50,6 +50,32 @@ const NEAR_W: f32 = 1.0e-6;
 const ORBIT_SPEED: f32 = 0.005;
 /// One wheel notch dollies the camera by this factor.
 const DOLLY: f32 = 1.2;
+/// Walk mode (the EffectCraft camera): metres per second the WASD walk covers (the
+/// reference's own walking pace).
+const WALK_SPEED: f32 = 3.5;
+/// Walk mode's Shift sprint multiplier — TerraZone's ground runs 60 km to the slab's edge, so
+/// the walk needs a run to cross it.
+const WALK_SPRINT: f32 = 8.0;
+/// Walk mode's Q/E lift speed (metres per second).
+const WALK_LIFT_SPEED: f32 = 4.0;
+/// Walk mode's wheel lift (metres per scroll point — the reference's walk wheel, rescaled for
+/// the metre world).
+const WALK_WHEEL_LIFT: f32 = 0.05;
+/// Walk mode's drag-look speed (radians per pointer point — the reference's own factor).
+const WALK_LOOK_SPEED: f32 = 0.004;
+/// The endless ground grid's far clamp ring (metres): rays that miss the ground (at/above the
+/// horizon) march out along their ground heading to here — the ground slab's own half extent,
+/// so the grid never reaches past the world's ground.
+const GRID_FAR_RING: f64 = 60_000.0;
+/// Target screen pixels between the endless grid's minor lines.
+const GRID_TARGET_PX: f64 = 26.0;
+/// The endless grid's per-direction line budget: at grazing angles the extent grows faster
+/// than the centre spacing, so the step widens to stay inside it (the grid then still reaches
+/// every edge of the viewport).
+const GRID_MAX_LINES: f64 = 900.0;
+/// The endless grid's minor lines draw only when they are at least this far apart on screen
+/// (the EffectCraft viewer's draw_minor gate).
+const GRID_MINOR_MIN_PX: f32 = 4.0;
 /// View-centre travel (ground metres) that rebuilds the DEM window around the new centre.
 const DEM_MOVE_M: f64 = 1500.0;
 /// The imagery ring around the scene centre: ±[`IMAGERY_RING`] tiles at the base zoom, wider
@@ -83,9 +109,23 @@ struct Tri {
 struct Xform {
     vp: Mat4,
     rect: Rect,
+    /// The far plane the projection was built with (metres) — the horizon haze projects its
+    /// band anchor along the eye's horizontal ray just inside it.
+    far: f32,
 }
 
 impl Xform {
+    /// The frame's projection for any [`CameraRig`] over `rect` — the orbit arm or the walk
+    /// rig, whichever mode the environment is in.
+    fn for_cam(rect: Rect, rig: &CameraRig) -> Self {
+        let aspect = (rect.width() / rect.height().max(1.0)).max(0.01);
+        let far = match rig {
+            CameraRig::Orbit(c) => c.far_plane.max(c.dist * 8.0 + 400.0),
+            CameraRig::Walk(_) => 120_000.0,
+        };
+        Self { vp: rig.proj(aspect) * rig.view(), rect, far }
+    }
+
     /// Project a world point to screen; `None` behind the camera (w too small) or past the far
     /// plane.
     fn proj(&self, p: [f32; 3]) -> Option<Pos2> {
@@ -362,19 +402,26 @@ fn ground_distance(lon0: f64, lat0: f64, lon1: f64, lat1: f64) -> f64 {
     (dx * dx + dy * dy).sqrt()
 }
 
+/// The camera the frame renders through: the mode's rig (the orbit arm, or the walk rig the
+/// EffectCraft viewer drives). Every pick, drape and aid of the 3D frame reads this, never
+/// the mode directly.
+fn rig_of(app: &TerrazoneApp) -> CameraRig {
+    CameraRig::of(app.ui.cam_mode, app.ui.cam3d, app.ui.walk3d)
+}
+
 /// The pick ray through a screen point on the canvas.
-fn ray_at(cam: &OrbitCamera, rect: Rect, p: Pos2) -> Ray {
+fn ray_at(rig: &CameraRig, rect: Rect, p: Pos2) -> Ray {
     let aspect = (rect.width() / rect.height().max(1.0)).max(0.01);
     let ndc = [((p.x - rect.left()) / rect.width()) * 2.0 - 1.0, -(((p.y - rect.top()) / rect.height()) * 2.0 - 1.0)];
-    Ray::from_ndc(cam, ndc, aspect)
+    rig.ray_from_ndc(ndc, aspect)
 }
 
 /// The world point a screen position picks on the ground: the flat datum plane (the elevation
 /// mesh is gone — the ground drapes flat, so the plane is the ground). `None` when the ray
 /// never crosses it (looking at the sky).
-fn ground_pick(app: &TerrazoneApp, cam: &OrbitCamera, rect: Rect, p: Pos2) -> Option<Vec3> {
+fn ground_pick(app: &TerrazoneApp, rig: &CameraRig, rect: Rect, p: Pos2) -> Option<Vec3> {
     let _ = app;
-    let ray = ray_at(cam, rect, p);
+    let ray = ray_at(rig, rect, p);
     ray.plane_y(0.0)
 }
 
@@ -555,17 +602,20 @@ pub fn show_3d(app: &mut TerrazoneApp, ui: &mut egui::Ui, rect: Rect) {
     // The frame's projection, built before the DEM/imagery step so the imagery ring covers
     // the ground this exact camera sees (a tilted view reaches toward the horizon). The
     // render path rebuilds it after the step (a re-anchor moves the camera target there).
-    let cam_pre = app.ui.cam3d;
-    let aspect = (rect.width() / rect.height().max(1.0)).max(0.01);
-    dem_step(app, ui.ctx(), Some(&Xform { vp: cam_pre.proj(aspect) * cam_pre.view(), rect }));
+    dem_step(app, ui.ctx(), Some(&Xform::for_cam(rect, &rig_of(app))));
 
     let painter = ui.painter_at(rect);
     painter.rect_filled(rect, 0.0, SKY);
 
     let interval = app.ui.terrain3d.contour_interval;
-    let cam = app.ui.cam3d;
-    let aspect = (rect.width() / rect.height().max(1.0)).max(0.01);
-    let xform = Xform { vp: cam.proj(aspect) * cam.view(), rect };
+    let rig = rig_of(app);
+    let xform = Xform::for_cam(rect, &rig);
+    // The position aids' scale: the orbit arm's distance, or the walk rig's height off the
+    // ground (a walked camera keeps its aids readable at street height).
+    let aid_dist = match rig {
+        CameraRig::Orbit(c) => c.dist,
+        CameraRig::Walk(w) => (w.pos[1] * 3.0).max(12.0),
+    };
 
     // The pointer's ground pick feeds the status bar's coordinate readout (the same doc-point
     // hover the 2D canvas sets).
@@ -579,9 +629,9 @@ pub fn show_3d(app: &mut TerrazoneApp, ui: &mut egui::Ui, rect: Rect) {
     draw_imagery(app, &painter, &xform);
     draw_loading_hint(app, &painter, &t, rect);
 
-    // The ground grid (the position aid): metre lines around the scene's position, under the
-    // contours and the art.
-    draw_ground_grid(&painter, &xform, &cam);
+    // The ground grid (the position aid): the EffectCraft viewer's endless grid — it fills
+    // the viewport at every camera, under the contours and the art.
+    draw_ground_grid(&painter, &xform, rect, &rig);
 
     let mut buckets: [Vec<Tri>; 3] = [Vec::new(), Vec::new(), Vec::new()];
     let mut drawn = 0usize;
@@ -626,7 +676,7 @@ pub fn show_3d(app: &mut TerrazoneApp, ui: &mut egui::Ui, rect: Rect) {
     // The placement ghost: while the Assets tool holds the canvas, the asset it would place
     // draws translucent at the pointer's ground point.
     let ghost = assets_tool_kind(app).filter(|_| hover.is_some()).map(|kind| {
-        hover.and_then(|h| ground_pick(app, &cam, rect, h)).map(|hit| {
+        hover.and_then(|h| ground_pick(app, &rig, rect, h)).map(|hit| {
             let mesh = match app.canvas.dem.as_mut() {
                 Some(rt) => rt.ghost_of(kind),
                 None => build_prim(kind, 1.0),
@@ -653,13 +703,17 @@ pub fn show_3d(app: &mut TerrazoneApp, ui: &mut egui::Ui, rect: Rect) {
         draw_overlays_3d(&painter, &xform, &drape, tol, &overlays);
     }
 
-    // The position aids over everything: the X/Y/Z axis gizmo at the scene's position, and
-    // the big cursor marker under the pointer's ground pick.
-    draw_axis_gizmo(&painter, &xform, cam.target, cam.dist);
+    // The position aids over everything: the X/Y/Z axis gizmo at the scene's position (under
+    // the walked camera in walk mode), and the big cursor marker under the pointer's pick.
+    let gizmo_at = match rig {
+        CameraRig::Orbit(c) => c.target,
+        CameraRig::Walk(w) => [w.pos[0], 0.0, w.pos[2]],
+    };
+    draw_axis_gizmo(&painter, &xform, gizmo_at, aid_dist);
     if let Some(h) = hover
-        && let Some(hit) = ground_pick(app, &cam, rect, h)
+        && let Some(hit) = ground_pick(app, &rig, rect, h)
     {
-        draw_hover_cursor(&painter, &xform, hit, cam.dist);
+        draw_hover_cursor(&painter, &xform, hit, aid_dist);
     }
 
     if drawn > TRI_BUDGET {
@@ -844,7 +898,9 @@ fn dem_step(app: &mut TerrazoneApp, ctx: &egui::Context, xform: Option<&Xform>) 
     //    The drape's zoom follows the camera: far it stays at the setting, close it refines, so
     //    dollying in brings sharper ground instead of stretching the same pixels.
     let base_zoom = app.ui.terrain3d.imagery_zoom;
-    let cam_dist = app.ui.cam3d.dist;
+    // The drape's distance input: the orbit arm's, or in walk mode the rig's own height off
+    // the ground (a walked camera at street height reads street-level tiles).
+    let cam_dist = if app.ui.cam_mode == CamMode::Walk { app.ui.walk3d.pos[1] * 2.5 } else { app.ui.cam3d.dist };
     let (source, pinned) = app
         .session
         .active()
@@ -1352,48 +1408,264 @@ fn draw_ghost_ring(painter: &egui::Painter, xform: &Xform, hit: Vec3, kind: Asse
     }
 }
 
-/// The ground grid's line spacing for the camera's distance: a 1-2-5×10ⁿ metre ladder aiming
-/// at about four cells across the visible half-width, so any dolly keeps a legible ladder.
-fn grid_spacing(cam: &OrbitCamera) -> f32 {
-    let raw = 2.0 * cam.dist * cam.fov_y.tan().max(0.01) / 4.0;
-    let pow = 10.0f32.powf(raw.max(1e-3).log10().floor());
-    let m = raw / pow;
-    if m < 1.5 {
-        pow
-    } else if m < 3.5 {
-        2.0 * pow
-    } else if m < 7.5 {
-        5.0 * pow
-    } else {
-        10.0 * pow
+/// The 1/2/5×10ⁿ step the endless grid's ladder picks for a raw target spacing.
+fn nice_step(s: f64) -> f64 {
+    let mag = 10f64.powf(s.max(1e-9).log10().floor());
+    for m in [1.0, 2.0, 5.0, 10.0] {
+        if m * mag >= s {
+            return m * mag;
+        }
     }
+    10.0 * mag
 }
 
-/// The X/Y/Z grid lines on the map canvas: metre lines around the scene's position (the camera
-/// target) on the flat ground, the two centre lines stronger — the position's coordinate frame,
-/// seen well at every dolly.
-fn draw_ground_grid(painter: &egui::Painter, xform: &Xform, cam: &OrbitCamera) {
-    let target = cam.target;
-    let s = grid_spacing(cam);
-    let extent = (cam.dist * 2.5).max(s * 2.0);
-    let n = ((extent / s).round() as i32).clamp(2, 28);
-    let faint = Color32::from_black_alpha(44);
-    let centre = Color32::from_black_alpha(100);
-    let line = |a: [f32; 3], b: [f32; 3], stroke: egui::Stroke| {
-        if let (Some(sa), Some(sb)) = (xform.proj(a), xform.proj(b)) {
-            painter.line_segment([sa, sb], stroke);
-        }
+/// The ground rectangle (min_x, max_x, min_z, max_z) the endless grid must cover for one
+/// camera over one viewport: the screen's corners (and centre) un-projected onto the ground
+/// plane, horizon-missed rays marched out to the far clamp ring. Pure, so the endlessness is
+/// testable without a painter.
+fn grid_extent(rig: &CameraRig, rect: Rect, y: f32) -> (f64, f64, f64, f64) {
+    let corners = [
+        pos2(rect.left(), rect.top()),
+        pos2(rect.right(), rect.top()),
+        pos2(rect.left(), rect.bottom()),
+        pos2(rect.right(), rect.bottom()),
+        rect.center(),
+    ];
+    let focus_ground: [f64; 2] = match rig {
+        CameraRig::Orbit(c) => [f64::from(c.target[0]), f64::from(c.target[2])],
+        CameraRig::Walk(c) => [f64::from(c.pos[0]), f64::from(c.pos[2])],
     };
-    let z0 = target[2] - n as f32 * s;
-    let z1 = target[2] + n as f32 * s;
-    let x0 = target[0] - n as f32 * s;
-    let x1 = target[0] + n as f32 * s;
-    for i in -n..=n {
-        let d = i as f32 * s;
-        let is_centre = i == 0;
-        let stroke = egui::Stroke::new(if is_centre { 1.4 } else { 1.0 }, if is_centre { centre } else { faint });
-        line([target[0] + d, 0.02, z0], [target[0] + d, 0.02, z1], stroke);
-        line([x0, 0.02, target[2] + d], [x1, 0.02, target[2] + d], stroke);
+    let aspect = (rect.width() / rect.height().max(1.0)).max(0.01);
+    let mut min_x = f64::MAX;
+    let mut max_x = f64::MIN;
+    let mut min_z = f64::MAX;
+    let mut max_z = f64::MIN;
+    let mut hits = 0usize;
+    for c in corners {
+        let ndc = [((c.x - rect.left()) / rect.width()) * 2.0 - 1.0, -(((c.y - rect.top()) / rect.height()) * 2.0 - 1.0)];
+        let ray = rig.ray_from_ndc(ndc, aspect);
+        // On-plane hits clamp to the far ring so the extent stays finite but still covers
+        // everything on screen; rays at/above the horizon march out along their ground
+        // heading so the top of the screen is covered too.
+        let hit = match ray_plane_y(&ray, y).map(|p| (p, (p - ray.origin).length())) {
+            Some((_p, t)) => {
+                let t = t.min(GRID_FAR_RING as f32);
+                Some([f64::from(ray.origin.x + ray.dir.x * t), f64::from(ray.origin.z + ray.dir.z * t)])
+            }
+            None => {
+                let (dx, dz) = (f64::from(ray.dir.x), f64::from(ray.dir.z));
+                let len = (dx * dx + dz * dz).sqrt();
+                if len < 1e-9 {
+                    None
+                } else {
+                    Some([f64::from(ray.origin.x) + dx / len * GRID_FAR_RING, f64::from(ray.origin.z) + dz / len * GRID_FAR_RING])
+                }
+            }
+        };
+        if let Some([x, z]) = hit {
+            hits += 1;
+            min_x = min_x.min(x);
+            max_x = max_x.max(x);
+            min_z = min_z.min(z);
+            max_z = max_z.max(z);
+        }
+    }
+    if hits < 3 {
+        // Degenerate — fall back to a generous box around the focus so some grid always shows.
+        let far = 400.0f64;
+        (min_x, max_x) = (focus_ground[0] - far, focus_ground[0] + far);
+        (min_z, max_z) = (focus_ground[1] - far, focus_ground[1] + far);
+    }
+    // The far clamp ring keeps the span sane; guard against float blowups at extreme grazing.
+    let span = (max_x - min_x).max(max_z - min_z).max(1.0);
+    if span > GRID_FAR_RING * 4.0 {
+        (min_x, max_x) = (focus_ground[0] - GRID_FAR_RING * 2.0, focus_ground[0] + GRID_FAR_RING * 2.0);
+        (min_z, max_z) = (focus_ground[1] - GRID_FAR_RING * 2.0, focus_ground[1] + GRID_FAR_RING * 2.0);
+    }
+    (min_x, max_x, min_z, max_z)
+}
+
+/// The viewport-filling "endless" ground grid — the EffectCraft viewer's grid (ported by way of
+/// ArchCraft's `view3d.rs`): its extent comes from un-projecting the screen corners onto the
+/// ground plane ([`grid_extent`]), and rays that miss the ground (at/above the horizon) march
+/// out along their ground heading to a far clamp ring, so the grid always covers the whole
+/// viewport and never visibly ends. The step adapts to zoom — the 1-2-5 ladder aiming at
+/// [`GRID_TARGET_PX`] between minor lines, widened to stay inside the line budget at grazing
+/// angles, minor lines dropped under [`GRID_MINOR_MIN_PX`] — a minor/major/super hierarchy
+/// reads depth the way the reference's does, and every segment clips against the camera
+/// frustum (four side planes + a near plane through the eye) so no endpoint behind the lens
+/// mirrors across the screen. A haze band at the horizon melts the far line ends into the sky.
+/// Drawn under the contours, the art and the fleet (the frame paints those after), it only
+/// ever veils itself.
+fn draw_ground_grid(painter: &egui::Painter, xform: &Xform, rect: Rect, rig: &CameraRig) {
+    let y = 0.02f32;
+    let (min_x, max_x, min_z, max_z) = grid_extent(rig, rect, y);
+    let eye = rig.eye();
+
+    // -- adaptive step: metres-per-pixel at the focus, ~[`GRID_TARGET_PX`] px between minor
+    // lines, never past the line budget -------------------------------------------------------
+    let span = (max_x - min_x).max(max_z - min_z).max(1.0);
+    let focus = match rig {
+        CameraRig::Orbit(c) => [c.target[0], c.target[2]],
+        CameraRig::Walk(c) => [c.pos[0], c.pos[2]],
+    };
+    let m_per_px = xform
+        .proj([focus[0], y, focus[1]])
+        .zip(xform.proj([focus[0] + 1.0, y, focus[1]]))
+        .map(|(a, b)| 1.0 / (b.x - a.x).abs().max(1e-3))
+        .unwrap_or(1.0) as f64;
+    let target = (GRID_TARGET_PX * m_per_px.max(1e-6)).max(span / GRID_MAX_LINES);
+    let step = nice_step(target);
+    let major_every = 5usize;
+    let sub = step / major_every as f64;
+
+    let minor_alpha = 34u8;
+    let major_alpha = 84u8;
+    let super_alpha = 140u8;
+    let grid_col = |a: u8| Color32::from_black_alpha(a);
+
+    let x0 = (min_x / sub).floor() * sub;
+    let z0 = (min_z / sub).floor() * sub;
+    let nx = (((max_x - x0) / sub).ceil().max(0.0) as usize).min(2400);
+    let nz = (((max_z - z0) / sub).ceil().max(0.0) as usize).min(2400);
+
+    // -- frustum clip: grid segments clip against the camera frustum (four Gribb–Hartmann
+    // side planes + a near plane through the eye) so no endpoint ever lands behind the lens —
+    // a behind-camera endpoint mirrors across the screen and tears the grid -------------------
+    let vp = xform.vp.to_cols_array();
+    let row = |r: usize| [f64::from(vp[r]), f64::from(vp[4 + r]), f64::from(vp[8 + r]), f64::from(vp[12 + r])];
+    let (r0, r1, r3) = (row(0), row(1), row(3));
+    let mut planes: [[f64; 4]; 5] = [
+        [r3[0] + r0[0], r3[1] + r0[1], r3[2] + r0[2], r3[3] + r0[3]], // left
+        [r3[0] - r0[0], r3[1] - r0[1], r3[2] - r0[2], r3[3] - r0[3]], // right
+        [r3[0] + r1[0], r3[1] + r1[1], r3[2] + r1[2], r3[3] + r1[3]], // bottom
+        [r3[0] - r1[0], r3[1] - r1[1], r3[2] - r1[2], r3[3] - r1[3]], // top
+        [0.0, 1.0, 0.0, 0.0],                                         // near plane, set below
+    ];
+    // Near plane: dot(p - eye, forward) >= 0.3 m.
+    let fwd3 = match rig {
+        CameraRig::Orbit(c) => {
+            let e = c.eye();
+            Vec3::new(c.target[0] - e.x, c.target[1] - e.y, c.target[2] - e.z)
+        }
+        CameraRig::Walk(c) => c.dir(),
+    };
+    let fl = fwd3.length().max(1e-9) as f64;
+    let f3 = [f64::from(fwd3.x) / fl, f64::from(fwd3.y) / fl, f64::from(fwd3.z) / fl];
+    planes[4] = [f3[0], f3[1], f3[2], -(f3[0] * f64::from(eye.x) + f3[1] * f64::from(eye.y) + f3[2] * f64::from(eye.z)) + 0.3];
+    let clip = |a: [f64; 2], b: [f64; 2]| -> Option<(Pos2, Pos2)> {
+        let mut from = [a[0], f64::from(y), a[1]];
+        let mut to = [b[0], f64::from(y), b[1]];
+        for pl in planes.iter() {
+            let df = pl[0] * from[0] + pl[1] * from[1] + pl[2] * from[2] + pl[3];
+            let dt = pl[0] * to[0] + pl[1] * to[1] + pl[2] * to[2] + pl[3];
+            if df < 0.0 && dt < 0.0 {
+                return None;
+            }
+            if df < 0.0 {
+                let t = df / (df - dt);
+                from = [from[0] + (to[0] - from[0]) * t, from[1] + (to[1] - from[1]) * t, from[2] + (to[2] - from[2]) * t];
+            } else if dt < 0.0 {
+                let t = dt / (dt - df);
+                to = [to[0] + (from[0] - to[0]) * t, to[1] + (from[1] - to[1]) * t, to[2] + (from[2] - to[2]) * t];
+            }
+        }
+        let sa = xform.proj([from[0] as f32, y, from[2] as f32])?;
+        let sb = xform.proj([to[0] as f32, y, to[2] as f32])?;
+        Some((sa, sb))
+    };
+
+    let mut lines_minor: Vec<(Pos2, Pos2)> = Vec::new();
+    let mut lines_major: Vec<(Pos2, Pos2)> = Vec::new();
+    let mut lines_super: Vec<(Pos2, Pos2)> = Vec::new();
+    // Major-ness comes from the absolute world coordinate (multiples of `sub`), so the grid is
+    // stable while the camera pans.
+    let classify = |v: f64| -> (bool, bool) {
+        let i = (v / sub).round() as i64;
+        let maj = i.rem_euclid(major_every as i64) == 0;
+        let sup = i.rem_euclid((major_every * 5) as i64) == 0;
+        (maj, sup)
+    };
+    for i in 0..=nx {
+        let x = x0 + i as f64 * sub;
+        let (maj, sup) = classify(x);
+        if let Some((a, b)) = clip([x, z0], [x, max_z]) {
+            if sup {
+                lines_super.push((a, b));
+            } else if maj {
+                lines_major.push((a, b));
+            } else {
+                lines_minor.push((a, b));
+            }
+        }
+    }
+    for j in 0..=nz {
+        let z = z0 + j as f64 * sub;
+        let (maj, sup) = classify(z);
+        if let Some((a, b)) = clip([x0, z], [max_x, z]) {
+            if sup {
+                lines_super.push((a, b));
+            } else if maj {
+                lines_major.push((a, b));
+            } else {
+                lines_minor.push((a, b));
+            }
+        }
+    }
+    // Minor lines only when they are ≥ [`GRID_MINOR_MIN_PX`] apart (the EffectCraft draw_minor).
+    let minor_px = (step / major_every as f64 / m_per_px.max(1e-6)) as f32;
+    if minor_px >= GRID_MINOR_MIN_PX {
+        painter.extend(lines_minor.into_iter().map(|(a, b)| Shape::line_segment([a, b], egui::Stroke::new(1.0, grid_col(minor_alpha)))));
+    }
+    painter.extend(lines_major.into_iter().map(|(a, b)| Shape::line_segment([a, b], egui::Stroke::new(1.0, grid_col(major_alpha)))));
+    painter.extend(lines_super.into_iter().map(|(a, b)| Shape::line_segment([a, b], egui::Stroke::new(1.0, grid_col(super_alpha)))));
+
+    // The axis lines through the world origin (the scene anchor) across the visible range —
+    // the gizmo's own red X and blue Z, stronger than the grid.
+    if let Some((a, b)) = clip([x0, 0.0], [max_x, 0.0]) {
+        painter.line_segment([a, b], egui::Stroke::new(1.4, Color32::from_rgb(0xd4, 0x4c, 0x47)));
+    }
+    if let Some((a, b)) = clip([0.0, z0], [0.0, max_z]) {
+        painter.line_segment([a, b], egui::Stroke::new(1.4, Color32::from_rgb(0x47, 0x6e, 0xd4)));
+    }
+
+    // -- horizon haze: the far clamp ring converges at the horizon; a soft gradient there
+    // melts the line ends into the sky instead of stopping mid-screen, and the strip above
+    // the horizon is cleaned to pure sky. Only while the horizon is actually on screen (a
+    // pitched-down orbit never sees it).
+    let fwd = rig.forward_xz();
+    let l = (fwd[0] * fwd[0] + fwd[1] * fwd[1]).sqrt();
+    if l > 1e-6 {
+        // Any point on the horizontal ray out of the eye projects onto the horizon line; the
+        // distance only has to stay inside the far plane for the projection to answer.
+        let d = xform.far * 0.9;
+        if let Some(hp) = xform.proj([eye.x + (fwd[0] / l) * d, eye.y, eye.z + (fwd[1] / l) * d])
+            && rect.top() <= hp.y
+            && hp.y <= rect.bottom()
+        {
+            let bg = SKY;
+            let sky_h = (hp.y - rect.top()).clamp(0.0, rect.height());
+            if sky_h > 0.0 {
+                painter.rect_filled(Rect::from_min_max(pos2(rect.left(), rect.top()), pos2(rect.right(), rect.top() + sky_h)), 0.0, bg);
+            }
+            // The haze band fading out below the horizon.
+            let band_top = hp.y.max(rect.top());
+            let band_h = (rect.height() * 0.30).min(rect.bottom() - band_top);
+            if band_h > 0.0 {
+                let mut mesh = egui::Mesh::default();
+                let yb = band_top + band_h;
+                let (xl, xr) = (rect.left(), rect.right());
+                let c0 = bg;
+                let c1 = Color32::from_rgba_unmultiplied(SKY.r(), SKY.g(), SKY.b(), 0);
+                mesh.colored_vertex(pos2(xl, band_top), c0);
+                mesh.colored_vertex(pos2(xr, band_top), c0);
+                mesh.colored_vertex(pos2(xl, yb), c1);
+                mesh.colored_vertex(pos2(xr, yb), c1);
+                mesh.add_triangle(0, 1, 2);
+                mesh.add_triangle(2, 1, 3);
+                painter.add(Shape::mesh(std::sync::Arc::new(mesh)));
+            }
+        }
     }
 }
 
@@ -1456,7 +1728,7 @@ fn draw_readout(app: &TerrazoneApp, painter: &egui::Painter, rect: Rect, hover: 
     let font = FontId::proportional(10.0);
     let mut lines: Vec<String> = Vec::new();
     if let Some(hp) = hover
-        && let Some(hit) = ground_pick(app, &app.ui.cam3d, rect, hp)
+        && let Some(hit) = ground_pick(app, &rig_of(app), rect, hp)
     {
         let m = scene_mercator(app);
         let (lon, lat) = m.unproject(f64::from(hit.x), f64::from(-hit.z));
@@ -1529,7 +1801,33 @@ fn draw_canvas_switch(app: &mut TerrazoneApp, ui: &mut egui::Ui, rect: Rect) {
 
 /// The status hint shown when the 3D environment is entered.
 fn enter_3d_status(app: &mut TerrazoneApp) {
-    app.status(tl!("3D environment — drag to orbit · Shift-drag to pan · wheel to zoom"));
+    app.status(tl!("3D environment — drag to orbit · Shift-drag to pan · wheel to zoom · the Camera panel switches to Walk (WASD)"));
+}
+
+/// Switch the 3D environment's camera mode — the EffectCraft viewer's pair. The switch hands
+/// the view over instead of jumping: walking from an orbit stands the walk rig at the orbit
+/// eye looking the orbit's way; returning re-aims the orbit from where the walk stood, so both
+/// directions keep the scene on screen.
+pub fn set_cam_mode(app: &mut TerrazoneApp, mode: CamMode) {
+    if app.ui.cam_mode == mode {
+        return;
+    }
+    match mode {
+        CamMode::Walk => {
+            let w = WalkCam::from_orbit(&app.ui.cam3d);
+            app.ui.walk3d = w;
+            app.status(tl!("Walk mode — W/A/S/D to move · Space-drag to look · Q/E down/up · Shift runs · the wheel lifts"));
+        }
+        CamMode::Orbit => {
+            let c = OrbitCamera::from_walk(&app.ui.walk3d);
+            app.ui.cam3d = c;
+            app.status(tl!("Orbit camera — drag to orbit · Shift-drag to pan · wheel to zoom · double-click recentres"));
+        }
+    }
+    app.ui.cam_mode = mode;
+    if let Some(rt) = app.canvas.dem.as_mut() {
+        rt.interacted = true;
+    }
 }
 
 /// The "terrain is on its way" line under the readout while nothing has stitched yet.
@@ -1552,33 +1850,49 @@ fn draw_loading_hint(app: &TerrazoneApp, painter: &egui::Painter, t: &crate::the
 /// every path tool draws mercatorized on the terrain. The camera keeps its own gestures: drag
 /// orbits, Shift-drag pans, the wheel dollies, double-click recentres — and with a navigation
 /// tool (Hand/Zoom/Rotate View), Space held, or the placement tool up, the whole pointer belongs
-/// to the camera, exactly as before.
+/// to the camera, exactly as before. In Walk mode (the EffectCraft camera) the same camera
+/// gestures look instead of orbit, and the keyboard drives the rig: W/A/S/D walks forward,
+/// left, back, right, Q/E sinks or lifts, Shift sprints, the wheel raises or lowers.
 fn handle_input(app: &mut TerrazoneApp, ui: &mut egui::Ui, resp: &egui::Response, rect: Rect, hover: Option<Pos2>) {
     let m = ui.input(|i| i.modifiers);
     let delta = ui.input(|i| i.pointer.delta());
     let tool = app.session.tool_id().to_string();
     let space = ui.input(|i| i.key_down(egui::Key::Space));
     let nav_tool = matches!(tool.as_str(), "hand" | "zoom" | "rotateView");
-    let cam_mode = nav_tool || space;
-    // The wheel: dolly (zoom toward the target) whatever the tool. `zoom_delta` covers Cmd-wheel
-    // and pinch; the plain wheel arrives as scroll, zooming in (camera closer) scrolling up,
-    // like the 2D canvas.
+    let cam_gesture = nav_tool || space;
+    let walking = app.ui.cam_mode == CamMode::Walk;
+    // The wheel: dolly (zoom toward the target) whatever the tool — the walk rig lifts instead
+    // (the reference's walk wheel). `zoom_delta` covers Cmd-wheel and pinch; the plain wheel
+    // arrives as scroll, zooming in (camera closer) scrolling up, like the 2D canvas.
     let (zoom, scroll) = ui.input(|i| (i.zoom_delta(), i.smooth_scroll_delta.y));
-    let factor = if (zoom - 1.0).abs() > 1.0e-6 {
-        1.0 / zoom
-    } else if scroll.abs() > 0.01 {
-        if scroll > 0.0 { 1.0 / DOLLY } else { DOLLY }
-    } else {
-        1.0
-    };
     let mut moved = false;
-    if (factor - 1.0).abs() > 1.0e-6 {
-        app.ui.cam3d.dolly_by(factor);
-        moved = true;
+    if walking {
+        if scroll.abs() > 0.01 {
+            app.ui.walk3d.lift(scroll * WALK_WHEEL_LIFT);
+            moved = true;
+        } else if (zoom - 1.0).abs() > 1.0e-6 {
+            app.ui.walk3d.lift((zoom - 1.0) * 120.0);
+            moved = true;
+        }
+    } else {
+        let factor = if (zoom - 1.0).abs() > 1.0e-6 {
+            1.0 / zoom
+        } else if scroll.abs() > 0.01 {
+            if scroll > 0.0 { 1.0 / DOLLY } else { DOLLY }
+        } else {
+            1.0
+        };
+        if (factor - 1.0).abs() > 1.0e-6 {
+            app.ui.cam3d.dolly_by(factor);
+            moved = true;
+        }
     }
-    if cam_mode {
+    if cam_gesture {
         if resp.dragged_by(egui::PointerButton::Primary) {
-            if m.shift {
+            if walking {
+                // Drag looks (the reference's grab-the-world: dragging down looks up).
+                app.ui.walk3d.look(delta.x * WALK_LOOK_SPEED, delta.y * WALK_LOOK_SPEED);
+            } else if m.shift {
                 app.ui.cam3d.pan(delta.x, delta.y);
             } else {
                 // Yaw increases dragging right; dragging up raises the pitch (toward top-down).
@@ -1587,7 +1901,11 @@ fn handle_input(app: &mut TerrazoneApp, ui: &mut egui::Ui, resp: &egui::Response
             moved = true;
         }
         if resp.dragged_by(egui::PointerButton::Middle) {
-            app.ui.cam3d.pan(delta.x, delta.y);
+            if walking {
+                app.ui.walk3d.look(delta.x * WALK_LOOK_SPEED, delta.y * WALK_LOOK_SPEED);
+            } else {
+                app.ui.cam3d.pan(delta.x, delta.y);
+            }
             moved = true;
         }
         let dbl = resp.double_clicked();
@@ -1596,16 +1914,63 @@ fn handle_input(app: &mut TerrazoneApp, ui: &mut egui::Ui, resp: &egui::Response
             moved = true;
         }
     } else {
-        // Drawing / editing. Alt-drag still orbits (the camera's escape hatch with a tool up);
-        // the middle button pans; the primary button belongs to the tool.
+        // Drawing / editing. Alt-drag still orbits — or looks, in walk mode — (the camera's
+        // escape hatch with a tool up); the middle button pans; the primary button belongs to
+        // the tool.
         if m.alt && resp.dragged_by(egui::PointerButton::Primary) {
-            app.ui.cam3d.orbit(delta.x * ORBIT_SPEED, -delta.y * ORBIT_SPEED);
+            if walking {
+                app.ui.walk3d.look(delta.x * WALK_LOOK_SPEED, delta.y * WALK_LOOK_SPEED);
+            } else {
+                app.ui.cam3d.orbit(delta.x * ORBIT_SPEED, -delta.y * ORBIT_SPEED);
+            }
             moved = true;
         } else if resp.dragged_by(egui::PointerButton::Middle) {
-            app.ui.cam3d.pan(delta.x, delta.y);
+            if walking {
+                app.ui.walk3d.look(delta.x * WALK_LOOK_SPEED, delta.y * WALK_LOOK_SPEED);
+            } else {
+                app.ui.cam3d.pan(delta.x, delta.y);
+            }
             moved = true;
         } else {
             dispatch_tool(app, ui, resp, rect, hover);
+        }
+    }
+    // The walk keys: the EffectCraft camera's drive. They read while the canvas is under the
+    // pointer (the wheel's own gate), so typing into a panel never walks the camera.
+    if walking && resp.hovered() {
+        let dt = ui.input(|i| i.unstable_dt).min(0.25);
+        let (mut fwd, mut side) = (0.0f32, 0.0f32);
+        ui.input(|i| {
+            if i.key_down(egui::Key::W) {
+                fwd += 1.0;
+            }
+            if i.key_down(egui::Key::S) {
+                fwd -= 1.0;
+            }
+            if i.key_down(egui::Key::D) {
+                side += 1.0;
+            }
+            if i.key_down(egui::Key::A) {
+                side -= 1.0;
+            }
+        });
+        if fwd != 0.0 || side != 0.0 {
+            let sprint = if m.shift { WALK_SPRINT } else { 1.0 };
+            app.ui.walk3d.walk(fwd, side, WALK_SPEED * sprint * dt);
+            moved = true;
+        }
+        let mut sink = false;
+        let mut rise = false;
+        ui.input(|i| {
+            sink = i.key_down(egui::Key::Q);
+            rise = i.key_down(egui::Key::E);
+        });
+        if sink || rise {
+            app.ui.walk3d.lift((rise as i32 - sink as i32) as f32 * WALK_LIFT_SPEED * dt);
+            moved = true;
+        }
+        if moved {
+            ui.ctx().request_repaint();
         }
     }
     if moved && let Some(rt) = app.canvas.dem.as_mut() {
@@ -1629,7 +1994,7 @@ fn dispatch_tool(app: &mut TerrazoneApp, ui: &mut egui::Ui, resp: &egui::Respons
     let pick = |app: &TerrazoneApp, p: Pos2| ground_to_doc(app, rect, p).map(|d| (d, p));
     let at = hover.or_else(|| pointer.interact_pos().filter(|p| rect.contains(*p)));
     let frozen = |app: &TerrazoneApp, ui: &Ui, p: Pos2| -> Option<Point> {
-        let cam: OrbitCamera = ui.data(|d| d.get_temp(press_cam_id()))?;
+        let cam: CameraRig = ui.data(|d| d.get_temp(press_cam_id()))?;
         let hit = ground_pick(app, &cam, rect, p)?;
         let m = scene_mercator(app);
         let (lon, lat) = m.unproject(f64::from(hit.x), f64::from(-hit.z));
@@ -1641,7 +2006,7 @@ fn dispatch_tool(app: &mut TerrazoneApp, ui: &mut egui::Ui, resp: &egui::Respons
         && let Some(p) = at
         && let Some(doc) = pick(app, p)
     {
-        ui.data_mut(|d| d.insert_temp(press_cam_id(), app.ui.cam3d));
+        ui.data_mut(|d| d.insert_temp(press_cam_id(), rig_of(app)));
         let ev = terrazon_tools::PointerEvent {
             kind: terrazon_tools::PointerKind::Down,
             pos: doc.0,
@@ -1649,7 +2014,7 @@ fn dispatch_tool(app: &mut TerrazoneApp, ui: &mut egui::Ui, resp: &egui::Respons
             pressure: crate::canvas::pen_pressure(ui, true),
         };
         crate::canvas::dispatch(app, &ev, view);
-    } else if pointer.primary_down() && ui.data(|d| d.get_temp::<OrbitCamera>(press_cam_id()).is_some()) {
+    } else if pointer.primary_down() && ui.data(|d| d.get_temp::<CameraRig>(press_cam_id()).is_some()) {
         // Held: drag (and tick time-driven tools), through the frozen camera.
         if pointer.delta() != egui::Vec2::ZERO
             && let Some(p) = at
@@ -1668,7 +2033,7 @@ fn dispatch_tool(app: &mut TerrazoneApp, ui: &mut egui::Ui, resp: &egui::Respons
             let r = app.session.tool_tick(dt, view);
             crate::canvas::apply_requests(app, r);
         }
-    } else if !pointer.primary_down() && ui.data(|d| d.get_temp::<OrbitCamera>(press_cam_id()).is_some()) {
+    } else if !pointer.primary_down() && ui.data(|d| d.get_temp::<CameraRig>(press_cam_id()).is_some()) {
         // Released: the tool's Up, through the frozen camera, then the press memory goes.
         let p = at.unwrap_or(rect.center());
         if let Some(pos) = frozen(app, ui, p) {
@@ -1680,7 +2045,7 @@ fn dispatch_tool(app: &mut TerrazoneApp, ui: &mut egui::Ui, resp: &egui::Respons
             };
             crate::canvas::dispatch(app, &ev, view);
         }
-        ui.data_mut(|d| d.remove::<OrbitCamera>(press_cam_id()));
+        ui.data_mut(|d| d.remove::<CameraRig>(press_cam_id()));
     } else if let Some(p) = at
         && pointer.is_moving()
     {
@@ -1704,10 +2069,14 @@ fn dispatch_tool(app: &mut TerrazoneApp, ui: &mut egui::Ui, resp: &egui::Respons
     }
 }
 
-/// Double-click: the camera target recentres on the clicked ground point.
+/// Double-click: the camera target recentres on the clicked ground point (the orbit arm's
+/// gesture — the walk rig moves with its own keys, so a walk double-click stays a no-op).
 fn recentre(app: &mut TerrazoneApp, rect: Rect, p: Pos2) {
+    if app.ui.cam_mode != CamMode::Orbit {
+        return;
+    }
     let cam = app.ui.cam3d;
-    let Some(hit) = ground_pick(app, &cam, rect, p) else { return };
+    let Some(hit) = ground_pick(app, &CameraRig::Orbit(cam), rect, p) else { return };
     app.ui.cam3d.target = [hit.x, 0.0, hit.z];
 }
 
@@ -1717,7 +2086,7 @@ fn recentre(app: &mut TerrazoneApp, rect: Rect, p: Pos2) {
 /// through the document's Mercator — the same doc coordinates the 2D canvas draws with, so a
 /// stroke drawn here lands exactly where the flat map puts it.
 fn ground_to_doc(app: &TerrazoneApp, rect: Rect, p: Pos2) -> Option<Point> {
-    let hit = ground_pick(app, &app.ui.cam3d, rect, p)?;
+    let hit = ground_pick(app, &rig_of(app), rect, p)?;
     let m = scene_mercator(app);
     let (lon, lat) = m.unproject(f64::from(hit.x), f64::from(-hit.z));
     let (x, y) = lonlat_to_doc(lon, lat);
@@ -2074,7 +2443,7 @@ pub fn vignette(ui: &mut egui::Ui, rect: Rect) {
         target_dist: None,
     };
     let aspect = (inner.width() / inner.height().max(1.0)).max(0.01);
-    let xform = Xform { vp: cam.proj(aspect) * cam.view(), rect: inner };
+    let xform = Xform { vp: cam.proj(aspect) * cam.view(), rect: inner, far: cam.far_plane.max(cam.dist * 8.0 + 400.0) };
 
     // Sky gradient card top → the ground reads against it.
     painter.rect_filled(inner, 4.0, SKY);
@@ -2185,18 +2554,35 @@ mod tests {
         app
     }
 
-    /// The grid spacing follows the 1-2-5×10ⁿ ladder: three camera distances read three
-    /// clean steps (each within 4× of the visible half-width over 4).
+    /// The endless grid's ladder: the step keeps the 1-2-5×10ⁿ mantissa whatever raw target it
+    /// is handed, and grows with the target.
     #[test]
-    fn the_ground_grid_spacing_climbs_the_one_two_five_ladder() {
-        let s_close = grid_spacing(&OrbitCamera { dist: 120.0, ..Default::default() });
-        let s_mid = grid_spacing(&OrbitCamera { dist: 1_200.0, ..Default::default() });
-        let s_far = grid_spacing(&OrbitCamera { dist: 12_000.0, ..Default::default() });
-        assert!(s_close < s_mid && s_mid < s_far, "spacing grows with the dolly: {s_close} {s_mid} {s_far}");
-        for s in [s_close, s_mid, s_far] {
-            let mantissa = s / 10.0f32.powf(s.log10().floor());
-            assert!([1.0, 2.0, 5.0, 10.0].iter().any(|k| (mantissa - k).abs() < 1e-4), "1-2-5 ladder: {s} → {mantissa}");
+    fn the_endless_grid_step_climbs_the_one_two_five_ladder() {
+        for (target, want) in [(0.7, 1.0), (1.7, 2.0), (4.2, 5.0), (7.9, 10.0), (31.0, 50.0), (140.0, 200.0)] {
+            let s = nice_step(target);
+            assert!((s - want).abs() < 1e-9, "nice_step({target}) = {s}, want {want}");
         }
+        assert!(nice_step(4.0) < nice_step(40.0) && nice_step(40.0) < nice_step(400.0));
+    }
+
+    /// The endless grid's extent never visibly ends: a camera looking level (every corner ray
+    /// above the horizon) still covers kilometres of ground ahead — the horizon rays march to
+    /// the far ring instead of shrinking the grid to a finite patch.
+    #[test]
+    fn the_endless_grid_covers_the_ground_even_looking_level() {
+        let rect = Rect::from_min_size(pos2(0.0, 0.0), vec2(1200.0, 800.0));
+        // A walk rig at eye height looking level (pitch 0): every corner ray misses the ground.
+        let walk = CameraRig::Walk(WalkCam { pos: [0.0, 1.6, 0.0], yaw: std::f32::consts::PI, pitch: 0.0, fov_y: 65.0f32.to_radians() });
+        let (min_x, max_x, min_z, max_z) = grid_extent(&walk, rect, 0.0);
+        assert!(min_z < -40_000.0, "looking north (−z) the extent reaches kilometres ahead: {min_z}");
+        assert!((max_z - min_z) > 40_000.0 && (max_x - min_x) > 10_000.0, "the coverage is vast, not a patch: x {min_x}..{max_x} z {min_z}..{max_z}");
+        // The extent stays finite (the far ring clamps it) so the line budget holds.
+        assert!(max_x.abs() <= GRID_FAR_RING * 4.0 && max_z.abs() <= GRID_FAR_RING * 4.0);
+        // And a normal pitched-down orbit covers its own view.
+        let orbit = CameraRig::Orbit(OrbitCamera { target: [0.0, 0.0, 0.0], dist: 900.0, yaw: 0.6, pitch: 0.62, ..Default::default() });
+        let (o0, o1, o2, o3) = grid_extent(&orbit, rect, 0.0);
+        assert!(o1 > o0 && o3 > o2, "the orbit's extent is a real rectangle");
+        assert!(o1 - o0 > 200.0, "a 900 m orbit sees hundreds of metres across: {}", o1 - o0);
     }
 
     /// The pointer picks the flat datum plane — the ground drapes flat, so the pick and the
@@ -2210,7 +2596,7 @@ mod tests {
         let cam = OrbitCamera { target: [0.0, 0.0, 0.0], dist: 300.0, yaw: 0.0, pitch: 0.6, ..Default::default() };
         let rect = Rect::from_min_size(pos2(0.0, 0.0), vec2(800.0, 600.0));
         let centre = pos2(400.0, 300.0);
-        let hit = ground_pick(&app, &cam, rect, centre).expect("a pitched ray crosses the datum");
+        let hit = ground_pick(&app, &CameraRig::Orbit(cam), rect, centre).expect("a pitched ray crosses the datum");
         assert!(hit.y.abs() < 1e-4, "the pick rides the datum plane: {hit:?}");
         // And its lon/lat round-trips through the scene Mercator (the doc point tools draw with).
         let m = scene_mercator(&app);
@@ -2227,6 +2613,33 @@ mod tests {
         // Pitch above the horizon: the ray never comes down to the plane.
         let cam = OrbitCamera { target: [0.0, 0.0, 0.0], dist: 300.0, yaw: 0.0, pitch: 0.05, ..Default::default() };
         let rect = Rect::from_min_size(pos2(0.0, 0.0), vec2(800.0, 600.0));
-        assert!(ground_pick(&app, &cam, rect, pos2(400.0, 40.0)).is_none(), "the sky picks nothing");
+        assert!(ground_pick(&app, &CameraRig::Orbit(cam), rect, pos2(400.0, 40.0)).is_none(), "the sky picks nothing");
+    }
+
+    /// Switching camera modes hands the view over: orbit → walk stands the rig at the eye
+    /// looking the orbit's way; walk → orbit re-aims the arm from where the walk stood. And
+    /// the mode round-trips through the command surface.
+    #[test]
+    fn switching_camera_modes_hands_the_view_over() {
+        let mut app = app_with_map();
+        app.run("view.mode3d", serde_json::json!({ "on": true })).unwrap();
+        app.ui.cam3d.dist = 400.0;
+        let eye = app.ui.cam3d.eye();
+        crate::view3d::set_cam_mode(&mut app, CamMode::Walk);
+        assert_eq!(app.ui.cam_mode, CamMode::Walk);
+        assert!((app.ui.walk3d.pos[0] - eye.x).abs() < 0.01 && (app.ui.walk3d.pos[2] - eye.z).abs() < 0.01, "the walk stands where the orbit was");
+        assert!(app.ui.walk3d.pos[1] >= 0.4, "the eye height never sinks under the datum");
+        // The walk drives; switching back aims the orbit down the walk's own look.
+        app.ui.walk3d.walk(1.0, 0.0, 30.0);
+        app.ui.walk3d.look(0.4, -0.1);
+        let look_w = app.ui.walk3d.dir();
+        crate::view3d::set_cam_mode(&mut app, CamMode::Orbit);
+        assert_eq!(app.ui.cam_mode, CamMode::Orbit);
+        let look_o = (glam::Vec3::from(app.ui.cam3d.target) - app.ui.cam3d.eye()).normalize_or_zero();
+        assert!(look_w.dot(look_o) > 0.95, "the orbit looks where the walk looked: {look_w:?} vs {look_o:?}");
+        // Same mode twice is a no-op (the handoff never resets a standing camera).
+        let before = app.ui.cam3d;
+        crate::view3d::set_cam_mode(&mut app, CamMode::Orbit);
+        assert_eq!(app.ui.cam3d, before);
     }
 }

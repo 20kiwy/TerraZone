@@ -201,7 +201,20 @@ default-members = ["crates/*", "apps/terrazon", "apps/terrazon-cli", "xtask"]
 # zip + SHA256SUMS.txt, all checksum-verified anonymously off the public repo, the ELF
 # executing "terrazon 0.23.0"). No app code changed in this round; the version moves so
 # every release keeps its own tag, its own binaries and its own checksums.
-version = "0.24.0"
+# 0.25.0: the 3D environment copies the EffectCraft viewer's camera and grid. The ground grid
+# is the endless one — its extent un-projects the screen corners onto the datum, rays above
+# the horizon march out to a far clamp ring, the 1-2-5 step adapts to zoom with the
+# minor/major/super hierarchy and a 4-px minor gate, segments clip against the camera frustum
+# so nothing behind the lens tears, and a haze band melts the far ends into the sky — so the
+# grid always fills the viewport instead of stopping in a patch around the target. And the
+# camera gains the viewer's modes: the Orbit arm as ever, and the Walk rig — WASD walks
+# forward/left/back/right, drag (Space or a navigation tool held, or Alt with a tool up)
+# looks, Q/E sinks or lifts, Shift sprints, the wheel raises or lowers — switching hands the
+# view over (the walk stands at the orbit eye looking its way; the orbit re-aims from where
+# the walk stood). The Camera 3D panel carries the Orbit/Walk switch with the walk's look and
+# eye-height sliders, the scene3d.set protocol drives camMode + the walk rig, and the drape
+# refines off the walk's own height.
+version = "0.25.0"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 rust-version = "1.95"
