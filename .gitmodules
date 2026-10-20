@@ -1,0 +1,18 @@
+[submodule "clone/DocCraft"]
+	path = clone/DocCraft
+	url = https://github.com/20kiwy/DocCraft.git
+[submodule "clone/traffic-sim"]
+	path = clone/traffic-sim
+	url = https://github.com/20kiwy/traffic-sim.git
+[submodule "clone/map-launcher"]
+	path = clone/map-launcher
+	url = https://github.com/20kiwy/map-launcher.git
+[submodule "clone/rust-engine-zoofam"]
+	path = clone/rust-engine-zoofam
+	url = https://github.com/20kiwy/rust-engine-zoofam.git
+[submodule "clone/ansible-rs"]
+	path = clone/ansible-rs
+	url = https://github.com/20kiwy/ansible-rs.git
+[submodule "clone/zscript"]
+	path = clone/zscript
+	url = https://github.com/20kiwy/zscript.git
