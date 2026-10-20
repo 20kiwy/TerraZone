@@ -41,9 +41,14 @@ XYZ tile view** — the two systems read independently, and an eye gates exactly
   signs in with the deployment's own trust pair (or your phone number + 4-digit code).
 - **Marine Traffic** — the vessels in view, managing its own cookie session.
 - **Flight Radar** — the aircraft in the current view's share.
-- **SGR trains** — the day's whole timetable drawn on the rail: running trains ride their
-  segment, departures still waiting sit dimmed at their origin station, finished runs drop
-  off while the panel's day list keeps them.
+- **SGR trains** — the active trains only: a train rides its own times along the standard
+  gauge line while it is on it, and the map draws nothing else — departures still waiting
+  and finished runs live in the panel's day tree. The atlas names the railways, so the view
+  is the SGR's alone: the old TAZARA (1067 mm) and the meter-gauge Central Line are
+  detected in the data and stay off the canvas. The line itself draws like a railway —
+  ballast bed, twin rails, sleepers at street zooms — and the electric corridor carries its
+  catenary posts and wire (2D) and raises them in 3D, where the running trains are four-car
+  sets in the TRC livery.
 
 | ![Live fleet](docs/images/TerraZone-0.21.0-fleet-live.png) |
 |---|
@@ -61,6 +66,16 @@ rail, waiting departures fanned at their origins:
 | ![SGR whole day](docs/images/TerraZone-0.22.0-sgr-whole-day.png) |
 |---|
 | The SGR's whole day — running trains + waiting departures dimmed at their origin stations. |
+
+| ![SGR corridor day](docs/images/TerraZone-0.26.0-sgr-corridor-day.png) |
+|---|
+| 0.26.0 — the SGR drawn as a railway: ballast bed, twin rails, sleepers and the electric
+  corridor's catenary, with the OSM name ("Morogoro - Makutopora SGR") reading along it. |
+
+| ![SGR tree](docs/images/TerraZone-0.26.0-sgr-tree.png) |
+|---|
+| 0.26.0 — the corridor day in the Fleet panel: the Dar ↔ Dodoma counts, a train's chain
+  tree (every stop of the ride, the coaches under it, the vendor's own seat grid). |
 
 | ![Network z8](docs/images/TerraZone-0.22.0-network-z8.png) |
 |---|

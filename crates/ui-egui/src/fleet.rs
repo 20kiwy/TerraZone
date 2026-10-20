@@ -339,8 +339,6 @@ pub fn tick(app: &mut TerrazoneApp, view: Option<FleetView>) {
             let cache = &mut app.canvas.fleet;
             tt.project_routed(&cache.atlas, &mut cache.rail_router, now)
         };
-        #[cfg(test)]
-        eprintln!("DEBUG tick projected {} markers (now {now}, trains {})", markers.len(), tt.trains.len());
         app.canvas.fleet.grid.insert(Provider::Sgr, Vec::new());
         app.canvas.fleet.markers.insert(Provider::Sgr, markers);
         // The schedule is live: the sweep's data answers set this too, but a timetable that
@@ -813,14 +811,26 @@ fn view_box(xf: &crate::canvas::Xf, rect: Rect) -> (f64, f64, f64, f64) {
     (min_lon, min_lat, max_lon, max_lat)
 }
 
-/// The rail network highlight: every OSM railway line whose box touches the view, stroked in
-/// the SGR tint — the "railway data from the OSM fetch" the trains ride. The stroke breathes
-/// with the zoom (a hair at world view, fuller at street level).
+/// The SGR's railway, drawn the way a railway is BUILT — the egregoria look: a dark ballast
+/// bed under two thin rails, sleepers ticking across at street zooms, and where the atlas
+/// says the contact line rides the way, catenary posts standing off the track with their
+/// wire over it. The layer is the SGR's view: the atlas still detects the old TAZARA and
+/// the meter-gauge Central Line (they are data there), but the map draws the standard gauge
+/// line and nothing over it. Construction/disused SGR ways read dimmer; the stroke breathes
+/// with the zoom.
 fn draw_rail(out: &mut Vec<Shape>, atlas: &fleetlib::RailAtlas, xf: &crate::canvas::Xf, rect: Rect, color: Color32, zoom_scale: f32) {
     let (w, s, e, n) = view_box(xf, rect);
-    let width = 0.9 + 1.1 * zoom_scale;
-    let stroke = Stroke::new(width, Color32::from_rgba_unmultiplied(color.r(), color.g(), color.b(), 170));
+    let detailed = xf.zoom >= 11.5;
+    let electrified_detail = xf.zoom >= 12.5;
+    let ballast_w = 1.6 + 2.6 * zoom_scale;
+    let live_alpha = 200;
+    let build_alpha = 90;
     for line in &atlas.lines {
+        // The SGR's view: the standard gauge line only (see the class docs — the old
+        // systems ride the atlas for the router and the panel, not this draw).
+        if line.cls != fleetlib::rail::RailClass::Sgr {
+            continue;
+        }
         let [min_lon, min_lat, max_lon, max_lat] = line.bbox;
         if max_lon < w || min_lon > e || max_lat < s || min_lat > n {
             continue;
@@ -829,7 +839,118 @@ fn draw_rail(out: &mut Vec<Shape>, atlas: &fleetlib::RailAtlas, xf: &crate::canv
         if pts.len() < 2 {
             continue;
         }
-        out.push(Shape::Path(egui::epaint::PathShape { points: pts, closed: false, fill: Color32::TRANSPARENT, stroke: stroke.into() }));
+        let alpha = if line.is_operational() { live_alpha } else { build_alpha };
+        // The ballast bed: a dark underlay the rails sit on.
+        let ballast = Stroke::new(ballast_w, Color32::from_rgba_unmultiplied(72, 66, 58, alpha.min(215)));
+        out.push(Shape::Path(egui::epaint::PathShape { points: pts.clone(), closed: false, fill: Color32::TRANSPARENT, stroke: ballast.into() }));
+        if !detailed {
+            // World/national zoom: one SGR-tinted stroke reads the corridor.
+            let stroke = Stroke::new(0.9 + 1.1 * zoom_scale, Color32::from_rgba_unmultiplied(color.r(), color.g(), color.b(), alpha));
+            out.push(Shape::Path(egui::epaint::PathShape { points: pts, closed: false, fill: Color32::TRANSPARENT, stroke: stroke.into() }));
+            continue;
+        }
+        // Street zoom: two rails (offset polylines ± the gauge gap), sleepers across, and
+        // the catenary where the wire rides.
+        let gap = (1.1 + 0.9 * zoom_scale).max(1.8);
+        let rail_w = 0.9_f32.max(0.55 * zoom_scale.min(2.4));
+        let rail_color = Color32::from_rgba_unmultiplied(226, 222, 214, alpha);
+        for side in [-1.0_f32, 1.0] {
+            let rails = offset_polyline(&pts, side * gap);
+            out.push(Shape::Path(egui::epaint::PathShape {
+                points: rails,
+                closed: false,
+                fill: Color32::TRANSPARENT,
+                stroke: Stroke::new(rail_w, rail_color).into(),
+            }));
+        }
+        // Sleepers: dark ties across the bed, every few pixels of screen length.
+        let sleeper_step = 7.0_f32.max(9.0 - 2.0 * zoom_scale);
+        let sleeper_len = gap * 2.0 + 2.6;
+        let sleeper_color = Color32::from_rgba_unmultiplied(58, 52, 46, alpha.min(190));
+        sleepers(out, &pts, sleeper_step, sleeper_len, Stroke::new(1.1, sleeper_color));
+        if line.electrified && electrified_detail {
+            // The electric SGR's signature: catenary posts off one side and the wire they
+            // carry — a faint amber so the electrified corridor reads at a glance.
+            let post_color = Color32::from_rgba_unmultiplied(214, 158, 74, alpha.min(230));
+            catenary(out, &pts, gap + 3.2, 44.0, post_color);
+        }
+    }
+}
+
+/// The polyline offset sideways by `r` px (left when negative): each vertex moves along the
+/// averaged segment normal — the two rails of one track from one centerline.
+fn offset_polyline(pts: &[Pos2], r: f32) -> Vec<Pos2> {
+    if pts.len() < 2 {
+        return pts.to_vec();
+    }
+    let mut out = Vec::with_capacity(pts.len());
+    for i in 0..pts.len() {
+        let (dx, dy) = if i == 0 {
+            (pts[1].x - pts[0].x, pts[1].y - pts[0].y)
+        } else if i + 1 == pts.len() {
+            (pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y)
+        } else {
+            (pts[i + 1].x - pts[i - 1].x, pts[i + 1].y - pts[i - 1].y)
+        };
+        let len = (dx * dx + dy * dy).sqrt();
+        let (nx, ny) = if len < f32::EPSILON { (0.0, 0.0) } else { (-dy / len, dx / len) };
+        out.push(pos2(pts[i].x + nx * r, pts[i].y + ny * r));
+    }
+    out
+}
+
+/// Sleepers: perpendicular ticks walked along the polyline every `step` px of screen arc.
+fn sleepers(out: &mut Vec<Shape>, pts: &[Pos2], step: f32, len: f32, stroke: Stroke) {
+    if pts.len() < 2 {
+        return;
+    }
+    let half = len * 0.5;
+    let mut acc = step * 0.5;
+    for w in pts.windows(2) {
+        let (dx, dy) = (w[1].x - w[0].x, w[1].y - w[0].y);
+        let seg = (dx * dx + dy * dy).sqrt();
+        if seg < f32::EPSILON {
+            continue;
+        }
+        let (ux, uy) = (dx / seg, dy / seg);
+        let (nx, ny) = (-uy, ux);
+        let mut d = acc;
+        while d < seg {
+            let cx = w[0].x + ux * d;
+            let cy = w[0].y + uy * d;
+            out.push(Shape::line_segment([pos2(cx - nx * half, cy - ny * half), pos2(cx + nx * half, cy + ny * half)], stroke));
+            d += step;
+        }
+        acc = d - seg;
+    }
+}
+
+/// Catenary: a post dot standing off the track every `step` px, with a short arm reaching
+/// back over the rails — the wire itself rides the centerline's faint echo.
+fn catenary(out: &mut Vec<Shape>, pts: &[Pos2], standoff: f32, step: f32, color: Color32) {
+    if pts.len() < 2 {
+        return;
+    }
+    let mut acc = step * 0.25;
+    for w in pts.windows(2) {
+        let (dx, dy) = (w[1].x - w[0].x, w[1].y - w[0].y);
+        let seg = (dx * dx + dy * dy).sqrt();
+        if seg < f32::EPSILON {
+            continue;
+        }
+        let (ux, uy) = (dx / seg, dy / seg);
+        let (nx, ny) = (-uy, ux);
+        let mut d = acc;
+        while d < seg {
+            let cx = w[0].x + ux * d;
+            let cy = w[0].y + uy * d;
+            let px = cx + nx * standoff;
+            let py = cy + ny * standoff;
+            out.push(Shape::line_segment([pos2(cx, cy), pos2(px, py)], Stroke::new(1.0, color)));
+            out.push(Shape::circle_filled(pos2(px, py), 1.4, color));
+            d += step;
+        }
+        acc = d - seg;
     }
 }
 

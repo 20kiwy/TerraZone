@@ -201,6 +201,14 @@ default-members = ["crates/*", "apps/terrazon", "apps/terrazon-cli", "xtask"]
 # zip + SHA256SUMS.txt, all checksum-verified anonymously off the public repo, the ELF
 # executing "terrazon 0.23.0"). No app code changed in this round; the version moves so
 # every release keeps its own tag, its own binaries and its own checksums.
+# 0.26.0: the SGR round — the atlas names the railways now (a fresh Overpass extract,
+# classified by name and gauge: the electric SGR, the old TAZARA, the Central Line), the map
+# draws the SGR's view alone with the railway built like a railway (ballast, twin rails,
+# sleepers, catenary), only the ACTIVE trains ride the map, the panel counts the corridor's
+# day per direction and lays every train out as a tree (the whole station chain, the coaches,
+# the vendor's own seat grid), and the 3D environment lays the same line on the terrain with
+# its catenary and four-car TRC-livery sets. Egregoria rides along under clone/ as the rail
+# reference, with the rest of the sibling fleet.
 # 0.25.0: the 3D environment copies the EffectCraft viewer's camera and grid. The ground grid
 # is the endless one — its extent un-projects the screen corners onto the datum, rays above
 # the horizon march out to a far clamp ring, the 1-2-5 step adapts to zoom with the
@@ -214,7 +222,7 @@ default-members = ["crates/*", "apps/terrazon", "apps/terrazon-cli", "xtask"]
 # the walk stood). The Camera 3D panel carries the Orbit/Walk switch with the walk's look and
 # eye-height sliders, the scene3d.set protocol drives camMode + the walk rig, and the drape
 # refines off the walk's own height.
-version = "0.25.0"
+version = "0.26.0"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 rust-version = "1.95"

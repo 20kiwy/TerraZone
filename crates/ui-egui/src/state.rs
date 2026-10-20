@@ -295,6 +295,10 @@ pub struct FleetDraft {
     /// flow ends there (booking needs the vendor's own login; TerraZone stops honestly).
     #[serde(skip)]
     pub sgr_coach: Option<(String, i64)>,
+    /// The SGR tree: whether the expanded train's coach subtree is open (the chain rows
+    /// always show; the coaches fold like the layers panel's groups).
+    #[serde(skip)]
+    pub sgr_cars_open: bool,
 }
 
 /// The two steps of the phone-code sign-in.

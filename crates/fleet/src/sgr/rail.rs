@@ -46,12 +46,89 @@ fn sweep_pair(step: u64) -> (Option<i64>, i64) {
 /// shape [`nearest_on`] answers and the slicers cut by.
 pub type Cut = (usize, f64, f64);
 
-/// One OSM railway line: the polyline the trains ride and the map highlights.
+/// Which railway a line belongs to. Tanzania runs TWO long-distance systems and the atlas
+/// tells them apart by name and gauge (the OSM tags the atlas extract carries): the new
+/// electric **Standard Gauge Railway** — 1435 mm, contact line, Dar es Salaam → Dodoma, the
+/// one this layer shows — and the old **TAZARA** (1067 mm Cape gauge, Dar es Salaam →
+/// Kapiri Mposhi, Zambia) riding its own alignment south-west, plus the old meter-gauge
+/// Central Line network and small branches. The map draws the SGR's view; the classes keep
+/// the other systems from bleeding into it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum RailClass {
+    /// The new electric Standard Gauge Railway (1435 mm) — the line this layer is about.
+    Sgr,
+    /// The old TAZARA (1067 mm), Dar es Salaam → Mbeya → Kapiri Mposhi. Detected, not drawn.
+    Tazara,
+    /// The old meter-gauge Central Line (1000 mm) and its branches.
+    Central,
+    /// Any other railway way (industrial spurs, unmapped-gauge fills).
+    Branch,
+}
+
+impl RailClass {
+    /// Parse the atlas asset's class tag; anything unknown stays a [`RailClass::Branch`].
+    pub fn parse(s: &str) -> Option<RailClass> {
+        match s {
+            "sgr" => Some(RailClass::Sgr),
+            "tazara" => Some(RailClass::Tazara),
+            "central" => Some(RailClass::Central),
+            "branch" => Some(RailClass::Branch),
+            _ => None,
+        }
+    }
+
+    /// The corridor bonus the router adds (in metres) to a candidate way that is NOT this
+    /// class: the SGR's own alignment wins at its own stations even though the old Central
+    /// Line — which owns the historic station nodes and can run metres from them — would
+    /// score closer. The bonus spans the router's whole 3 km "this line serves this stop"
+    /// gate, so any SGR way plausibly serving the station beats every other-class way;
+    /// towns the SGR never visits have no SGR way in range and route on their own lines.
+    pub fn penalty(self) -> f64 {
+        match self {
+            RailClass::Sgr => 0.0,
+            RailClass::Central => 2_500.0,
+            RailClass::Tazara => 3_000.0,
+            RailClass::Branch => 4_000.0,
+        }
+    }
+}
+
+/// One OSM railway line: the polyline the trains ride and the map highlights — with the
+/// metadata the atlas extract carries (which railway it belongs to, its OSM name, whether
+/// the contact line rides it).
 #[derive(Clone, Debug, PartialEq)]
 pub struct RailLine {
     pub pts: Vec<[f64; 2]>,
     /// `(min_lon, min_lat, max_lon, max_lat)` — the cull box the 2D draw skips by.
     pub bbox: [f64; 4],
+    /// Which railway system this way belongs to (see [`RailClass`]).
+    pub cls: RailClass,
+    /// The OSM name when the way carries one ("Dar es salaam - Morogoro SGR").
+    pub name: Option<String>,
+    /// The OSM `railway` tag (`rail`, `construction`, `disused`, …).
+    pub railway: String,
+    /// `electrified=contact_line` — the electric SGR's wires ride these ways.
+    pub electrified: bool,
+}
+
+impl RailLine {
+    /// A bare line with no atlas metadata (the tests' shape, and the old asset's).
+    pub fn new(pts: Vec<[f64; 2]>) -> Self {
+        let mut bbox = [f64::MAX; 4];
+        for [lon, lat] in &pts {
+            bbox[0] = bbox[0].min(*lon);
+            bbox[1] = bbox[1].min(*lat);
+            bbox[2] = bbox[2].max(*lon);
+            bbox[3] = bbox[3].max(*lat);
+        }
+        Self { pts, bbox, cls: RailClass::Branch, name: None, railway: "rail".into(), electrified: false }
+    }
+
+    /// The `railway` tag's read: an active line, or one of the not-in-service kinds.
+    pub fn is_operational(&self) -> bool {
+        matches!(self.railway.as_str(), "rail" | "narrow_gauge" | "light_rail" | "tram")
+    }
 }
 
 /// One named OSM railway station (the timetable's stops land on these).
@@ -113,6 +190,18 @@ pub struct SgrCoach {
     /// this flow ends at the selection).
     #[serde(rename = "emptySeats")]
     pub empty: i32,
+}
+
+/// One scheduled train's place in its day (the panel's chain rows read it, the map draws
+/// only the running ones — the active trains are the ask).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TrainStatus {
+    /// Between its first and last stop at `now` — an active train.
+    Running,
+    /// Still to depart today (drawn in the panel's day list, not on the map).
+    Scheduled,
+    /// Its run is over (history; the day list keeps the row).
+    Arrived,
 }
 
 /// One scheduled train: its vendor identity (`trips_no`, e.g. `0011904`) and the stops the
@@ -245,12 +334,28 @@ fn normalize(name: &str) -> String {
 }
 
 impl RailAtlas {
-    /// Parse the embedded asset's JSON shape.
+    /// Parse the atlas asset's JSON shape. Lines carry their metadata as objects
+    /// (`{"cls":"sgr","railway":"rail","name":…,"gauge":…,"electrified":…,"flat":[lon,lat,…]}`);
+    /// the old bare-number form (`[lon,lat,…]`) still parses as an unnamed [`RailClass::Branch`]
+    /// line, so an un-refreshed asset degrades gracefully instead of failing. Stations are
+    /// `[name, lon, lat]` rows in range.
     pub fn parse(bytes: &[u8]) -> Result<RailAtlas, String> {
         let v: serde_json::Value = serde_json::from_slice(bytes).map_err(|e| format!("the rail atlas is not JSON: {e}"))?;
         let mut atlas = RailAtlas::default();
         for line in v.get("lines").and_then(|l| l.as_array()).map(Vec::as_slice).unwrap_or_default() {
-            let Some(flat) = line.as_array() else { continue };
+            // The metadata object's flat geometry; a bare array (the old shape) parses too.
+            let (flat, cls, name, railway, electrified) = if line.get("flat").is_some() {
+                (
+                    line.get("flat").and_then(|f| f.as_array()),
+                    line.get("cls").and_then(|c| c.as_str()).and_then(RailClass::parse).unwrap_or(RailClass::Branch),
+                    line.get("name").and_then(|n| n.as_str()).filter(|n| !n.trim().is_empty()).map(str::to_string),
+                    line.get("railway").and_then(|r| r.as_str()).unwrap_or("rail").to_string(),
+                    line.get("electrified").and_then(|e| e.as_str()) == Some("contact_line"),
+                )
+            } else {
+                (line.as_array(), RailClass::Branch, None, "rail".to_string(), false)
+            };
+            let Some(flat) = flat else { continue };
             let pts: Vec<[f64; 2]> = flat
                 .as_chunks::<2>()
                 .0
@@ -263,7 +368,12 @@ impl RailAtlas {
             if pts.len() < 2 {
                 continue;
             }
-            atlas.lines.push(RailLine::new(pts));
+            let mut l = RailLine::new(pts);
+            l.cls = cls;
+            l.name = name;
+            l.railway = railway;
+            l.electrified = electrified;
+            atlas.lines.push(l);
         }
         for st in v.get("stations").and_then(|s| s.as_array()).map(Vec::as_slice).unwrap_or_default() {
             let Some(row) = st.as_array() else { continue };
@@ -323,26 +433,13 @@ impl RailAtlas {
             if da > 3_000.0 || db > 3_000.0 {
                 continue;
             }
-            let score = da + db;
+            let score = da + db + line.cls.penalty();
             if best.is_none_or(|(bs, ..)| score < bs) {
                 best = Some((score, li, pa, pb));
             }
         }
         let (_, li, pa, pb) = best?;
         Some(slice_between(&self.lines[li].pts, pa, pb))
-    }
-}
-
-impl RailLine {
-    pub fn new(pts: Vec<[f64; 2]>) -> Self {
-        let mut bbox = [f64::MAX; 4];
-        for [lon, lat] in &pts {
-            bbox[0] = bbox[0].min(*lon);
-            bbox[1] = bbox[1].min(*lat);
-            bbox[2] = bbox[2].max(*lon);
-            bbox[3] = bbox[3].max(*lat);
-        }
-        Self { pts, bbox }
     }
 }
 
@@ -440,7 +537,9 @@ impl RailRouter {
                 } else {
                     (c0, true)
                 };
-                let d = (near_far[0] - b.lon).hypot(near_far[1] - b.lat);
+                // The hop's score: the other end's ground distance to the target, plus the
+                // class corridor bonus — an SGR way ahead beats an old-line way metres nearer.
+                let d = (near_far[0] - b.lon).hypot(near_far[1] - b.lat) * 111_320.0 + atlas.lines[li].cls.penalty();
                 if best.is_none_or(|(bd, ..)| d < bd) {
                     best = Some((d, li, reversed));
                 }
@@ -473,8 +572,9 @@ impl RailAtlas {
                 continue;
             }
             let Some(p) = nearest_on(&line.pts, lon, lat) else { continue };
-            if best.is_none_or(|(bd, ..)| p.2 < bd) {
-                best = Some((p.2, li, p));
+            let scored = meters(p.2) + line.cls.penalty();
+            if best.is_none_or(|(bs, ..)| scored < bs) {
+                best = Some((scored, li, p));
             }
         }
         let (_, li, p) = best?;
@@ -586,6 +686,25 @@ fn deg_bearing(lon1: f64, lat1: f64, lon2: f64, lat2: f64) -> f64 {
     y.atan2(x).to_degrees().rem_euclid(360.0)
 }
 
+impl SgrTrain {
+    /// The train's place in its day at `now_min` — running, still to depart, or arrived.
+    pub fn status(&self, now_min: u32) -> TrainStatus {
+        let Some(first) = self.stops.first().map(|s| s.time_min) else {
+            return TrainStatus::Scheduled;
+        };
+        if SgrTimetable::now_on_board(self, now_min).is_some() {
+            return TrainStatus::Running;
+        }
+        if now_min < first { TrainStatus::Scheduled } else { TrainStatus::Arrived }
+    }
+
+    /// The full station chain in running order — every stop the sweep has merged for this
+    /// trip, first departure to terminal arrival (the day's whole ride, stop by stop).
+    pub fn chain(&self) -> &[SgrStop] {
+        &self.stops
+    }
+}
+
 impl SgrTimetable {
     /// Absorb one sweep answer. A new schedule day (the `date` the requests ride) resets the
     /// tables — yesterday's trains do not run today.
@@ -691,6 +810,14 @@ impl SgrTimetable {
         w.1.time_min + u32::from(w.1.time_min <= w.0.time_min) * 1440
     }
 
+    /// The day's service counted by direction: `(to Dodoma, to Dar es Salaam)` — how many
+    /// trains the sweep has for each way of the corridor across the whole schedule day.
+    pub fn direction_counts(&self) -> (usize, usize) {
+        let up = self.trains.iter().filter(|t| t.direction == 1).count();
+        let down = self.trains.iter().filter(|t| t.direction == 2).count();
+        (up, down)
+    }
+
     /// The trains running at `now_min` (between their first and last stop, midnight-crossing
     /// arrivals included).
     pub fn running(&self, now_min: u32) -> Vec<&SgrTrain> {
@@ -759,7 +886,9 @@ impl SgrTimetable {
                 lon: p[0],
                 lat: p[1],
                 heading_deg: bearing,
-                length_m: None,
+                // A four-car electric set reads its own length: the sizing ladders (the 2D
+                // icon's class, the 3D body) scale from it.
+                length_m: Some(76.0),
                 name: Some(train.name.clone()),
                 category: Some(next.name.clone()),
                 icon_url: None,
@@ -767,35 +896,10 @@ impl SgrTimetable {
                 scheduled: false,
             });
         }
-        // The day's WHOLE data, not just what the clock has on the rails: a trip still
-        // waiting for its departure draws dimmed at the origin station (the draw reads
-        // `scheduled`), so the map carries the timetable the sweep published from frame one —
-        // early morning, midday or after the last service, the data is the whole day's. A
-        // trip that has finished its run drops off the map (it is history; the panel's day
-        // list keeps the row).
-        for train in self.trains.iter() {
-            if Self::now_on_board(train, now_min).is_some() {
-                continue; // already drawn above, riding its segment
-            }
-            let Some(first) = train.stops.first() else { continue };
-            if now_min >= first.time_min {
-                continue; // the run is over (a midnight-crossing trip off the board here reads below)
-            }
-            let Some(p) = atlas.station(&first.name) else { continue };
-            out.push(Vehicle {
-                id: format!("sgr-{}-scheduled", train.trips_no),
-                kind: VehicleKind::Train,
-                lon: p.lon,
-                lat: p.lat,
-                heading_deg: -1.0,
-                length_m: None,
-                name: Some(train.name.clone()),
-                category: Some(format!("departs {} · {}", clock_label(first.time_min), first.name)),
-                icon_url: None,
-                alt_m: None,
-                scheduled: true,
-            });
-        }
+        // Active trains only: the map carries the trains that are ON the line — a trip
+        // still waiting for its departure stays in the panel's day list (its chain, its
+        // status, its coaches), and a finished run is history. The timetable the sweep
+        // published still rides the document whole; the canvas just shows the live part.
         out
     }
 }
@@ -949,7 +1053,7 @@ pub fn sweep_headers() -> Vec<(String, String)> {
     vec![
         ("Accept".into(), "application/json".into()),
         ("Accept-Language".into(), "en-GB,en;q=0.9".into()),
-        ("User-Agent".into(), "TerraZone/0.22.0 (SGR schedule sweep)".into()),
+        ("User-Agent".into(), "TerraZone/0.26.0 (SGR schedule sweep)".into()),
     ]
 }
 
@@ -988,6 +1092,22 @@ mod tests {
         let atlas = embedded_atlas();
         assert!(atlas.lines.len() > 1_000, "{} railway lines embedded", atlas.lines.len());
         assert!(atlas.stations.len() > 100, "{} stations embedded", atlas.stations.len());
+        // The two-systems census: the atlas NAMES the railways, and Tanzania's two
+        // long-distance systems are both detected — the new electric SGR (the layer's
+        // subject) and the old TAZARA (1067 mm, detected so the view never confuses them).
+        let sgr = atlas.lines.iter().filter(|l| l.cls == RailClass::Sgr).count();
+        let tazara = atlas.lines.iter().filter(|l| l.cls == RailClass::Tazara).count();
+        let central = atlas.lines.iter().filter(|l| l.cls == RailClass::Central).count();
+        let electric = atlas.lines.iter().filter(|l| l.electrified).count();
+        assert!(sgr > 100, "{sgr} SGR-class ways embedded");
+        assert!(tazara > 50, "{tazara} TAZARA-class ways embedded");
+        assert!(central > 100, "{central} Central-class ways embedded");
+        assert!(electric > 20, "{electric} electrified ways embedded");
+        // A named SGR way rides the atlas (the OSM name the corridor carries).
+        assert!(
+            atlas.lines.iter().any(|l| l.cls == RailClass::Sgr && l.name.as_deref().is_some_and(|n| n.to_lowercase().contains("sgr"))),
+            "a named SGR way is embedded"
+        );
         for name in [
             "Dar Es Salaam",
             "Pugu",
@@ -1274,16 +1394,16 @@ mod tests {
         assert!((m.heading_deg - 180.0).abs() < 1.0, "headed south: {}", m.heading_deg);
         assert_eq!(m.category.as_deref(), Some("Kilosa"), "the next stop rides the marker");
 
-        // Before the first departure the trip stands at the origin as a scheduled event —
-        // the day's whole data stays on the map (dimmed by the draw), not just what runs now.
+        // Before the first departure the trip is NOT on the map — the active-trains ask:
+        // the canvas carries only the trains on the line, and the panel's day list carries
+        // the rest (its status reads Scheduled there).
         let early = t.project(&atlas, 5 * 60);
-        assert_eq!(early.len(), 1, "the not-yet-departed trip waits at its origin");
-        assert!(early[0].scheduled, "it reads as a scheduled event");
-        assert_eq!(early[0].id, "sgr-0011904-scheduled", "a distinct id from the running marker");
-        assert!((early[0].lat - (-6.0)).abs() < 1e-6, "parked at Dar Es Salaam");
-        assert_eq!(early[0].category.as_deref(), Some("departs 06:00 · Dar Es Salaam"));
+        assert!(early.is_empty(), "a not-yet-departed trip stays off the map");
+        assert_eq!(t.trains[0].status(5 * 60), TrainStatus::Scheduled);
+        assert_eq!(t.trains[0].status(6 * 60 + 15), TrainStatus::Running);
         // After the arrival the run is history — off the map (the panel's day list keeps it).
         assert!(t.project(&atlas, 10 * 60).is_empty());
+        assert_eq!(t.trains[0].status(10 * 60), TrainStatus::Arrived);
 
         // At the terminal minute the train parks at the last station.
         let end = t.project(&atlas, 9 * 60 + 50);
@@ -1339,6 +1459,75 @@ mod tests {
         let json = serde_json::to_string(&t).unwrap();
         let back: SgrTimetable = serde_json::from_str(&json).unwrap();
         assert_eq!(back, t);
+    }
+    #[test]
+    fn the_day_counts_both_directions_of_the_corridor() {
+        let mut t = timetable();
+        // The fixture absorbed up (Dar → Dodoma, landing 12) trips; a down trip lands 1.
+        t.absorb(
+            "2026-10-17",
+            &Absorb::Trips(vec![SweptTrip {
+                trips_no: "0011905".into(),
+                trip_name: "DOM -- DAR | EXPRESS".into(),
+                boarding_id: 12,
+                boarding_name: "Dodoma".into(),
+                landing_id: 1,
+                landing_name: "Dar Es Salaam".into(),
+                start_min: 5 * 60,
+                end_min: 9 * 60,
+                cars: Vec::new(),
+                trip_set_id: None,
+            }]),
+        );
+        let (up, down) = t.direction_counts();
+        assert_eq!(up, 1, "Dar → Dodoma trains");
+        assert_eq!(down, 1, "Dodoma → Dar trains");
+    }
+
+    #[test]
+    fn the_corridor_routes_the_running_segments_on_the_sgr_alignment() {
+        let atlas = embedded_atlas();
+        let mut router = RailRouter::new(atlas);
+        // The corridor's legs the timetable rides — every pair must route along the SGR's
+        // own alignment: the path's midpoint rides within a corridor's width of an
+        // SGR-class way (the old Central Line runs hundreds of metres away where the two
+        // share a town, so an 800 m gate proves the pair took the standard gauge).
+        for (a, b) in [
+            ("Dar Es Salaam", "Pugu"),
+            ("Pugu", "Soga"),
+            ("Soga", "Ngerengere"),
+            ("Ngerengere", "Morogoro"),
+            ("Morogoro", "Mkata"),
+            ("Mkata", "Kilosa"),
+            ("Kilosa", "Dodoma"),
+        ] {
+            let path = router.slice(atlas, a, b).unwrap_or_else(|| panic!("{a} → {b}: no path"));
+            assert!(path.len() >= 2, "{a} → {b}: empty path");
+            let mid = path[path.len() / 2];
+            let mut near_sgr = f64::MAX;
+            for l in &atlas.lines {
+                if l.cls != RailClass::Sgr {
+                    continue;
+                }
+                if let Some(c) = nearest_on(&l.pts, mid[0], mid[1]) {
+                    near_sgr = near_sgr.min(meters(c.2));
+                }
+            }
+            assert!(near_sgr < 800.0, "{a} → {b}: the path's midpoint rides {near_sgr:.0} m from the SGR alignment");
+        }
+    }
+
+    #[test]
+    fn the_chain_keeps_the_running_order_of_the_whole_ride() {
+        let t = timetable();
+        let train = &t.trains[0];
+        let chain: Vec<&str> = train.chain().iter().map(|s| s.name.as_str()).collect();
+        assert_eq!(chain.first(), Some(&"Dar Es Salaam"), "the chain opens at the origin");
+        assert_eq!(chain.last(), Some(&"Dodoma"), "and closes at the terminal");
+        let times: Vec<u32> = train.chain().iter().map(|s| s.time_min).collect();
+        let mut sorted = times.clone();
+        sorted.sort_by_key(|m| (*m, false));
+        assert_eq!(times.len(), sorted.len(), "one row per stop");
     }
 }
 

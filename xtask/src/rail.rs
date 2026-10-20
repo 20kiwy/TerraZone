@@ -27,13 +27,16 @@ pub fn run(root: &Path) -> Result<(), String> {
     let bytes = std::fs::read(&path).map_err(|e| format!("{ASSET}: {e} — the fleet crate's atlas asset is missing"))?;
     let v: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| format!("{ASSET} is not JSON: {e}"))?;
 
-    // The parser's own shape rules: flat `[lon,lat,…]` line arrays (≥ 2 points survive) and
-    // `[name, lon, lat]` station rows in range.
+    // The parser's own shape rules: metadata objects carrying `flat:[lon,lat,…]` (the old
+    // bare-array form still parses), and `[name, lon, lat]` station rows in range.
     let mut lines = 0usize;
     let mut points = 0usize;
     let mut dropped_lines = 0usize;
+    let mut classes = std::collections::BTreeMap::<String, usize>::new();
+    let mut electrified = 0usize;
     for line in v.get("lines").and_then(|l| l.as_array()).map(Vec::as_slice).unwrap_or_default() {
-        let Some(flat) = line.as_array() else {
+        let flat = if line.is_array() { line.as_array() } else { line.get("flat").and_then(|f| f.as_array()) };
+        let Some(flat) = flat else {
             dropped_lines += 1;
             continue;
         };
@@ -44,6 +47,11 @@ pub fn run(root: &Path) -> Result<(), String> {
         }
         lines += 1;
         points += pts;
+        let cls = line.get("cls").and_then(|c| c.as_str()).unwrap_or("branch").to_string();
+        *classes.entry(cls).or_default() += 1;
+        if line.get("electrified").and_then(|e| e.as_str()) == Some("contact_line") {
+            electrified += 1;
+        }
     }
     let mut stations: Vec<(String, f64, f64)> = Vec::new();
     let mut dropped_stations = 0usize;
@@ -69,6 +77,20 @@ pub fn run(root: &Path) -> Result<(), String> {
     if lines == 0 {
         return Err(format!("{ASSET}: no railway lines survived the parse — the asset is truncated or reshaped"));
     }
+    // The two-systems check: Tanzania runs the SGR AND the TAZARA, and the atlas tells them
+    // apart — a re-extract that lost the classes (or the electric contact-line tag) is a
+    // re-extract that lost the point.
+    let sgr = *classes.get("sgr").unwrap_or(&0);
+    let tazara = *classes.get("tazara").unwrap_or(&0);
+    if sgr < 100 {
+        return Err(format!("{ASSET}: only {sgr} SGR-class way(s) — the standard gauge corridor's ways are missing"));
+    }
+    if tazara < 50 {
+        return Err(format!("{ASSET}: only {tazara} TAZARA-class way(s) — the old 1067 mm line must stay detected"));
+    }
+    if electrified < 20 {
+        return Err(format!("{ASSET}: only {electrified} electrified way(s) — the electric SGR's contact-line ways are missing"));
+    }
     if stations.is_empty() {
         return Err(format!("{ASSET}: no named stations survived the parse"));
     }
@@ -84,7 +106,7 @@ pub fn run(root: &Path) -> Result<(), String> {
     // country's rough bounds (a swapped lon/lat pair lands far outside).
     let outside: Vec<String> = stations
         .iter()
-        .filter(|(_, lon, lat)| !(-12.0..=-2.0).contains(lat) || !(28.0..=42.0).contains(lon))
+        .filter(|(_, lon, lat)| !(-12.5..=-0.9).contains(lat) || !(28.0..=41.0).contains(lon))
         .map(|(n, _, _)| n.clone())
         .take(4)
         .collect();
@@ -98,6 +120,8 @@ pub fn run(root: &Path) -> Result<(), String> {
         stations.len(),
         SGR_CORRIDOR.len(),
     );
+    let class_bits = classes.iter().map(|(c, n)| format!("{c} {n}")).collect::<Vec<_>>().join(", ");
+    println!("  classes: {class_bits} — electrified (contact line): {electrified}");
     if dropped_lines + dropped_stations > 0 {
         println!("  (skipped in parse: {dropped_lines} line(s), {dropped_stations} station row(s))");
     }

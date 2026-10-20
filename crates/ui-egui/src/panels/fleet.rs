@@ -209,12 +209,12 @@ pub fn show(app: &mut TerrazoneApp, ui: &mut Ui) {
     );
 }
 
-/// The SGR editor: the sweep's progress and the timetable it built — the trains running
-/// right now with their ETA at the next stop and at the terminal, computed from the vendor's
-/// own schedule times (the trains ride those times along the OSM rail network) — then the
-/// day's trains with the seat selection: each coach's free seats, a sold-out class reading
-/// "No seat available", and the flow ending at the picked seat (booking needs the vendor's
-/// own login, so TerraZone stops there honestly).
+/// The SGR editor: the corridor's day at a glance — how many trains run each way between
+/// Dar es Salaam and Dodoma — then the trains as a tree, the layers panel's own layout:
+/// a train row opens into its station chain (the whole day's ride, stop by stop), and a
+/// coaches subtree opens into the vendor's coach classes with their seat grids. Active
+/// trains chip green; the rest read Scheduled or Arrived — the map draws only the green
+/// ones (the active-trains ask), the tree carries the whole day.
 fn sgr_editor(app: &mut TerrazoneApp, ui: &mut Ui) {
     ui.add_space(2.0);
     let schedule = app.session.active().and_then(|st| st.doc.fleet.layer(Provider::Sgr)).and_then(|l| l.schedule.clone());
@@ -228,6 +228,20 @@ fn sgr_editor(app: &mut TerrazoneApp, ui: &mut Ui) {
         &crate::i18n::fmt(tl!("{n} stations · {m} trains"), &[("n", &tt.stations.len().to_string()), ("m", &tt.trains.len().to_string())]),
     );
     ui.add_space(4.0);
+    // The corridor's day, counted by direction — the chain arithmetic the schedule makes:
+    // every train the sweep holds, from Dar es Salaam to Dodoma or back.
+    let (up, down) = tt.direction_counts();
+    let t = Tokens::get(ui.ctx());
+    widgets::subheader(ui, tl!("Corridor day"));
+    ui.label(
+        egui::RichText::new(crate::i18n::fmt(
+            tl!("{up} toward Dodoma · {down} toward Dar es Salaam"),
+            &[("up", &up.to_string()), ("down", &down.to_string())],
+        ))
+        .strong()
+        .small(),
+    );
+    ui.add_space(2.0);
     let now = terrazon_fleet::rail::now_minutes_eat(
         std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs() as i64).unwrap_or(0),
     );
@@ -239,6 +253,7 @@ fn sgr_editor(app: &mut TerrazoneApp, ui: &mut Ui) {
         for train in &running {
             let Some((next, terminal, to_next, to_terminal)) = tt.progress(train, now) else { continue };
             ui.horizontal(|ui| {
+                status_dot(ui, &t, terrazon_fleet::rail::TrainStatus::Running);
                 widgets::dim_label(ui, &train.name.to_string());
             });
             widgets::dim_label(ui, &crate::i18n::fmt(tl!("Next: {name} in {m} min"), &[("name", &next.name), ("m", &to_next.to_string())]));
@@ -247,9 +262,10 @@ fn sgr_editor(app: &mut TerrazoneApp, ui: &mut Ui) {
     }
     ui.add_space(4.0);
 
-    // The day's trains with the seat selection: the vendor reports each set's coaches with
-    // their free seats, so the pick is the vendor's own availability — a sold-out class is
-    // not selectable, and a picked seat ends the flow (booking is the vendor's login's work).
+    // The day's trains as a tree — the layers panel's own row language (chevron, indent,
+    // children). The vendor reports each set's coaches with their free seats, so the pick
+    // is the vendor's own availability — a sold-out class is not selectable, and a picked
+    // seat ends the flow (booking is the vendor's login's work).
     widgets::subheader(ui, tl!("Today's trains"));
     let mut trains: Vec<&terrazon_fleet::rail::SgrTrain> = tt.trains.iter().collect();
     trains.sort_by_key(|t| t.stops.first().map(|s| s.time_min).unwrap_or(u32::MAX));
@@ -258,39 +274,85 @@ fn sgr_editor(app: &mut TerrazoneApp, ui: &mut Ui) {
             (Some(a), Some(b)) => (format_clock(a.time_min), format_clock(b.time_min)),
             _ => ("—".into(), "—".into()),
         };
+        let status = train.status(now);
         let expanded = app.ui.fleet_draft.sgr_train.as_deref() == Some(train.trips_no.as_str());
         let (row, resp) = ui.allocate_exact_size(vec2(ui.available_width(), 22.0), egui::Sense::click());
         let t = Tokens::get(ui.ctx());
         if expanded || resp.hovered() {
             ui.painter_at(row).rect_filled(row, 3.0, if expanded { t.row_selected } else { t.hover });
         }
+        // The chevron, then the name, then the times; the status dot rides the right edge.
+        let chev = egui::Rect::from_center_size(row.left_center() + vec2(7.0, 0.0), vec2(14.0, 16.0));
+        icons::paint(ui, if expanded { "chevron-down" } else { "chevron-right" }, chev, t.text_dim);
         ui.painter_at(row).text(
-            row.left_center() + vec2(6.0, 0.0),
+            row.left_center() + vec2(18.0, 0.0),
             egui::Align2::LEFT_CENTER,
             format!("{}  {dep} → {arr}", train.name),
             egui::FontId::proportional(11.5),
             if expanded { t.text_strong } else { t.text },
         );
-        ui.painter_at(row).text(
-            row.right_center() - vec2(6.0, 0.0),
-            egui::Align2::RIGHT_CENTER,
-            if train.cars.is_empty() { tl!("Seats…").to_string() } else { tl!("Seats").to_string() },
-            egui::FontId::proportional(10.5),
-            t.text_dim,
-        );
+        status_dot_at(ui, &t, status, row.right_center() - vec2(10.0, 0.0));
         if resp.clicked() {
-            // Toggling a train's list resets the landing (a new pick starts a new flow).
+            // Toggling a train's tree resets the landing (a new pick starts a new flow).
             app.ui.fleet_draft.sgr_train = if expanded { None } else { Some(train.trips_no.clone()) };
             app.ui.fleet_draft.sgr_coach = None;
+            app.ui.fleet_draft.sgr_cars_open = false;
         }
-        if expanded {
-            let picked = app.ui.fleet_draft.sgr_coach.as_ref().and_then(|(tn, cid)| (tn == &train.trips_no).then_some(*cid));
+        if !expanded {
+            continue;
+        }
+        // The chain: every stop of the day's ride, in running order, one indented row each.
+        let mut open_cars = app.ui.fleet_draft.sgr_cars_open;
+        let indent = 18.0;
+        for stop in train.chain() {
+            let (row, _) = ui.allocate_exact_size(vec2(ui.available_width(), 17.0), egui::Sense::hover());
+            let is_next = status == terrazon_fleet::rail::TrainStatus::Running
+                && tt.progress(train, now).is_some_and(|(next, _, _, _)| next.station_id == stop.station_id);
+            let label = if is_next {
+                crate::i18n::fmt(tl!("{time} · {name} — next"), &[("time", &format_clock(stop.time_min)), ("name", &stop.name)])
+            } else {
+                crate::i18n::fmt(tl!("{time} · {name}"), &[("time", &format_clock(stop.time_min)), ("name", &stop.name)])
+            };
+            ui.painter_at(row).text(
+                row.left_center() + vec2(indent, 0.0),
+                egui::Align2::LEFT_CENTER,
+                label,
+                egui::FontId::proportional(10.5),
+                if is_next { t.text_strong } else { t.text_dim },
+            );
+        }
+        // The coaches subtree: one disclosure under the chain, its own chevron.
+        ui.add_space(1.0);
+        let (cars_row, cars_resp) = ui.allocate_exact_size(vec2(ui.available_width(), 19.0), egui::Sense::click());
+        let cars_chev = egui::Rect::from_center_size(cars_row.left_center() + vec2(indent + 4.0, 0.0), vec2(14.0, 16.0));
+        icons::paint(ui, if open_cars { "chevron-down" } else { "chevron-right" }, cars_chev, t.text_dim);
+        ui.painter_at(cars_row).text(
+            cars_row.left_center() + vec2(indent + 15.0, 0.0),
+            egui::Align2::LEFT_CENTER,
+            tl!("Coaches").to_string(),
+            egui::FontId::proportional(10.5),
+            t.text,
+        );
+        ui.painter_at(cars_row).text(
+            cars_row.right_center() - vec2(6.0, 0.0),
+            egui::Align2::RIGHT_CENTER,
+            if train.cars.is_empty() { tl!("Seats…").to_string() } else { tl!("Seats").to_string() },
+            egui::FontId::proportional(10.0),
+            t.text_dim,
+        );
+        if cars_resp.clicked() {
+            open_cars = !open_cars;
+            app.ui.fleet_draft.sgr_cars_open = open_cars;
+        }
+        if open_cars {
             if train.cars.is_empty() {
                 widgets::dim_label(ui, tl!("The vendor hasn't reported this set's coaches yet — the sweep keeps asking."));
             }
+            let picked = app.ui.fleet_draft.sgr_coach.as_ref().and_then(|(tn, cid)| (tn == &train.trips_no).then_some(*cid));
             for car in &train.cars {
                 let sold_out = car.empty <= 0;
                 ui.horizontal(|ui| {
+                    ui.add_space(indent + 14.0);
                     widgets::dim_label(
                         ui,
                         &crate::i18n::fmt(
@@ -314,6 +376,7 @@ fn sgr_editor(app: &mut TerrazoneApp, ui: &mut Ui) {
                     && let Some(set) = &tt.seat_set
                     && let Some(grid) = set.coach(car.id)
                 {
+                    ui.add_space(indent + 14.0);
                     draw_seat_grid(ui, &t, grid);
                 }
             }
@@ -324,6 +387,22 @@ fn sgr_editor(app: &mut TerrazoneApp, ui: &mut Ui) {
     }
     ui.add_space(4.0);
     widgets::dim_label(ui, tl!("The timetable rides the document — a saved map keeps it."));
+}
+
+/// The status dot the tree rows carry: green when the train is on the line now, dim for
+/// the ones still to depart, fainter still for the finished runs.
+fn status_dot(ui: &mut Ui, t: &Tokens, status: terrazon_fleet::rail::TrainStatus) {
+    let (rect, _) = ui.allocate_exact_size(vec2(8.0, 8.0), egui::Sense::hover());
+    status_dot_at(ui, t, status, rect.center());
+}
+
+fn status_dot_at(ui: &mut Ui, t: &Tokens, status: terrazon_fleet::rail::TrainStatus, c: egui::Pos2) {
+    let color = match status {
+        terrazon_fleet::rail::TrainStatus::Running => t.accent_strong,
+        terrazon_fleet::rail::TrainStatus::Scheduled => t.text_dim,
+        terrazon_fleet::rail::TrainStatus::Arrived => t.text_disabled,
+    };
+    ui.painter().circle_filled(c, 3.2, color);
 }
 
 /// `HH:MM` in the vendor's own clock style (minutes since midnight EAT).
@@ -352,7 +431,7 @@ fn draw_seat_grid(ui: &mut Ui, t: &Tokens, coach: &terrazon_fleet::seats::SeatCo
     let free = egui::Color32::from_rgb(56, 142, 90);
     let taken = t.text_dim.gamma_multiply(0.55);
     let special = t.text_dim.gamma_multiply(0.28);
-    egui::ScrollArea::vertical().max_height(grid_h.min(190.0)).show(ui, |ui| {
+    egui::ScrollArea::vertical().max_height(grid_h.min(190.0)).id_salt(("sgr-seat-grid", coach.id)).show(ui, |ui| {
         let (rect, _) = ui.allocate_exact_size(vec2(grid_w, grid_h), Sense::hover());
         let painter = ui.painter_at(rect);
         // The column letters over their seat columns (the aisle's gap carries no letter).

@@ -16,3 +16,6 @@
 [submodule "clone/zscript"]
 	path = clone/zscript
 	url = https://github.com/20kiwy/zscript.git
+[submodule "clone/Egregoria"]
+	path = clone/Egregoria
+	url = https://github.com/Uriopass/Egregoria.git

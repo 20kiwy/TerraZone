@@ -519,6 +519,9 @@ fn draw_fleet(app: &mut TerrazoneApp, buckets: &mut [Vec<Tri>; 3], drawn: &mut u
         }
     }
     let m = scene_mercator(app);
+    // The ground vehicles stand on the draped terrain (the anchor's elevation), not the
+    // datum — a fleet on a plateau reads on the ground the imagery paints.
+    let base = app.canvas.dem.as_ref().map_or(0.0, |r| r.base);
     // A frame-local prim cache: every marker of one kind/class/tint shares the meshes.
     let mut cache: HashMap<String, Mesh3d> = HashMap::new();
     for (v, color, alpha, hex_on) in jobs {
@@ -532,7 +535,14 @@ fn draw_fleet(app: &mut TerrazoneApp, buckets: &mut [Vec<Tri>; 3], drawn: &mut u
             [wx as f32, -(yn as f32)]
         };
         let hex = cache.entry(hex_key).or_insert_with(|| fleet_hex_prim(color, span)).clone();
-        let block = cache.entry(block_key).or_insert_with(|| fleet_block_prim(v.kind, class, color)).clone();
+        // The SGR's trains ride their own four-car set (the livery body) instead of the
+        // generic kind block — the id names them, the way the 2D map's scheduled fan does.
+        let is_sgr_train = v.kind == terrazon_fleet::VehicleKind::Train && v.id.starts_with("sgr-");
+        let block = if is_sgr_train {
+            cache.entry("sgr-train-set".into()).or_insert_with(sgr_train_prim).clone()
+        } else {
+            cache.entry(block_key).or_insert_with(|| fleet_block_prim(v.kind, class, color)).clone()
+        };
         // The hex doesn't rotate (a cell is a cell); the block turns to the heading: the
         // placements' clockwise-from-above convention, nose −z → east at 90°.
         let (s, c) = v.heading_deg.max(0.0).to_radians().sin_cos();
@@ -547,17 +557,17 @@ fn draw_fleet(app: &mut TerrazoneApp, buckets: &mut [Vec<Tri>; 3], drawn: &mut u
         // The altitude: flyers ride their reported metres (the vendor's own alt; the demo's
         // cruise), everything else sits on the datum. The ground ring stays below either way
         // — the marker's anchor on the map — dimmed once the body is up at height.
-        let lift = if v.kind.flies() { v.alt_m.unwrap_or(0.0).clamp(0.0, 20_000.0) } else { 0.0 };
+        let lift = if v.kind.flies() { v.alt_m.unwrap_or(0.0).clamp(0.0, 20_000.0) } else { base };
         let ground_alpha = if lift > span { alpha * 0.45 } else { alpha };
         if hex_on {
-            push_mesh(buckets, drawn, &hex, [x, 0.0, z], 0.0, ground_alpha, xform);
+            push_mesh(buckets, drawn, &hex, [x, base, z], 0.0, ground_alpha, xform);
         }
         push_mesh(buckets, drawn, &turned, [x, lift, z], 0.0, alpha, xform);
         if lift > span {
             // The plumb line: four triangles, built per flyer (cheaper than a cache keyed
             // by altitude).
-            let leader = fleet_leader_prim(lift);
-            push_mesh(buckets, drawn, &leader, [x, 0.0, z], 0.0, alpha * 0.55, xform);
+            let leader = fleet_leader_prim(lift - base);
+            push_mesh(buckets, drawn, &leader, [x, base, z], 0.0, alpha * 0.55, xform);
         }
     }
 }
@@ -579,6 +589,201 @@ fn fleet_leader_prim(height: f32) -> Mesh3d {
         mesh.tri(a, c, d);
     }
     mesh
+}
+
+/// Append `other`'s vertices and indices onto `m` (the prim builders compose).
+fn merge_mesh(m: &mut Mesh3d, other: &Mesh3d) {
+    let base = m.positions.len() as u32;
+    m.positions.extend_from_slice(&other.positions);
+    m.colors.extend_from_slice(&other.colors);
+    if other.indices.is_empty() {
+        let n = other.positions.len() as u32;
+        for i in 0..n {
+            m.indices.push(base + i);
+        }
+    } else {
+        m.indices.extend(other.indices.iter().map(|i| base + i));
+    }
+}
+
+/// The SGR train set as the 3D body: a four-car electric multiple unit in the TRC's own
+/// livery reading — cream body, the green window band, a darker roof — one mesh, nose at
+/// −z, origin at the ground centre (the same convention `draw_fleet` rotates by).
+fn sgr_train_prim() -> Mesh3d {
+    let body = [0.91, 0.90, 0.86];
+    let band = [0.13, 0.44, 0.27];
+    let roof = [0.62, 0.63, 0.62];
+    let glass = [0.22, 0.28, 0.30];
+    let mut m = Mesh3d::new(terrazon_scene3d::mesh::MeshLayer::Standing);
+    let (w, len, h) = (2.9_f32, 17.0_f32, 3.5_f32);
+    for car in 0..4usize {
+        let z0 = -76.0 / 2.0 + car as f32 * 19.0;
+        let z1 = z0 + len;
+        // The car body.
+        let b = terrazon_scene3d::mesh::box_between([-w / 2.0, 0.35, z0], [w / 2.0, 0.35 + h, z1], body);
+        merge_mesh(&mut m, &b);
+        // The roof: a slightly narrower slab over the body.
+        let r = terrazon_scene3d::mesh::box_between([-w / 2.0 - 0.12, 0.35 + h, z0 + 0.4], [w / 2.0 + 0.12, 0.35 + h + 0.32, z1 - 0.4], roof);
+        merge_mesh(&mut m, &r);
+        // The green band along both flanks (the livery stripe), a hair off the skin.
+        for side in [-1.0_f32, 1.0] {
+            let s = terrazon_scene3d::mesh::box_between([side * (w / 2.0 + 0.02), 1.5, z0 + 0.6], [side * (w / 2.0 + 0.06), 2.4, z1 - 0.6], band);
+            merge_mesh(&mut m, &s);
+            // The window glass above the band.
+            let g = terrazon_scene3d::mesh::box_between([side * (w / 2.0 + 0.02), 2.55, z0 + 1.6], [side * (w / 2.0 + 0.06), 3.1, z1 - 1.6], glass);
+            merge_mesh(&mut m, &g);
+        }
+        // The nose cab (front car only): a shorter, taller face reads the driver's end.
+        if car == 0 {
+            let n = terrazon_scene3d::mesh::box_between([-w / 2.0 + 0.2, 0.35, z1 - 0.01], [w / 2.0 - 0.2, 0.35 + h - 0.6, z1 + 0.5], band);
+            merge_mesh(&mut m, &n);
+        }
+    }
+    m
+}
+
+/// A ground ribbon along a world-space centreline: one quad per segment, `half_w` metres to
+/// each side at height `y` — the way the ballast, the rails and the contact wire lay down.
+fn ribbon_between(out: &mut Mesh3d, pts: &[[f32; 2]], half_w: f32, y: f32, color: [f32; 3]) {
+    for w in pts.windows(2) {
+        let (dx, dz) = (w[1][0] - w[0][0], w[1][1] - w[0][1]);
+        let len = (dx * dx + dz * dz).sqrt();
+        if len < 0.05 {
+            continue;
+        }
+        let (nx, nz) = (-dz / len * half_w, dx / len * half_w);
+        let a = out.vertex([w[0][0] - nx, y, w[0][1] - nz], color);
+        let b = out.vertex([w[0][0] + nx, y, w[0][1] + nz], color);
+        let c = out.vertex([w[1][0] + nx, y, w[1][1] + nz], color);
+        let d = out.vertex([w[1][0] - nx, y, w[1][1] - nz], color);
+        out.tri(a, b, c);
+        out.tri(a, c, d);
+    }
+}
+
+/// The SGR's railway in 3D: the atlas's SGR-class ways lay down as a dark ballast ribbon
+/// with twin rails on it (street-close), the electrified ways raise their catenary — posts
+/// every ~45 m with the wire they carry — and the whole pass gates on the same "Rail Atlas"
+/// row the 2D map's highlight rides. The old TAZARA and Central Line stay atlas data only:
+/// this canvas is the SGR's view.
+fn draw_sgr_rail(app: &mut TerrazoneApp, buckets: &mut [Vec<Tri>; 3], drawn: &mut usize, xform: &Xform) {
+    let Some(doc) = app.session.active().map(|st| st.doc.clone()) else { return };
+    let Some(l) = doc.fleet.layer(terrazon_fleet::Provider::Sgr) else { return };
+    let live = l.schedule.is_some() || !app.canvas.fleet.markers_of(terrazon_fleet::Provider::Sgr).is_empty();
+    if !l.visible || !live || !crate::fleet::part_visible(&doc, terrazon_fleet::Provider::Sgr.label(), "Rail Atlas") {
+        return;
+    }
+    let m = scene_mercator(app);
+    let (clon, clat) = view_centre_lonlat(app);
+    let far = match rig_of(app) {
+        CameraRig::Orbit(c) => c.dist,
+        CameraRig::Walk(w) => (w.pos[1] * 6.0).max(30.0),
+    };
+    // Level of detail by eye distance: the corridor reads from any height (the ribbon),
+    // the street furniture only when the eye is close enough to see it.
+    let detailed = far < 22_000.0;
+    let view_r = (far as f64 * 6.0).clamp(12_000.0, 120_000.0);
+    let atlas = &app.canvas.fleet.atlas;
+    // The draped ground stands at the anchor's terrain elevation — the ribbon, the poles
+    // and the wire ride that base, not the datum, or they bury under the imagery.
+    let base = app.canvas.dem.as_ref().map_or(0.0, |r| r.base);
+    let mut ballast = Mesh3d::new(terrazon_scene3d::mesh::MeshLayer::Decal);
+    ballast.z_bias = 0.03;
+    let mut rails = Mesh3d::new(terrazon_scene3d::mesh::MeshLayer::Decal);
+    rails.z_bias = 0.045;
+    let mut furn = Mesh3d::new(terrazon_scene3d::mesh::MeshLayer::Decal);
+    furn.z_bias = 0.035;
+    let ballast_c = [0.30, 0.285, 0.26];
+    let rail_c = [0.80, 0.78, 0.74];
+    let post_c = [0.55, 0.42, 0.20];
+    let wire_c = [0.32, 0.30, 0.27];
+    let deg_to_m_lat = 111_320.0_f32;
+    let deg_to_m_lon = (111_320.0 * clat.to_radians().cos()) as f32;
+    let mut poles = 0usize;
+    for line in &atlas.lines {
+        if line.cls != terrazon_fleet::rail::RailClass::Sgr || !line.is_operational() {
+            continue;
+        }
+        // Cull: the way's bbox against the view's ground radius (cheap, in degrees).
+        let [mn_lo, mn_la, mx_lo, mx_la] = line.bbox;
+        let (dlo, dla) = ((view_r / deg_to_m_lon as f64), (view_r / deg_to_m_lat as f64));
+        let near = !(mx_lo < clon - dlo || mn_lo > clon + dlo || mx_la < clat - dla || mn_la > clat + dla);
+        if !near {
+            continue;
+        }
+        let world: Vec<[f32; 2]> = line
+            .pts
+            .iter()
+            .map(|p| {
+                let (x, yn) = m.project(p[0], p[1]);
+                [x as f32, -(yn as f32)]
+            })
+            .collect();
+        ribbon_between(&mut ballast, &world, 2.6, 0.05, ballast_c);
+        if detailed {
+            // Twin rails at the standard gauge's half-width.
+            for side in [-0.72_f32, 0.72] {
+                let shifted: Vec<[f32; 2]> = world
+                    .windows(2)
+                    .flat_map(|w| {
+                        let (dx, dz) = (w[1][0] - w[0][0], w[1][1] - w[0][1]);
+                        let len = (dx * dx + dz * dz).sqrt().max(1e-4);
+                        let (nx, nz) = (-dz / len * side, dx / len * side);
+                        [[w[0][0] + nx, w[0][1] + nz], [w[1][0] + nx, w[1][1] + nz]]
+                    })
+                    .collect();
+                ribbon_between(&mut rails, &shifted, 0.14, 0.09, rail_c);
+            }
+        }
+        if line.electrified && detailed {
+            // The contact line: posts off one side every ~45 m, each with its arm reaching
+            // over the track, and the wire they carry riding the centreline at 5.5 m.
+            let mut acc = 22.5_f32;
+            for w in world.windows(2) {
+                let (dx, dz) = (w[1][0] - w[0][0], w[1][1] - w[0][1]);
+                let seg_m = ((dx * deg_to_m_lon).powi(2) + (dz * deg_to_m_lat).powi(2)).sqrt();
+                if seg_m < 0.05 {
+                    continue;
+                }
+                let (ux, uz) = (dx / seg_m, dz / seg_m);
+                // The side normal (metres): perpendicular in world space.
+                let (px_n, pz_n) = (-uz, ux);
+                let mut d = acc;
+                while d < seg_m && poles < 600 {
+                    let mx = w[0][0] + ux * d;
+                    let mz = w[0][1] + uz * d;
+                    // To world metres for the pole geometry.
+                    let pole_x = mx + px_n * 3.4;
+                    let pole_z = mz + pz_n * 3.4;
+                    let pole = terrazon_scene3d::mesh::box_between([pole_x - 0.11, 0.0, pole_z - 0.11], [pole_x + 0.11, 5.9, pole_z + 0.11], post_c);
+                    merge_mesh(&mut furn, &pole);
+                    let arm = terrazon_scene3d::mesh::box_between(
+                        [pole_x - px_n * 1.2 - 0.05, 5.45, pole_z - pz_n * 1.2 - 0.05],
+                        [pole_x + 0.11, 5.62, pole_z + 0.11],
+                        post_c,
+                    );
+                    merge_mesh(&mut furn, &arm);
+                    poles += 1;
+                    d += 45.0;
+                }
+                acc = d - seg_m;
+            }
+            if far < 9_000.0 {
+                // The wire itself: a hair ribbon riding the centreline at 5.5 m, the height
+                // the arms reach over the track.
+                let mut wire_m = Mesh3d::new(terrazon_scene3d::mesh::MeshLayer::Decal);
+                wire_m.z_bias = 0.05;
+                ribbon_between(&mut wire_m, &world, 0.05, 5.5, wire_c);
+                push_mesh(buckets, drawn, &wire_m, [0.0, base, 0.0], 0.0, 0.9, xform);
+            }
+        }
+    }
+    // The ribbons were built in world coordinates: push them at the terrain base.
+    push_mesh(buckets, drawn, &ballast, [0.0, base, 0.0], 0.0, 1.0, xform);
+    push_mesh(buckets, drawn, &rails, [0.0, base, 0.0], 0.0, 1.0, xform);
+    if poles > 0 {
+        push_mesh(buckets, drawn, &furn, [0.0, base, 0.0], 0.0, 1.0, xform);
+    }
 }
 
 /// Entering the 3D environment from the menu/switch: the status hint (the runtime itself starts
@@ -669,7 +874,8 @@ pub fn show_3d(app: &mut TerrazoneApp, ui: &mut egui::Ui, rect: Rect) {
             let (x, yn) = m.project(lon, lat);
             let at = [x as f32, 0.0, -(yn as f32)];
             push_placed(&mut buckets, &mut drawn, &mesh, p, at, &xform);
-            push_blob_shadow(&mut buckets[1], &mut drawn, &xform, at, p.size_m(), &m);
+            let pbase = app.canvas.dem.as_ref().map_or(0.0, |r| r.base);
+            push_blob_shadow(&mut buckets[1], &mut drawn, &xform, [at[0], pbase, at[2]], p.size_m(), &m);
         }
     }
 
@@ -689,8 +895,19 @@ pub fn show_3d(app: &mut TerrazoneApp, ui: &mut egui::Ui, rect: Rect) {
         draw_ghost_ring(&painter, &xform, hit, kind);
     }
 
+    // The SGR's railway itself: the ballast ribbon, the twin rails and the electric
+    // corridor's catenary — the standard gauge line under its own trains (the same atlas
+    // the 2D map highlights, the same eyes).
+    draw_sgr_rail(app, &mut buckets, &mut drawn, &xform);
+
     // The fleet's live markers: the same feeds the 2D map draws, standing on the ground.
     draw_fleet(app, &mut buckets, &mut drawn, &xform);
+
+    // The SGR pass and the fleet's own decals (the hex bases, the blob shadows) ride the
+    // Decal bucket — flush it here, above the contours' earlier pass, before the standing
+    // bucket draws over both.
+    flush_bucket(&buckets[1], &painter);
+    buckets[1].clear();
 
     flush_bucket(&buckets[2], &painter);
 
