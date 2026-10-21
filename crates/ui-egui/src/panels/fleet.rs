@@ -41,10 +41,11 @@ pub fn show(app: &mut TerrazoneApp, ui: &mut Ui) {
         let pending = l.is_some_and(|l| l.needs_bootstrap());
         // The SGR sweep needs no credential — its truth is the cache's status, the same gate
         // the drawing uses (a timetable the sweep answered reads live like the radars do).
-        let keyless = provider == Provider::Sgr;
+        // Waze Roads is public the same way — the roads read needs no session.
+        let keyless = matches!(provider, Provider::Sgr | Provider::Waze);
         let auth_set = keyless || l.is_some_and(|l| l.auth.is_set());
         let visible = l.is_none_or(|l| l.visible);
-        let count = app.canvas.fleet.markers_of(provider).len();
+        let count = if provider == Provider::Waze { app.canvas.fleet.roads.len() } else { app.canvas.fleet.markers_of(provider).len() };
         // A managed feed whose handshake hasn't landed reads *Connecting* — the system is on it
         // (the cache can't know; it only speaks once requests fly).
         let status = if pending { FeedStatus::Connecting } else { app.canvas.fleet.status_of(provider) };
@@ -120,6 +121,8 @@ pub fn show(app: &mut TerrazoneApp, ui: &mut Ui) {
             bolt_editor(app, ui, auth_set);
         } else if provider == Provider::Sgr {
             sgr_editor(app, ui);
+        } else if provider == Provider::Waze {
+            waze_editor(app, ui);
         } else {
             // The system-managed radars: nothing to type, ever.
             ui.add_space(2.0);
@@ -387,6 +390,173 @@ fn sgr_editor(app: &mut TerrazoneApp, ui: &mut Ui) {
     }
     ui.add_space(4.0);
     widgets::dim_label(ui, tl!("The timetable rides the document — a saved map keeps it."));
+}
+
+/// The Waze editor: the view's roads as a tree in the layers panel's own language — the
+/// road-type groups (the vendor's own class chip, name and count) open into the named
+/// segments, and the picked segment opens into its properties (the vendor's type, the
+/// direction bits, the length, the speeds, the level and closure flags — the panel the
+/// vendor's own editor shows for a selected segment). The map highlights the pick, so the
+/// row and the line read as one thing.
+fn waze_editor(app: &mut TerrazoneApp, ui: &mut Ui) {
+    use terrazon_fleet::providers::waze::{road_type_color, road_type_name, road_type_rank};
+    ui.add_space(2.0);
+    let t = Tokens::get(ui.ctx());
+    let status = app.canvas.fleet.status_of(Provider::Waze);
+    let segs = app.canvas.fleet.roads.clone();
+    if segs.is_empty() {
+        match &status {
+            FeedStatus::Error(e) => {
+                widgets::dim_label(ui, e);
+            }
+            FeedStatus::Ready => {
+                widgets::dim_label(ui, tl!("No roads in this view's box — pan along a road and they will load."));
+            }
+            _ => {
+                widgets::dim_label(ui, tl!("Zoom in to street level — the roads load for the view you are looking at."));
+            }
+        }
+        return;
+    }
+    widgets::dim_label(ui, &crate::i18n::fmt(tl!("{n} road segments for this view"), &[("n", &segs.len().to_string())]));
+    ui.horizontal(|ui| {
+        if widgets::secondary_button(ui, tl!("Refresh roads")).clicked() {
+            // The next tick asks again (the skip check reads this URL).
+            app.canvas.fleet.roads_url = None;
+        }
+    });
+    ui.add_space(2.0);
+    widgets::subheader(ui, tl!("Roads"));
+    widgets::dim_label(ui, tl!("Pick a road in the list to see its properties — the vendor's own classes over the map."));
+    // The type groups, biggest class first (the parse sorted the segments by rank; the
+    // groups keep that order on first appearance).
+    let mut groups: Vec<(u8, Vec<&terrazon_fleet::providers::waze::WazeSeg>)> = Vec::new();
+    for seg in &segs {
+        match groups.iter_mut().find(|(rt, _)| *rt == seg.road_type) {
+            Some((_, list)) => list.push(seg),
+            None => groups.push((seg.road_type, vec![seg])),
+        }
+    }
+    groups.sort_by_key(|(rt, _)| std::cmp::Reverse(road_type_rank(*rt)));
+    let picked = app.canvas.fleet.road_pick;
+    egui::ScrollArea::vertical().max_height(300.0).id_salt("waze-roads-tree").show(ui, |ui| {
+        for (rt, list) in &groups {
+            let open = app.ui.fleet_draft.waze_open == Some(*rt);
+            let (row, resp) = ui.allocate_exact_size(vec2(ui.available_width(), 22.0), egui::Sense::click());
+            if open || resp.hovered() {
+                ui.painter_at(row).rect_filled(row, 3.0, if open { t.row_selected } else { t.hover });
+            }
+            // The class chip in the vendor's own colour, then the class name and the count.
+            let [r, g, b] = road_type_color(*rt);
+            ui.painter_at(row).rect_filled(
+                egui::Rect::from_center_size(row.left_center() + vec2(9.0, 0.0), vec2(10.0, 6.0)),
+                2.0,
+                egui::Color32::from_rgb(r, g, b),
+            );
+            let chev = egui::Rect::from_center_size(row.left_center() + vec2(24.0, 0.0), vec2(14.0, 16.0));
+            icons::paint(ui, if open { "chevron-down" } else { "chevron-right" }, chev, t.text_dim);
+            ui.painter_at(row).text(
+                row.left_center() + vec2(35.0, 0.0),
+                egui::Align2::LEFT_CENTER,
+                format!("{}  ·  {}", road_type_name(*rt), list.len()),
+                egui::FontId::proportional(11.5),
+                if open { t.text_strong } else { t.text },
+            );
+            if resp.clicked() {
+                app.ui.fleet_draft.waze_open = if open { None } else { Some(*rt) };
+            }
+            if !open {
+                continue;
+            }
+            for seg in list {
+                let is_pick = picked == Some(seg.id);
+                let (seg_row, seg_resp) = ui.allocate_exact_size(vec2(ui.available_width(), 18.0), egui::Sense::click());
+                if is_pick || seg_resp.hovered() {
+                    ui.painter_at(seg_row).rect_filled(seg_row, 3.0, if is_pick { t.row_selected } else { t.hover });
+                }
+                let label = if seg.name.is_empty() { tl!("Unnamed road").to_string() } else { seg.name.clone() };
+                ui.painter_at(seg_row).text(
+                    seg_row.left_center() + vec2(34.0, 0.0),
+                    egui::Align2::LEFT_CENTER,
+                    label,
+                    egui::FontId::proportional(10.5),
+                    if is_pick { t.text_strong } else { t.text_dim },
+                );
+                ui.painter_at(seg_row).text(
+                    seg_row.right_center() - vec2(6.0, 0.0),
+                    egui::Align2::RIGHT_CENTER,
+                    human_length(seg.length_m),
+                    egui::FontId::proportional(10.0),
+                    t.text_dim,
+                );
+                if seg_resp.clicked() {
+                    app.canvas.fleet.road_pick = if is_pick { None } else { Some(seg.id) };
+                }
+                // The picked segment's properties, the vendor's own editor panel: the type,
+                // the direction bits, the length and speeds, the level and flag attributes.
+                if is_pick {
+                    let dir = match (seg.fwd, seg.rev) {
+                        (true, true) => tl!("Two-way").to_string(),
+                        (false, true) => format!("{} ←", tl!("One way")),
+                        (true, false) => format!("{} →", tl!("One way")),
+                        (false, false) => tl!("One way").to_string(),
+                    };
+                    widgets::dim_label(ui, &crate::i18n::fmt(tl!("Segment {id}"), &[("id", &seg.id.to_string())]));
+                    ui.horizontal(|ui| {
+                        ui.add_space(18.0);
+                        ui.label(
+                            egui::RichText::new(if seg.name.is_empty() { tl!("Unnamed road").to_string() } else { seg.name.clone() })
+                                .strong()
+                                .small(),
+                        );
+                    });
+                    let speed = match (seg.fwd_speed, seg.rev_speed) {
+                        (Some(f), Some(r2)) if f != r2 => format!("{f} / {r2} km/h"),
+                        (Some(f), _) => format!("{f} km/h"),
+                        (None, Some(r2)) => format!("{r2} km/h"),
+                        (None, None) => String::new(),
+                    };
+                    let mut line = format!("{} · {} · {}", road_type_name(seg.road_type), dir, human_length(seg.length_m));
+                    if !speed.is_empty() {
+                        line.push_str(&format!(" · {speed}"));
+                    }
+                    ui.horizontal(|ui| {
+                        ui.add_space(18.0);
+                        widgets::dim_label(ui, &line);
+                    });
+                    if seg.level != 0 || seg.toll || seg.closures {
+                        ui.horizontal(|ui| {
+                            ui.add_space(18.0);
+                            if seg.level < 0 {
+                                widgets::dim_label(ui, tl!("Tunnel"));
+                            } else if seg.level > 0 {
+                                widgets::dim_label(ui, tl!("Bridge"));
+                            }
+                            if seg.toll {
+                                widgets::dim_label(ui, tl!("Toll"));
+                            }
+                            if seg.closures {
+                                widgets::dim_label(ui, tl!("Closures live"));
+                            }
+                        });
+                    }
+                    ui.horizontal(|ui| {
+                        ui.add_space(18.0);
+                        if widgets::secondary_button(ui, tl!("Clear pick")).clicked() {
+                            app.canvas.fleet.road_pick = None;
+                        }
+                    });
+                }
+            }
+        }
+    });
+    ui.add_space(4.0);
+    widgets::dim_label(ui, tl!("The roads follow the map view — a pan into a new area loads that area's roads."));
+}
+
+/// Metres the way the panel reads them: under a kilometre in metres, over in kilometres.
+fn human_length(m: f64) -> String {
+    if m < 950.0 { format!("{m:.0} m") } else { format!("{:.1} km", m / 1000.0) }
 }
 
 /// The status dot the tree rows carry: green when the train is on the line now, dim for

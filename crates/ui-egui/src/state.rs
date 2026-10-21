@@ -299,6 +299,9 @@ pub struct FleetDraft {
     /// always show; the coaches fold like the layers panel's groups).
     #[serde(skip)]
     pub sgr_cars_open: bool,
+    /// The Waze roads tree: which road type's group is expanded (its Waze road-type code).
+    #[serde(skip)]
+    pub waze_open: Option<u8>,
 }
 
 /// The two steps of the phone-code sign-in.

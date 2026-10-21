@@ -36,6 +36,7 @@ pub(crate) fn parts_for(provider: Option<Provider>) -> &'static [&'static str] {
         Some(Provider::Marine) => &["Vessels", "H3 Cells"],
         Some(Provider::Flight) => &["Aircraft", "H3 Cells"],
         Some(Provider::Sgr) => &["Rail Atlas", "Stations", "Trains"],
+        Some(Provider::Waze) => &["Roads"],
         None => &["Markers", "H3 Cells"], // the demo feed
     }
 }
@@ -57,6 +58,7 @@ pub(crate) fn sync_fleet_tree(d: &mut Document) -> Vec<NodeId> {
     ensure_system_layer(d, Provider::Marine);
     ensure_system_layer(d, Provider::Flight);
     ensure_system_layer(d, Provider::Sgr);
+    ensure_system_layer(d, Provider::Waze);
     let gi = match fleet_group_index(d) {
         Some(i) => i,
         None => {
@@ -84,6 +86,7 @@ pub(crate) fn sync_fleet_tree(d: &mut Document) -> Vec<NodeId> {
         ("Marine Radar", true),
         ("Flight Radar", true),
         ("SGR Trains", true),
+        ("Waze Roads", true),
         ("Demo", d.fleet.demo),
     ];
     let drop: Vec<&'static str> = want.iter().filter(|(_, on)| !on).map(|(name, _)| *name).collect();
@@ -227,10 +230,12 @@ fn clear_auth(s: &mut Session, p: &Value) -> Result<Value> {
     let provider = provider_param(C, p)?;
     let mut created = Vec::new();
     s.edit("Fleet Sign-out", |d, _| {
-        if provider.bootstrap_url().is_some() || provider == Provider::Sgr {
+        if provider.bootstrap_url().is_some() || provider == Provider::Sgr || provider == Provider::Waze {
             // A system-managed radar never leaves: the session resets and the system quietly
             // re-bootstraps it (the row stays; the user never typed a cookie to forget). The
             // SGR sweep is public — its reset drops the timetable and the sweep rebuilds it.
+            // Waze Roads is public the same way — its reset drops the roads and the next
+            // view tick asks again.
             let l = ensure_system_layer(d, provider);
             l.auth = Auth::System(String::new());
             l.status = FeedStatus::Connecting;
@@ -426,7 +431,7 @@ pub fn specs() -> Vec<CommandSpec> {
             "Fleet Sign-in",
             ["Map"],
             None,
-            "{provider: \"bolt\"|\"marine\"|\"flight\"|\"sgr\", token?: the Bolt session token, cookie?: a cookie override (the radars normally manage their own session — the UI never asks), user? + pass?: the Bolt login, endpoint?: override the request URL template ({res}, {cells}, {z}, {bbox} are filled)} sign a fleet feed in: its locked sub-layer appears under the Fleet group and its markers draw once the feed answers → {provider, status}",
+            "{provider: \"bolt\"|\"marine\"|\"flight\"|\"sgr\"|\"waze\", token?: the Bolt session token, cookie?: a cookie override (the radars normally manage their own session — the UI never asks), user? + pass?: the Bolt login, endpoint?: override the request URL template ({res}, {cells}, {z}, {bbox} are filled)} sign a fleet feed in: its locked sub-layer appears under the Fleet group and its markers draw once the feed answers → {provider, status}",
             has_doc,
             set_auth
         ),
@@ -549,7 +554,7 @@ mod tests {
         s.execute("fleet.syncTree", &json!({})).unwrap();
         assert_eq!(s.active().unwrap().history.undo.len(), undo_before, "the sync is background work");
         let i = fleet_group(&s).expect("the Fleet group is part of every document");
-        assert_eq!(fleet_children(&s), vec!["Marine Radar", "Flight Radar", "SGR Trains"]);
+        assert_eq!(fleet_children(&s), vec!["Marine Radar", "Flight Radar", "SGR Trains", "Waze Roads"]);
         let group = &s.active().unwrap().doc.layers[i];
         assert!(group.locked, "the Fleet group is a locked system group (new art never lands in it)");
         match &group.kind {
@@ -668,9 +673,9 @@ mod tests {
     fn signing_in_adds_bolt_and_history_stays_clean() {
         let mut s = session();
         s.execute("fleet.syncTree", &json!({})).unwrap();
-        assert_eq!(fleet_children(&s), vec!["Marine Radar", "Flight Radar", "SGR Trains"]);
+        assert_eq!(fleet_children(&s), vec!["Marine Radar", "Flight Radar", "SGR Trains", "Waze Roads"]);
         s.execute("fleet.setAuth", &json!({ "provider": "bolt", "token": "tok123" })).unwrap();
-        assert_eq!(fleet_children(&s), vec!["Marine Radar", "Flight Radar", "SGR Trains", "Bolt"]);
+        assert_eq!(fleet_children(&s), vec!["Marine Radar", "Flight Radar", "SGR Trains", "Waze Roads", "Bolt"]);
         let q = s.execute("fleet.sources", &json!({})).unwrap();
         let bolt = q["layers"].as_array().unwrap().iter().find(|l| l["provider"] == "Bolt").unwrap().clone();
         assert_eq!(bolt["authSet"], true);
@@ -680,7 +685,7 @@ mod tests {
         // session landings and every poll) is a background edit — the undo list stays at
         // zero, so the user's Ctrl+Z never walks a session the machine refreshed itself.
         assert!(s.active().unwrap().history.undo.is_empty(), "the sign-in is not tracked history");
-        assert_eq!(fleet_children(&s), vec!["Marine Radar", "Flight Radar", "SGR Trains", "Bolt"]);
+        assert_eq!(fleet_children(&s), vec!["Marine Radar", "Flight Radar", "SGR Trains", "Waze Roads", "Bolt"]);
     }
 
     #[test]
@@ -697,7 +702,7 @@ mod tests {
         s.execute("fleet.clearAuth", &json!({ "provider": "marine" })).unwrap();
         let m = s.active().unwrap().doc.fleet.layer(terrazon_fleet::Provider::Marine).unwrap();
         assert!(m.auth.is_system() && m.needs_bootstrap());
-        assert_eq!(fleet_children(&s), vec!["Marine Radar", "Flight Radar", "SGR Trains"], "the row never leaves");
+        assert_eq!(fleet_children(&s), vec!["Marine Radar", "Flight Radar", "SGR Trains", "Waze Roads"], "the row never leaves");
         // A cookie override still lands through setAuth (scripts), and reset takes it back too.
         s.execute("fleet.setAuth", &json!({ "provider": "marine", "cookie": "k=v" })).unwrap();
         let m = s.active().unwrap().doc.fleet.layer(terrazon_fleet::Provider::Marine).unwrap();
@@ -707,7 +712,7 @@ mod tests {
         // Bolt's sign-out still removes its row entirely.
         s.execute("fleet.setAuth", &json!({ "provider": "bolt", "token": "t" })).unwrap();
         s.execute("fleet.clearAuth", &json!({ "provider": "bolt" })).unwrap();
-        assert_eq!(fleet_children(&s), vec!["Marine Radar", "Flight Radar", "SGR Trains"]);
+        assert_eq!(fleet_children(&s), vec!["Marine Radar", "Flight Radar", "SGR Trains", "Waze Roads"]);
     }
 
     #[test]
@@ -755,7 +760,7 @@ mod tests {
         let mut s = session();
         s.execute("fleet.syncTree", &json!({})).unwrap();
         s.execute("fleet.demo", &json!({ "on": true })).unwrap();
-        assert_eq!(fleet_children(&s), vec!["Marine Radar", "Flight Radar", "SGR Trains", "Demo"]);
+        assert_eq!(fleet_children(&s), vec!["Marine Radar", "Flight Radar", "SGR Trains", "Waze Roads", "Demo"]);
         s.execute("fleet.setAuth", &json!({ "provider": "flight", "cookie": "c" })).unwrap();
         let children = fleet_children(&s);
         assert!(children.contains(&"Demo".to_string()) && children.contains(&"Flight Radar".to_string()));
@@ -774,7 +779,7 @@ mod tests {
         }
         // The demo off removes its sub-layer but the group (and the radars) stay.
         s.execute("fleet.demo", &json!({ "on": false })).unwrap();
-        assert_eq!(fleet_children(&s), vec!["Marine Radar", "Flight Radar", "SGR Trains"]);
+        assert_eq!(fleet_children(&s), vec!["Marine Radar", "Flight Radar", "SGR Trains", "Waze Roads"]);
     }
 
     #[test]

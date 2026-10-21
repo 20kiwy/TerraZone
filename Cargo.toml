@@ -222,7 +222,17 @@ default-members = ["crates/*", "apps/terrazon", "apps/terrazon-cli", "xtask"]
 # the walk stood). The Camera 3D panel carries the Orbit/Walk switch with the walk's look and
 # eye-height sliders, the scene3d.set protocol drives camMode + the walk rig, and the drape
 # refines off the walk's own height.
-version = "0.26.0"
+# 0.27.0 — the Waze round: the vendor's own basemap rides the built-in sources (the row
+# instance's live tiles, the highres 512-px variant, anonymous), and the roads ride the fleet
+# as the fifth provider — the anonymous Features read the vendor's own editor makes for its
+# view (bbox on a 0.01° grid, the sandbox+venue query that keeps it public), parsed into
+# per-class segments and drawn in the vendor's editor palette over the basemap (casings on
+# the big classes, dashes on rail and trails, tunnels dim), the road-type legend read off the
+# editor's own bundle (3 Freeway, 4 Ramp, 6 Major, 7 Minor, 18 Railroad, 20 Parking), and the
+# Fleet panel lays the view's roads out as the layers-panel tree — type groups open into
+# named segments, the picked segment opens into its properties (type, direction, length,
+# speeds, level, toll, closures), and the map rides the pick a white halo.
+version = "0.27.0"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 rust-version = "1.95"

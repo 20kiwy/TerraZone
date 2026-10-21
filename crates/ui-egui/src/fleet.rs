@@ -59,6 +59,14 @@ pub struct FleetCache {
     pub atlas: fleetlib::RailAtlas,
     /// The router: the chained way paths between station pairs, computed once, cut per tick.
     pub rail_router: fleetlib::rail::RailRouter,
+    /// The Waze roads the last Features answer left (kept through an error like the markers).
+    pub roads: Vec<fleetlib::providers::waze::WazeSeg>,
+    /// The Features URL the roads answer: the runtime skips the ask while the view sits in
+    /// the same 0.01° cell (the URL quantizes), and Refresh or a failure clears it.
+    pub roads_url: Option<String>,
+    /// The picked road segment: the Fleet panel's properties tree shows it, the draw rides
+    /// it a white halo so the row and the line read as one thing.
+    pub road_pick: Option<i64>,
     /// Bolt's downloaded vehicle artwork, decode-ready: url → the decoded RGBA (the texture
     /// itself is made lazily in [`draw`], where the egui context lives).
     pub icon_images: HashMap<String, egui::ColorImage>,
@@ -97,6 +105,9 @@ impl FleetCache {
             poll_no: 0,
             atlas: rail_atlas().clone(),
             rail_router: fleetlib::rail::RailRouter::new(rail_atlas()),
+            roads: Vec::new(),
+            roads_url: None,
+            road_pick: None,
             icon_images: HashMap::new(),
             icons: HashMap::new(),
             icons_pending: BTreeSet::new(),
@@ -413,6 +424,20 @@ pub fn tick(app: &mut TerrazoneApp, view: Option<FleetView>) {
                         }
                         continue;
                     }
+                    // The Waze answer is roads, not vehicles: the Features JSON parses into
+                    // the segment list the map draws and the properties tree reads.
+                    if provider == Provider::Waze {
+                        match fleetlib::providers::waze::parse_features(&bytes) {
+                            Ok(segs) => {
+                                cache.roads = segs;
+                                cache.status.insert(provider, FeedStatus::Ready);
+                            }
+                            Err(e) => {
+                                cache.status.insert(provider, FeedStatus::Error(e));
+                            }
+                        }
+                        continue;
+                    }
                     // A data answer can carry a fresh cookie too (vendors rotate sessions).
                     if provider.bootstrap_url().is_some()
                         && let Some(c) = set_cookie.filter(|c| !c.trim().is_empty())
@@ -456,6 +481,11 @@ pub fn tick(app: &mut TerrazoneApp, view: Option<FleetView>) {
                     let Some(provider) = cache.pending.remove(&key) else { continue };
                     if !bootstrap {
                         cache.status.insert(provider, FeedStatus::Error(reason));
+                        // A lost roads ask asks again on the next tick (the skip check would
+                        // otherwise keep serving the URL that just failed).
+                        if provider == Provider::Waze {
+                            cache.roads_url = None;
+                        }
                     }
                 }
             }
@@ -529,6 +559,33 @@ pub fn tick(app: &mut TerrazoneApp, view: Option<FleetView>) {
     let due = doc.fleet.poll_due || app.canvas.fleet.poll_due(cadence);
     let wants = doc.fleet.layers.iter().any(|l| l.wants_fetch() || l.needs_bootstrap()) || doc.fleet.demo;
     let Some(((west, south, east, north), zoom)) = view else { return };
+    // The Waze roads follow the view, not the poll cadence: a view that lands in a new
+    // 0.01° cell (the Features URL quantizes) asks at once, a pan inside one cell reuses
+    // the answer — and below the fetch floor the layer honestly waits for street level.
+    if doc.fleet.layer(Provider::Waze).is_some_and(|l| l.wants_fetch()) {
+        if zoom >= fleetlib::providers::waze::MIN_FETCH_ZOOM
+            && let Some(fetcher) = app.services.fleet.clone()
+        {
+            let url = fleetlib::providers::waze::features_url((west, south, east, north), zoom);
+            let cache = &mut app.canvas.fleet;
+            if cache.roads_url.as_deref() != Some(url.as_str()) && !cache.pending.contains_key("waze/roads") {
+                cache.roads_url = Some(url.clone());
+                fetcher.get("waze/roads".into(), url, fleetlib::providers::waze::request_headers(), cache.tx.clone());
+                cache.pending.insert("waze/roads".into(), Provider::Waze);
+                let entry = cache.status.entry(Provider::Waze).or_insert(FeedStatus::Connecting);
+                if !entry.has_data() {
+                    *entry = FeedStatus::Connecting;
+                }
+            }
+        } else {
+            // Below the fetch floor with nothing loaded: the row reads Off, not Connecting —
+            // nothing is being asked at country zooms, and the panel says so.
+            let cache = &mut app.canvas.fleet;
+            if cache.roads.is_empty() {
+                cache.status.insert(Provider::Waze, FeedStatus::Off);
+            }
+        }
+    }
     let res = fleetlib::h3grid::res_for_zoom(zoom);
     let span = fleetlib::h3grid::cell_span_deg(res).max(1e-4);
     let q = |v: f64| (v / span).round() as i64;
@@ -638,6 +695,7 @@ pub(crate) fn vehicles_part(p: Provider) -> &'static str {
         Provider::Marine => "Vessels",
         Provider::Flight => "Aircraft",
         Provider::Sgr => "Trains",
+        Provider::Waze => "Roads",
     }
 }
 
@@ -671,9 +729,10 @@ pub fn has_visible(app: &TerrazoneApp) -> bool {
             continue;
         }
         let label = l.provider.label();
-        let transport = if l.provider == Provider::Sgr {
-            // The schedule feed's data truth is the cache's status (the sweep answered) — no
-            // auth. Its atlas and stations are embedded data: they draw from the eyes alone.
+        let transport = if matches!(l.provider, Provider::Sgr | Provider::Waze) {
+            // The public feeds' data truth is the cache's status (the sweep or the roads read
+            // answered) — no auth. The SGR's atlas and stations are embedded data: they draw
+            // from the eyes alone.
             cache.status_of(l.provider).has_data()
         } else {
             l.auth.is_set() && cache.status_of(l.provider).has_data()
@@ -685,6 +744,9 @@ pub fn has_visible(app: &TerrazoneApp) -> bool {
             return true;
         }
         if l.provider == Provider::Sgr && part_visible(doc, label, "Rail Atlas") {
+            return true;
+        }
+        if l.provider == Provider::Waze && !cache.roads.is_empty() && part_visible(doc, label, "Roads") {
             return true;
         }
     }
@@ -770,6 +832,15 @@ pub fn draw(app: &mut TerrazoneApp, painter: &egui::Painter, rect: Rect, xf: &cr
             }
             if part_visible(doc, label, "Trains") {
                 draw_markers(&mut shapes, cache.markers_of(l.provider), xf, rect, color, &cache.icons, zoom_scale);
+            }
+            continue;
+        }
+        if l.provider == Provider::Waze {
+            // The Waze world: the vendor's roads in the vendor's own editor palette over the
+            // basemap, the picked segment riding its white halo. Public feed — the cache's
+            // status gates (no auth); the eyes gate like every artifact's own row.
+            if part_visible(doc, label, "Roads") {
+                draw_roads(&mut shapes, &cache.roads, xf, rect, zoom_scale, cache.road_pick);
             }
             continue;
         }
@@ -951,6 +1022,75 @@ fn catenary(out: &mut Vec<Shape>, pts: &[Pos2], standoff: f32, step: f32, color:
             d += step;
         }
         acc = d - seg;
+    }
+}
+
+/// The Waze roads, drawn the way the vendor paints its own editor: every class in its own
+/// colour over the basemap, the big classes on a dark casing at street zooms, the
+/// non-driving ways dashed, the freeways riding over the pack (the parse sorted by class
+/// rank). Tunnels read dimmer than the ground ways; a closure dashes red; the picked
+/// segment (the Fleet panel's properties tree) rides a white halo, so the row and the line
+/// read as one thing.
+fn draw_roads(
+    out: &mut Vec<Shape>,
+    segs: &[fleetlib::providers::waze::WazeSeg],
+    xf: &crate::canvas::Xf,
+    rect: Rect,
+    zoom_scale: f32,
+    picked: Option<i64>,
+) {
+    let (w, s, e, n) = view_box(xf, rect);
+    let street = xf.zoom >= 12.0;
+    let dash = (4.0 + 3.0 * zoom_scale).max(5.0);
+    let mut casings: Vec<Shape> = Vec::new();
+    let mut cores: Vec<Shape> = Vec::new();
+    for pass in 0..2 {
+        for seg in segs {
+            let [min_lon, min_lat, max_lon, max_lat] = seg.bbox;
+            if max_lon < w || min_lon > e || max_lat < s || min_lat > n {
+                continue;
+            }
+            let pts: Vec<Pos2> = seg.pts.iter().map(|p| to_screen(p[0], p[1], xf)).collect();
+            if pts.len() < 2 {
+                continue;
+            }
+            let is_pick = picked == Some(seg.id);
+            let [r, g, b] = if seg.closures { [0xd0, 0x2f, 0x2f] } else { fleetlib::providers::waze::road_type_color(seg.road_type) };
+            let dashed = seg.closures || fleetlib::providers::waze::road_type_dashed(seg.road_type);
+            let mut alpha = 235_u8;
+            if seg.level < 0 {
+                alpha = 115; // a tunnel reads as depth, not absence
+            }
+            let color = Color32::from_rgba_unmultiplied(r, g, b, alpha);
+            let width = fleetlib::providers::waze::road_type_width(seg.road_type) * (0.85 + 0.9 * zoom_scale) * if is_pick { 1.5 } else { 1.0 };
+            if pass == 0 {
+                // The casing pass (and the picked segment's halo, the widest white under all).
+                if is_pick {
+                    let halo = Stroke::new(width + 4.0 + 3.0 * zoom_scale, Color32::from_rgba_unmultiplied(255, 255, 255, 235));
+                    push_polyline(&mut cores, &pts, halo, dashed, dash);
+                }
+                if street && fleetlib::providers::waze::road_type_cased(seg.road_type) {
+                    let casing = Stroke::new(width + 2.4 + 1.8 * zoom_scale, Color32::from_rgba_unmultiplied(56, 54, 50, alpha.min(210)));
+                    push_polyline(&mut casings, &pts, casing, dashed, dash);
+                }
+            } else {
+                push_polyline(&mut cores, &pts, Stroke::new(width, color), dashed, dash);
+            }
+        }
+        if pass == 0 {
+            out.append(&mut casings);
+        }
+    }
+    out.extend(cores);
+}
+
+/// One polyline as a stroked path (or a dashed line's segments): the shape the roads and
+/// their casings ride.
+fn push_polyline(out: &mut Vec<Shape>, pts: &[Pos2], stroke: Stroke, dashed: bool, dash: f32) {
+    if dashed {
+        out.extend(Shape::dashed_line(pts, stroke, dash, dash * 0.7));
+    } else {
+        out.push(Shape::Path(egui::epaint::PathShape { points: pts.to_vec(), closed: false, fill: Color32::TRANSPARENT, stroke: stroke.into() }));
     }
 }
 

@@ -5,6 +5,8 @@
 //! - [`bolt`] — the ride-hailing poll (`{code, data:{vehicles:{…}}}`, the CDN artwork).
 //! - [`marine`] — the vessel radar's mobile tile (`data.rows`, the marine keys).
 //! - [`flight`] — the public aircraft feed's flexible shape and the ICAO kind read.
+//! - [`waze`] — the roads read: the vendor editor's anonymous `Features` answer parsed into
+//!   the per-class segments the map draws, with the vendor's own road-type legend.
 //!
 //! The SGR (the fourth provider) keeps its own folder ([`crate::sgr`]): it is a schedule
 //! service with its own atlas, timetable and seat maps, not a vehicle poll. The sign-in
@@ -14,3 +16,4 @@
 pub mod bolt;
 pub mod flight;
 pub mod marine;
+pub mod waze;

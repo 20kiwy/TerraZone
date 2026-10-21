@@ -46,10 +46,14 @@ pub enum Provider {
     /// positions: stations and timetables, with the trains themselves placed algorithmically
     /// along the OSM rail network by the schedule times (see [`rail`]).
     Sgr,
+    /// Waze's road network — the anonymous Features read the vendor's own web editor makes
+    /// for its view, drawn as the vendor paints its editor: per-class colours over the
+    /// basemap, the road properties on pick. No credentials (see [`crate::providers::waze`]).
+    Waze,
 }
 
 impl Provider {
-    pub const ALL: [Provider; 4] = [Provider::Bolt, Provider::Marine, Provider::Flight, Provider::Sgr];
+    pub const ALL: [Provider; 5] = [Provider::Bolt, Provider::Marine, Provider::Flight, Provider::Sgr, Provider::Waze];
 
     /// The name the layer panel shows (and the name of the locked sub-layer node).
     pub fn label(self) -> &'static str {
@@ -58,6 +62,7 @@ impl Provider {
             Provider::Marine => "Marine Radar",
             Provider::Flight => "Flight Radar",
             Provider::Sgr => "SGR Trains",
+            Provider::Waze => "Waze Roads",
         }
     }
 
@@ -67,13 +72,15 @@ impl Provider {
         Provider::ALL.into_iter().find(|p| p.label().eq_ignore_ascii_case(s) || format!("{p:?}").eq_ignore_ascii_case(s))
     }
 
-    /// The marker tint, sRGB (Bolt's green, a deep marine navy, radar amber, SGR rail brick).
+    /// The marker tint, sRGB (Bolt's green, a deep marine navy, radar amber, SGR rail brick,
+    /// Waze's own cyan).
     pub fn color(self) -> [u8; 3] {
         match self {
             Provider::Bolt => [0x2f, 0xc6, 0x6f],
             Provider::Marine => [0x17, 0x4e, 0x63],
             Provider::Flight => [0xd9, 0x8e, 0x1f],
             Provider::Sgr => [0xb0, 0x43, 0x2a],
+            Provider::Waze => [0x33, 0xcc, 0xff],
         }
     }
 
@@ -88,6 +95,9 @@ impl Provider {
             // Template mode is never SGR's path (its flow builds the sweep); this names the
             // service the same way the other rows do.
             Provider::Sgr => "https://sgrticket-api.trc.co.tz/TICIDIS/api/v1/Public/SearchTrip",
+            // Template mode is never Waze's path either (its flow builds the Features read);
+            // this names the service.
+            Provider::Waze => "https://www.waze.com/row-Descartes/app/Features",
         }
     }
 
@@ -96,7 +106,7 @@ impl Provider {
     /// user's session token, kept by the user, never generated here.
     pub fn bootstrap_url(self) -> Option<&'static str> {
         match self {
-            Provider::Bolt | Provider::Sgr => None,
+            Provider::Bolt | Provider::Sgr | Provider::Waze => None,
             Provider::Marine => Some("https://www.marinetraffic.com/en/ais/home"),
             Provider::Flight => Some("https://www.flightradar24.com/data/aircraft"),
         }
@@ -377,8 +387,9 @@ impl Default for FleetState {
             |p: Provider| FleetLayer { provider: p, auth: Auth::System(String::new()), status: FeedStatus::Connecting, ..FleetLayer::default() };
         Self {
             // SGR is public (no handshake) but still a system row: the sweep starts on frame one
-            // the same way the radars' bootstraps do.
-            layers: vec![system(Provider::Marine), system(Provider::Flight), system(Provider::Sgr)],
+            // the same way the radars' bootstraps do. Waze Roads is public the same way — its
+            // Features read needs no session, so its row rides with every document too.
+            layers: vec![system(Provider::Marine), system(Provider::Flight), system(Provider::Sgr), system(Provider::Waze)],
             demo: false,
             demo_visible: true,
             poll_secs: default_poll(),
@@ -529,7 +540,7 @@ mod tests {
     #[test]
     fn every_document_carries_the_system_radars() {
         let st = FleetState::default();
-        assert_eq!(st.layers.iter().map(|l| l.provider).collect::<Vec<_>>(), vec![Provider::Marine, Provider::Flight, Provider::Sgr]);
+        assert_eq!(st.layers.iter().map(|l| l.provider).collect::<Vec<_>>(), vec![Provider::Marine, Provider::Flight, Provider::Sgr, Provider::Waze]);
         for l in &st.layers {
             assert!(l.auth.is_system());
             assert!(l.visible, "the rows the Layers panel shows start with the eye on");
@@ -559,11 +570,11 @@ mod tests {
     #[test]
     fn layer_mut_creates_and_reuses() {
         let mut st = FleetState::default();
-        assert_eq!(st.layers.len(), 3, "marine, flight and the SGR sweep ride with the document");
+        assert_eq!(st.layers.len(), 4, "marine, flight, the SGR sweep and the Waze roads ride with the document");
         st.layer_mut(Provider::Bolt).visible = false;
-        assert_eq!(st.layers.len(), 4);
+        assert_eq!(st.layers.len(), 5);
         st.layer_mut(Provider::Bolt).auth = Auth::Cookie("c".into());
-        assert_eq!(st.layers.len(), 4);
+        assert_eq!(st.layers.len(), 5, "the layer existed: the auth lands in it, nothing is created");
         assert_eq!(st.layer(Provider::Bolt).map(|l| l.auth.clone()), Some(Auth::Cookie("c".into())));
         assert!(st.configured(), "a signed-in feed is configured even while its row is hidden");
     }

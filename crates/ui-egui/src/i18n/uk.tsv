@@ -3930,3 +3930,19 @@ axis	Vertical	Вертикальна
 	{time} · {name} — next	{time} · {name} — наступна
 	{time} · {name}	{time} · {name}
 	Coaches	Вагони
+	Zoom in to street level — the roads load for the view you are looking at.	Наблизьте до рівня вулиць — дороги завантажуються для області, яку ви дивитесь.
+	No roads in this view's box — pan along a road and they will load.	На цій області немає доріг — перемістіть карту вздовж дороги, і вони завантажаться.
+	{n} road segments for this view	{n} ділянок доріг для цієї області
+	Refresh roads	Оновити дороги
+	Roads	Дороги
+	Pick a road in the list to see its properties — the vendor's own classes over the map.	Виберіть дорогу зі списку, щоб побачити її властивості — класи вендора поверх карти.
+	Unnamed road	Дорога без назви
+	Two-way	Двостороння
+	One way	Одностороння
+	Tunnel	Тунель
+	Bridge	Міст
+	Toll	Платна
+	Closures live	Є перекриття
+	Segment {id}	Ділянка {id}
+	Clear pick	Зняти вибір
+	The roads follow the map view — a pan into a new area loads that area's roads.	Дороги слідують за оглядом карти — при переміщенні в нову область завантажуються її дороги.

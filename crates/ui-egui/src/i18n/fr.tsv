@@ -3958,3 +3958,19 @@ axis	Vertical	Vertical
 	{time} · {name} — next	{time} · {name} — prochaine
 	{time} · {name}	{time} · {name}
 	Coaches	Voitures
+	Zoom in to street level — the roads load for the view you are looking at.	Zoomez au niveau de la rue — les routes se chargent pour la vue que vous regardez.
+	No roads in this view's box — pan along a road and they will load.	Aucune route dans le cadre de cette vue — déplacez-vous le long d'une route et elles se chargeront.
+	{n} road segments for this view	{n} tronçons de route pour cette vue
+	Refresh roads	Actualiser les routes
+	Roads	Routes
+	Pick a road in the list to see its properties — the vendor's own classes over the map.	Choisissez une route dans la liste pour voir ses propriétés — les classes du fournisseur sur la carte.
+	Unnamed road	Route sans nom
+	Two-way	Double sens
+	One way	Sens unique
+	Tunnel	Tunnel
+	Bridge	Pont
+	Toll	Péage
+	Closures live	Fermetures en cours
+	Segment {id}	Tronçon {id}
+	Clear pick	Effacer la sélection
+	The roads follow the map view — a pan into a new area loads that area's roads.	Les routes suivent la vue de la carte — un déplacement vers une nouvelle zone charge les routes de cette zone.

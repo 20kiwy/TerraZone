@@ -301,6 +301,9 @@ pub(crate) fn read_vehicle(provider: Provider, id: &str, item: &serde_json::Valu
             }
         }
         Provider::Sgr => VehicleKind::Train,
+        // The Waze read never reaches the vehicle reader (its answer is roads, dispatched
+        // before this in the runtime) — the arm keeps the match exhaustive.
+        Provider::Waze => VehicleKind::Car,
     };
     Some(Vehicle {
         id: s_of(item, &["id", "uuid", "mmsi", "icao", "reg", "callsign"])
@@ -433,7 +436,7 @@ mod tests {
     #[test]
     fn requests_go_to_live_layers_only_with_their_auth() {
         let (reqs, _skipped) = build_requests(&state(), SINZA, 16.0, 7);
-        assert_eq!(reqs.len(), 3, "a pending system handshake asks for no data yet; the public SGR sweep does");
+        assert_eq!(reqs.len(), 4, "a pending system handshake asks for no data yet; the public SGR sweep and the public Waze roads read do");
         let bolt = reqs.iter().find(|r| r.provider == Provider::Bolt).unwrap();
         assert!(bolt.url.contains("mobility/search/poll?"), "bolt rides the vendor poll: {}", bolt.url);
         match &bolt.body {
@@ -450,6 +453,10 @@ mod tests {
         let sgr = reqs.iter().find(|r| r.provider == Provider::Sgr).unwrap();
         assert!(sgr.url.contains("sgrticket-api.trc.co.tz"), "the sweep asks the TRC API: {}", sgr.url);
         assert!(!sgr.headers.iter().any(|(k, _)| k == "Cookie"), "the schedule service is public");
+        let waze = reqs.iter().find(|r| r.provider == Provider::Waze).unwrap();
+        assert!(waze.url.contains("row-Descartes/app/Features?bbox=39.18,-6.80,"), "the roads read takes the view's box: {}", waze.url);
+        assert!(waze.url.contains("sandbox=true"), "the sandbox flag keeps the read anonymous");
+        assert!(waze.url.contains("zoomLevel=16"));
         // Poll number keeps keys unique per poll.
         let (a, _) = build_requests(&state(), SINZA, 16.0, 7);
         let (b, _) = build_requests(&state(), SINZA, 16.0, 8);

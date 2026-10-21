@@ -34,13 +34,22 @@ MIT OR Apache-2.0 (NOTICE).
 The document is also a live operations view. The Fleet feeds poll the vendors themselves and
 register everything they draw in the Layers panel — the **Fleet group is the events system**
 (one locked row per artifact: Bolt Vehicles + H3 Cells, Marine Vessels, Flight Aircraft, the
-SGR's Rail Atlas + Stations + Trains, each with its own eye), while the **Map group is the
-XYZ tile view** — the two systems read independently, and an eye gates exactly its artifact.
+SGR's Rail Atlas + Stations + Trains, the Waze Roads, each with its own eye), while the
+**Map group is the XYZ tile view** — the two systems read independently, and an eye gates
+exactly its artifact.
 
 - **Bolt** — vehicles as bearing-rotated pins over a ground shadow with a heading needle;
   signs in with the deployment's own trust pair (or your phone number + 4-digit code).
 - **Marine Traffic** — the vessels in view, managing its own cookie session.
 - **Flight Radar** — the aircraft in the current view's share.
+- **Waze roads** — the vendor's own road network over the vendor's own basemap (a built-in
+  tile source): the anonymous Features read the editor's web client makes for its view,
+  drawn in the editor's palette (freeways brick red over the pack, collectors yellow and
+  orange, rail and trails dashed), and the Fleet panel lays the view's roads out as a tree —
+  type groups open into named segments, the picked segment opens into its properties (the
+  vendor's class, the direction bits, the length, the speeds, the level, toll and closure
+  flags), and the map rides the pick a white halo. The roads follow the view: a pan into a
+  new area loads that area's roads.
 - **SGR trains** — the active trains only: a train rides its own times along the standard
   gauge line while it is on it, and the map draws nothing else — departures still waiting
   and finished runs live in the panel's day tree. The atlas names the railways, so the view
@@ -76,6 +85,18 @@ rail, waiting departures fanned at their origins:
 |---|
 | 0.26.0 — the corridor day in the Fleet panel: the Dar ↔ Dodoma counts, a train's chain
   tree (every stop of the ride, the coaches under it, the vendor's own seat grid). |
+
+| ![Waze roads](docs/images/TerraZone-0.27.0-waze-roads.png) |
+|---|
+| 0.27.0 — Dar es Salaam on Waze's own basemap with the Waze Roads layer over it: 1,696 of
+  the vendor's segments in the editor's palette (the orange major, the yellow minors, the
+  cased streets), the live Bolt cars riding them. |
+
+| ![Waze tree](docs/images/TerraZone-0.27.0-waze-tree.png) |
+|---|
+| 0.27.0 — the roads as a tree in the Fleet panel: the vendor's type groups (Freeway · 20,
+  Major Highway · 41), a picked segment with its properties (name, class, direction, length)
+  and its siblings, the map riding the pick. |
 
 | ![Network z8](docs/images/TerraZone-0.22.0-network-z8.png) |
 |---|

@@ -266,6 +266,7 @@ pub fn flow_for(provider: Provider) -> &'static dyn AuthFlow {
         Provider::Marine => &MarineAuth,
         Provider::Flight => &FlightAuth,
         Provider::Sgr => &SgrAuth,
+        Provider::Waze => &WazeAuth,
     }
 }
 
@@ -557,6 +558,53 @@ impl AuthFlow for FlightAuth {
             provider: Provider::Flight,
             url,
             headers,
+            cells: Vec::new(),
+            body: None,
+        })
+    }
+}
+
+/// Waze — the roads feed. Keyless like the flight feed: the vendor's own web editor reads
+/// its `Features` answer anonymously (the `sandbox=true` + venue-level query shape is what
+/// keeps it public — without it the endpoint flips to the logged-in editor mode), and the
+/// request carries the web client's headers. The poll is per view: the bbox quantizes onto
+/// a 0.01° grid so a pan inside one cell reuses the answer instead of re-asking.
+pub struct WazeAuth;
+
+impl AuthFlow for WazeAuth {
+    fn id(&self) -> &'static str {
+        "waze"
+    }
+
+    fn credential(&self) -> Credential {
+        Credential::None
+    }
+
+    fn needs_credential(&self) -> bool {
+        false
+    }
+
+    fn otp_start(&self, _phone: &str, _device: &Device, _poll: u64) -> Result<AuthRequest, String> {
+        Err("the Waze roads feed is public — nothing to sign in to".into())
+    }
+
+    fn otp_confirm(&self, _pending: &PendingSession, _code: &str, _device: &Device, _poll: u64) -> Result<AuthRequest, String> {
+        Err("the Waze roads feed is public — nothing to verify".into())
+    }
+
+    fn bootstrap(&self, _poll: u64) -> Option<AuthRequest> {
+        None
+    }
+
+    fn poll(&self, _secret: &str, view: crate::feed::ViewBox, zoom: f64, _poll_no: u64) -> Result<FleetRequest, String> {
+        // A stable key (not per-poll): the runtime dedupes the inflight ask by it, and the
+        // skip-if-unchanged check in the runtime keeps one answer serving until the view
+        // leaves its cell — the roads are the vendor's map truth, not a moving fleet.
+        Ok(FleetRequest {
+            key: "waze/roads".into(),
+            provider: Provider::Waze,
+            url: crate::providers::waze::features_url(view, zoom),
+            headers: crate::providers::waze::request_headers(),
             cells: Vec::new(),
             body: None,
         })

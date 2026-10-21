@@ -621,6 +621,11 @@ pub fn builtin_sources() -> Vec<TileSource> {
                 &[],
             )
         },
+        // Waze's own basemap — the same tiles the vendor's live map serves its clients (the
+        // row instance, the `highres` 512-px variant), anonymous with an honest user agent.
+        // The Waze Roads fleet layer draws the vendor's road data over it (the two ride
+        // together the way the vendor's own map does).
+        TileSource::new("waze", "Waze", "https://www.waze.com/row-tiles/live/base/{z}/{x}/{y}/tile.png?highres=true", "© Waze", 20, &[]),
     ]
 }
 
@@ -645,6 +650,7 @@ pub fn builtin_id(id: &str) -> bool {
             | "google-map-tiles"
             | "google-3d-tiles"
             | "noaa-nowcoast-radar"
+            | "waze"
     )
 }
 
@@ -1073,6 +1079,10 @@ mod tests {
         assert_eq!(noaa.max_zoom, 12);
         assert_eq!(noaa.attribution, "NOAA nowCOAST");
         assert!(noaa.plausible());
+        let waze = by_id("waze");
+        assert_eq!(waze.kind, TileKind::Raster);
+        assert!(waze.plausible());
+        assert_eq!(TileId::new(15, 19635, 16944).url(waze), "https://www.waze.com/row-tiles/live/base/15/19635/16944/tile.png?highres=true");
         // Every new preset is a built-in (can't be removed by the user).
         for id in ["esri-world-imagery", "google-map-tiles", "google-3d-tiles", "noaa-nowcoast-radar"] {
             assert!(builtin_id(id));

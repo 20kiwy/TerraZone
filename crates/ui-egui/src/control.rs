@@ -12,7 +12,10 @@
 //! - `ui.key {key, shift?, alt?, cmd?}` / `ui.text {text}`: synthetic keyboard input
 //! - `ui.move {x, y}` / `ui.click {x, y, button?, count?, shift?…}` / `ui.drag {x, y, toX, toY, steps?}`:
 //!   real egui pointer input in screen points (reaches every widget: panels, flyouts, dialogs)
-//! - `ui.set {brightness?, panel?, dockTab?, rulers?, outline?, …}`
+//! - `ui.set {brightness?, panel?, dockTab?, rulers?, outline?, fleetSel?, wazeOpen?, roadPick?, …}`:
+//!   the Fleet panel's state rides here too — `fleetSel` the selected feed ("" clears),
+//!   `wazeOpen` the Waze tree's expanded road type (code or null), `roadPick` the picked
+//!   segment (vendor id, street name, or null)
 //! - `ui.dialog.set {field, value}` / `ui.dialog.confirm` / `ui.dialog.cancel`
 //! - `ui.resize {width, height}`, `ui.focus`, `ui.screenshot {path?}`
 //! - `ui.render {path?, scale?}`: render the active artboard headlessly (PNG)
@@ -277,6 +280,24 @@ pub fn handle(app: &mut TerrazoneApp, ctx: &egui::Context, req: &ControlRequest)
             }
             if let Some(st) = s("status") {
                 app.ui.status = st.to_string();
+            }
+            // The Fleet panel's state, the way an operator's click would leave it: the
+            // selected feed ("" clears — its editor folds), the Waze roads tree's expanded
+            // type group (its Waze road-type code; null folds), and the picked road segment
+            // (the vendor's id, or a street name to match, null clears) — the properties the
+            // editor shows and the halo the map rides.
+            if let Some(v) = p.get("fleetSel") {
+                app.ui.fleet_sel = v.as_str().map(str::trim).filter(|st| !st.is_empty()).map(String::from);
+            }
+            if let Some(v) = p.get("wazeOpen") {
+                app.ui.fleet_draft.waze_open = v.as_u64().map(|n| n as u8);
+            }
+            if let Some(v) = p.get("roadPick") {
+                app.canvas.fleet.road_pick = match v {
+                    Value::Number(n) => n.as_i64(),
+                    Value::String(name) => app.canvas.fleet.roads.iter().find(|seg| seg.name.eq_ignore_ascii_case(name)).map(|seg| seg.id),
+                    _ => None,
+                };
             }
             for (k, flag) in [
                 ("rulers", "view.rulers"),
