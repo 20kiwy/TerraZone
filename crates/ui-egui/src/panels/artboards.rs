@@ -325,7 +325,8 @@ mod tests {
         assert!(held.iter().any(|c| matches!(&c.shape, egui::Shape::Rect(r) if r.stroke.color == t.accent)), "New Artboard is outlined");
         frame(&mut app, vec![button(new, false)]);
         let d = &app.session.active().unwrap().doc;
-        assert_eq!((d.artboards.len(), d.layers[0].children().unwrap().len()), (2, 2), "the artboard and its art");
+        let art = d.node(d.default_layer().unwrap()).unwrap().children().unwrap().len();
+        assert_eq!((d.artboards.len(), art), (2, 2), "the artboard and its art");
         assert_eq!(app.view().unwrap().artboard, 1);
     }
 }

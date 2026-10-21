@@ -243,7 +243,10 @@ fn symbols_and_effects_export_import_export_is_stable() {
     let mut blurred = Node::path(d.alloc_id(), shapes::rectangle(Rect::new(120.0, 30.0, 180.0, 90.0)), Appearance::default_art());
     blurred.appearance.effects.push(Effect { id: "stylize.dropShadow".into(), params: json!({"x": 3.0, "y": 3.0, "blur": 2.0}), visible: true });
     d.insert(Some(l), usize::MAX, blurred).unwrap();
-    let opts = ExportOptions { object_ids: terrazon_svg::ObjectIds::Minimal, ..Default::default() };
+    // Layers ride their ids: with `ObjectIds::Minimal` the groups lose the names the reimport
+    // needs to rebuild the layer stack (a multi-layer document never round-trips stably in
+    // that mode), so the default ids carry the layers through and the two exports match.
+    let opts = ExportOptions::default();
     let first = export(&d, &opts);
     let second = export(&import(&first).unwrap(), &opts);
     let strip = |s: &str| s.lines().filter(|l| !l.contains("<title>")).collect::<Vec<_>>().join("\n");

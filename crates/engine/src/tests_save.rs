@@ -143,10 +143,10 @@ fn revert_reloads_the_saved_file_in_the_same_tab() {
     let uid = s.doc().unwrap().uid;
     rect(&mut s);
     rect(&mut s);
-    assert_eq!(objects(&s), 4);
+    assert_eq!(objects(&s), 5, "the Map layer, the drawing layer and the three rectangles");
     s.execute("file.revert", &json!({})).unwrap();
     let st = s.doc().unwrap();
-    assert_eq!((s.active_index(), s.documents().len(), objects(&s)), (Some(0), 2, 2));
+    assert_eq!((s.active_index(), s.documents().len(), objects(&s)), (Some(0), 2, 3));
     assert!(!st.is_dirty() && st.history.undo.is_empty() && st.selection.is_empty());
     assert_eq!((st.uid, st.path.as_deref()), (uid, Some(native.as_str())));
     // With the file gone the document is left as it is, still modified.
@@ -155,7 +155,7 @@ fn revert_reloads_the_saved_file_in_the_same_tab() {
     assert!(s.execute("file.revert", &json!({})).is_err());
     let st = s.doc().unwrap();
     assert!(st.is_dirty());
-    assert_eq!((objects(&s), st.history.undo.len()), (3, 1));
+    assert_eq!((objects(&s), st.history.undo.len()), (4, 1));
     // Never saved: nothing to revert to.
     s.set_active(1);
     rect(&mut s);

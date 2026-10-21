@@ -274,7 +274,7 @@ fn export_without_path_returns_bytes_and_never_retargets() {
 /// A red square on a template layer and a blue one on a normal layer above it.
 fn template_doc() -> (Session, u64, u64) {
     let mut s = session(100.0, 100.0, 1);
-    let template = s.doc().unwrap().doc.layers[0].id.0;
+    let template = s.doc().unwrap().doc.default_layer().unwrap().0;
     s.execute("paint.setFill", &json!({"color": "#ff0000"})).unwrap();
     let red = s.execute("shape.rectangle", &json!({"x": 0, "y": 0, "width": 50, "height": 100})).unwrap()["id"].as_u64().unwrap();
     s.execute("layer.new", &json!({})).unwrap();

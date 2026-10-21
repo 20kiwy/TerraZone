@@ -119,7 +119,7 @@ fn every_stroke_is_outlined_in_paint_order() {
     // One undo step restores the stroked rectangle.
     s.execute("edit.undo", &json!({})).unwrap();
     let d = &s.doc().unwrap().doc;
-    assert_eq!(d.layers[0].children().unwrap()[0].appearance.items.len(), 3);
+    assert_eq!(d.node(d.default_layer().unwrap()).unwrap().children().unwrap()[0].appearance.items.len(), 3);
 }
 
 /// The live effect on a stroke item outlines that stroke (its own weight), not the top stroke.

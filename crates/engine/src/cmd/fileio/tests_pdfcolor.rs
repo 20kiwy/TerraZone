@@ -25,7 +25,7 @@ fn cmyk_pdf() -> String {
 
 fn fills(s: &Session) -> Vec<Paint> {
     let d = &s.active().unwrap().doc;
-    d.layers[0].children().unwrap().iter().filter_map(|n| n.appearance.fill().map(|f| f.paint.clone())).collect()
+    d.node(d.default_layer().unwrap()).unwrap().children().unwrap().iter().filter_map(|n| n.appearance.fill().map(|f| f.paint.clone())).collect()
 }
 
 #[test]

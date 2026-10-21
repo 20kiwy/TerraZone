@@ -222,6 +222,29 @@ default-members = ["crates/*", "apps/terrazon", "apps/terrazon-cli", "xtask"]
 # the walk stood). The Camera 3D panel carries the Orbit/Walk switch with the walk's look and
 # eye-height sliders, the scene3d.set protocol drives camMode + the walk rig, and the drape
 # refines off the walk's own height.
+# 0.28.0 — the Layer 1 round: every canvas draws on its own layer now. A document is born with
+# the base "Map" layer AND a "Layer 1" above it — the drawing layer, where every new art lands
+# (`default_layer` never targets the base Map layer, and a document that lost every layer of its
+# own grows a "Layer 1" back with the next fleet sync) — so nothing a user draws ever rides the
+# tiles or the feeds ("always make the default layer Layer 1 for all canvas"). The Fleet group
+# slots in directly ABOVE the Map layer, under every user layer — anything new a user adds rides
+# on top of the tiles and the fleet ("make sure any new layer to be on top") — and an older file
+# whose Fleet group rode on top of everything, or whose feeds drifted from the canonical order,
+# heals with the frame-one sync. The canonical order puts Waze Roads against the tiles ("make
+# sure waze is to tiles" — the vendor's roads paint just over the basemap, under every marker),
+# then Bolt, the radars, the SGR, the demo last. The Layers panel wears the feeds' type: the
+# bolt, the train, the ship, the plane and the waze arrow (five new Lucide icons) in the
+# vendors' own colours — the ones the markers draw with, Provider::color found for good
+# (Bolt's green, the deep marine navy, radar amber, SGR rail brick, Waze's cyan) — the Fleet
+# group a radar in its layer colour, every part row its feed's icon dimmed, and the empty white
+# thumbnail boxes are gone. And the tiles gather like the feeds do: a "Tiles" group row under
+# the Map layer's art holds the pinned tile layers and the basemap sources, its eye the master
+# switch (map.setTilesVisible: the basemap and every pin flip in one undo step — the whole tile
+# stack reads invisible at once, "same like tiles"), its chevron folds it, the rows indent
+# inside it, and a tile row drags onto another to reorder the pin stack (map.moveTileLayer, the
+# line shows where it lands) — the layer movement is the user's. Layer naming starts at the
+# first free "Layer N" and a new top-level layer takes the first preset colour no top-level
+# layer wears, so siblings read apart.
 # 0.27.0 — the Waze round: the vendor's own basemap rides the built-in sources (the row
 # instance's live tiles, the highres 512-px variant, anonymous), and the roads ride the fleet
 # as the fifth provider — the anonymous Features read the vendor's own editor makes for its
@@ -232,7 +255,7 @@ default-members = ["crates/*", "apps/terrazon", "apps/terrazon-cli", "xtask"]
 # Fleet panel lays the view's roads out as the layers-panel tree — type groups open into
 # named segments, the picked segment opens into its properties (type, direction, length,
 # speeds, level, toll, closures), and the map rides the pick a white halo.
-version = "0.27.0"
+version = "0.28.0"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 rust-version = "1.95"

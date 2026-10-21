@@ -18,6 +18,12 @@ fn rect(s: &mut Session, x: f64, y: f64, w: f64, h: f64) -> NodeId {
     NodeId(r["id"].as_u64().unwrap())
 }
 
+/// The layer new art lands on ("Layer 1", the default drawing layer — the base Map layer is
+/// the tiles' home and takes no art).
+fn drawing_layer(d: &terrazon_doc::Document) -> &terrazon_doc::Node {
+    d.node(d.default_layer().unwrap()).unwrap()
+}
+
 fn bounds(s: &Session, id: NodeId) -> Rect {
     s.doc().unwrap().doc.node(id).unwrap().geometric_bounds().unwrap()
 }
@@ -70,7 +76,7 @@ fn rotate_tool_alt_release_copies() {
     s.pointer(&PointerEvent::new(PointerKind::Down, 250.0, 125.0), v).unwrap();
     s.pointer(&PointerEvent::new(PointerKind::Drag, 150.0, 225.0), v).unwrap();
     s.pointer(&PointerEvent::new(PointerKind::Up, 150.0, 225.0).with_mods(alt), v).unwrap();
-    assert_eq!(s.doc().unwrap().doc.layers[0].children().unwrap().len(), 2);
+    assert_eq!(drawing_layer(&s.doc().unwrap().doc).children().unwrap().len(), 2);
 }
 
 #[test]
@@ -283,7 +289,7 @@ fn artboard_alt_drag_duplicates_it_with_its_art() {
     assert_eq!(d.artboards[0].rect, Rect::new(0.0, 0.0, 800.0, 600.0), "the original stays");
     assert_eq!((d.artboards[1].rect, d.artboards[1].name.as_str()), (Rect::new(900.0, 0.0, 1700.0, 600.0), "Artboard 1 copy"));
     assert_ne!(d.artboards[1].id, d.artboards[0].id);
-    let kids = d.layers[0].children().unwrap();
+    let kids = drawing_layer(d).children().unwrap();
     assert_eq!(kids.len(), 2, "the rectangle and its copy");
     assert_eq!(d.node(r).unwrap().geometric_bounds().unwrap().x0, 100.0);
     let copy = kids.iter().find(|n| n.id != r).unwrap();
@@ -292,7 +298,7 @@ fn artboard_alt_drag_duplicates_it_with_its_art() {
     // One undo takes the copies away.
     s.execute("edit.undo", &json!({})).unwrap();
     let d = &s.doc().unwrap().doc;
-    assert_eq!((d.artboards.len(), d.layers[0].children().unwrap().len()), (1, 1));
+    assert_eq!((d.artboards.len(), drawing_layer(d).children().unwrap().len()), (1, 1));
 }
 
 /// `artboard.move` with `copy` reports the copies it moved, and copies only the artboard when Move/Copy
@@ -310,7 +316,7 @@ fn artboard_move_copy_reports_the_copies_and_follows_move_art() {
     let out = s.execute("artboard.move", &json!({"index": 0, "dx": 0, "dy": 900, "copy": true})).unwrap();
     assert_eq!(out["moved"], json!([]));
     let d = &s.doc().unwrap().doc;
-    assert_eq!((d.artboards.len(), d.layers[0].children().unwrap().len()), (3, 2), "an artboard alone");
+    assert_eq!((d.artboards.len(), drawing_layer(d).children().unwrap().len()), (3, 2), "an artboard alone");
     assert_eq!(d.artboards[2].name, "Artboard 1 copy 2", "a name of its own");
     let ids: std::collections::HashSet<u32> = d.artboards.iter().map(|a| a.id).collect();
     assert_eq!(ids.len(), 3, "every artboard has an id of its own");

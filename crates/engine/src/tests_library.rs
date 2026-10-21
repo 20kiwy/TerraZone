@@ -17,7 +17,8 @@ fn run(s: &mut Session, id: &str, p: Value) -> Value {
 }
 
 fn objects(s: &Session) -> usize {
-    s.doc().unwrap().doc.layers[0].children().map_or(0, |c| c.len())
+    // The art a test drew: it lands on the drawing layer, never on the base Map layer.
+    s.doc().unwrap().doc.node(s.doc().unwrap().doc.default_layer().unwrap()).unwrap().children().map_or(0, |c| c.len())
 }
 
 fn hex_of(s: &Session, id: &Value, stroke: bool) -> String {

@@ -76,7 +76,7 @@ fn layer_clipping_masks_save_and_export() {
     toggle(&mut s);
     let doc = &s.doc().unwrap().doc;
     let back = terrazon_format::load(&terrazon_format::save(doc, false)).unwrap();
-    assert!(back.layers[0].clips());
+    assert!(back.node(back.default_layer().unwrap()).unwrap().clips(), "the drawing layer clips");
     assert_eq!(back, **doc);
     // An unclipped layer writes no `clip` key (older files stay as they were).
     let plain = String::from_utf8(terrazon_format::save(&session().doc().unwrap().doc, false)).unwrap();

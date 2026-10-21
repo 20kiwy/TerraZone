@@ -660,8 +660,10 @@ world", "size": 20}),
     // The Type tool: a click among the glyphs puts the caret in that type, it adds none.
     assert_eq!(click(&mut s, "type", x, first.y - 7.0), vec![src]);
     assert!(s.tool_wants_text(), "editing");
-    let texts =
-        |s: &Session| s.doc().unwrap().doc.layers[0].children().map_or(0, |c| c.iter().filter(|n| matches!(n.kind, NodeKind::Text(_))).count());
+    let texts = |s: &Session| {
+        let d = &s.doc().unwrap().doc;
+        d.node(d.default_layer().unwrap()).unwrap().children().map_or(0, |c| c.iter().filter(|n| matches!(n.kind, NodeKind::Text(_))).count())
+    };
     assert_eq!(texts(&s), 1, "no new type");
     // The Eyedropper: a click among the glyphs samples the type into the selected type.
     s.select_tool("selection", v).unwrap();

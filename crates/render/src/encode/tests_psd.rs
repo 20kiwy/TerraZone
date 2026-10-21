@@ -159,17 +159,17 @@ fn layers_are_the_top_level_layers_and_the_merged_image_is_the_render() {
     let file = export(&doc, &opts(PsdOptions::default()));
     let p = parse(&file);
     assert_eq!((p.channels, p.mode), (4, 3), "RGB with the merged image's transparency");
-    assert_eq!(p.count, -2, "two layers; negative: the merged alpha is its transparency");
+    assert_eq!(p.count, -3, "three layers; negative: the merged alpha is its transparency");
     let names: Vec<&str> = p.records.iter().map(|r| r.name.as_str()).collect();
-    assert_eq!(names, ["Map", "Top"], "bottom first");
+    assert_eq!(names, ["Map", "Layer 1", "Top"], "bottom first");
     let red = &p.records[0];
     assert_eq!(red.rect, [10, 10, 40, 40], "cropped to what the layer paints");
     assert_eq!((red.channels, red.blend, red.opacity, red.hidden, red.divider), (4, *b"norm", 255, false, None));
-    assert_eq!(p.records[1].rect, [0, 0, 50, 60], "the blue square and the corner");
+    assert_eq!(p.records[2].rect, [0, 0, 50, 60], "the blue square and the corner");
 
     // A reader decodes it: the layers, in place, and the merged image.
     let psd = ::psd::Psd::from_bytes(&file).unwrap();
-    assert_eq!((psd.width(), psd.height(), psd.layers().len()), (100, 60, 2));
+    assert_eq!((psd.width(), psd.height(), psd.layers().len()), (100, 60, 3));
     let red = psd.layer_by_name("Map").unwrap().rgba();
     assert_eq!(pixel(&red, 100, 20, 20), [255, 0, 0, 255]);
     assert_eq!(pixel(&red, 100, 50, 45)[3], 0, "the blue square isn't on Map");
@@ -218,6 +218,8 @@ fn maximum_editability_writes_groups_and_an_object_per_layer() {
             (rect.as_str(), None),
             ("Map", Some(1)),
             ("</Layer group>", Some(3)),
+            ("Layer 1", Some(1)),
+            ("</Layer group>", Some(3)),
             (rect.as_str(), None),
             ("</Layer group>", Some(3)),
             ("Corner", None),
@@ -227,11 +229,11 @@ fn maximum_editability_writes_groups_and_an_object_per_layer() {
         "groups end below their layers and open above them; the hidden square is left out"
     );
     // The object keeps its opacity and blending in its record; groups pass through.
-    assert_eq!((p.records[4].opacity, p.records[4].blend, p.records[4].rect), (128, *b"mul ", [20, 30, 50, 60]));
-    assert_eq!((p.records[8].blend, p.records[8].opacity), (*b"pass", 255));
-    assert_eq!(p.records[6].rect, [0, 0, 6, 6]);
+    assert_eq!((p.records[6].opacity, p.records[6].blend, p.records[6].rect), (128, *b"mul ", [20, 30, 50, 60]));
+    assert_eq!((p.records[10].blend, p.records[10].opacity), (*b"pass", 255));
+    assert_eq!(p.records[8].rect, [0, 0, 6, 6]);
     let psd = ::psd::Psd::from_bytes(&file).unwrap();
-    assert_eq!((psd.layers().len(), psd.groups().len()), (3, 3));
+    assert_eq!((psd.layers().len(), psd.groups().len()), (3, 4));
     assert_eq!(merged(&file), merged(&export(&doc, &opts(PsdOptions::default()))), "the same merged image");
 
     // Hidden layers: written hidden, drawn as if visible, instead of left out.
@@ -246,13 +248,17 @@ fn maximum_editability_writes_groups_and_an_object_per_layer() {
 #[test]
 fn hidden_top_level_layers_are_optional() {
     let mut doc = doc();
-    Arc::make_mut(&mut doc.layers[1]).visible = false;
+    Arc::make_mut(&mut doc.layers[2]).visible = false;
     let names = |o: PsdOptions| parse(&export(&doc, &opts(o))).records.iter().map(|r| (r.name.clone(), r.hidden)).collect::<Vec<_>>();
-    assert_eq!(names(PsdOptions::default()), [("Map".to_string(), false)]);
-    assert_eq!(names(PsdOptions { hidden_layers: true, ..PsdOptions::default() }), [("Map".to_string(), false), ("Top".to_string(), true)]);
+    assert_eq!(names(PsdOptions::default()), [("Map".to_string(), false), ("Layer 1".to_string(), false)]);
+    assert_eq!(
+        names(PsdOptions { hidden_layers: true, ..PsdOptions::default() }),
+        [("Map".to_string(), false), ("Layer 1".to_string(), false), ("Top".to_string(), true)]
+    );
 
     // Nothing left to write as a layer: no transparency plane either (it would read as a channel).
     Arc::make_mut(&mut doc.layers[0]).visible = false;
+    Arc::make_mut(&mut doc.layers[1]).visible = false;
     let file = export(&doc, &opts(PsdOptions::default()));
     let p = parse(&file);
     assert_eq!((p.channels, p.count), (3, 0));
@@ -268,7 +274,7 @@ fn guides_are_not_layers() {
         }
     });
     let o = opts(PsdOptions { max_editability: true, ..PsdOptions::default() });
-    assert_eq!(parse(&export(&b.build(), &o)).count, -3, "the group and the square");
+    assert_eq!(parse(&export(&b.build(), &o)).count, -5, "the groups and the squares");
 }
 
 #[test]
@@ -276,7 +282,7 @@ fn a_background_colour_is_the_bottom_layer() {
     let doc = doc();
     let file = export(&doc, &RasterExportOptions { background: Some([0, 0, 255]), ..opts(PsdOptions::default()) });
     let p = parse(&file);
-    assert_eq!((p.channels, p.count), (3, 3), "opaque: no merged alpha");
+    assert_eq!((p.channels, p.count), (3, 4), "opaque: no merged alpha");
     assert_eq!((p.records[0].name.as_str(), p.records[0].rect), ("Background", [0, 0, 60, 100]));
     let psd = ::psd::Psd::from_bytes(&file).unwrap();
     assert!(psd.layer_by_name("Background").unwrap().rgba().chunks(4).all(|p| p == [0, 0, 255, 255]));
@@ -288,7 +294,7 @@ fn cmyk_planes_hold_the_inks_inverted_and_gray_is_one_plane() {
     let doc = doc();
     let cmyk = export(&doc, &opts(PsdOptions { color_model: ColorModel::Cmyk, ..PsdOptions::default() }));
     let p = parse(&cmyk);
-    assert_eq!((p.channels, p.mode, p.count, p.records[0].channels), (5, 4, -2, 5));
+    assert_eq!((p.channels, p.mode, p.count, p.records[0].channels), (5, 4, -3, 5));
 
     let gray = export(&doc, &opts(PsdOptions { color_model: ColorModel::Gray, layers: false, ..PsdOptions::default() }));
     let p = parse(&gray);

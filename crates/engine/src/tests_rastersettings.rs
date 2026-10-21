@@ -29,7 +29,7 @@ fn shadowed(s: &mut Session) -> NodeId {
 /// The decoded pixels of the first raster effect image of `doc` flattened for output.
 fn effect_image(doc: &Document) -> image::RgbaImage {
     let flat = crate::flatten_raster_effects(doc).unwrap();
-    let kids = flat.layers[0].children().unwrap();
+    let kids = flat.node(flat.default_layer().unwrap()).unwrap().children().unwrap();
     let NodeKind::Group { children, .. } = &kids[0].kind else { panic!("a shadow becomes a group") };
     let NodeKind::Image(im) = &children[0].kind else { panic!("the image goes under the object") };
     image::load_from_memory(&flat.images[&im.key].bytes).unwrap().to_rgba8()

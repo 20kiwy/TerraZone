@@ -95,13 +95,17 @@ fn screens_and_rasterize_take_anti_aliasing() {
     s.execute("select.set", &json!({"ids": [id]})).unwrap();
     s.execute("object.rasterize", &json!({"ppi": 72, "antiAlias": "none", "background": "transparent"})).unwrap();
     let doc = &s.doc().unwrap().doc;
-    let terrazon_doc::NodeKind::Image(im) = &doc.layers[0].children().unwrap()[0].kind else { panic!("rasterized to an image") };
+    let terrazon_doc::NodeKind::Image(im) = &doc.node(doc.default_layer().unwrap()).unwrap().children().unwrap()[0].kind else {
+        panic!("rasterized to an image")
+    };
     assert!(hard(&rgba(&doc.images[&im.key].bytes)));
     s.execute("edit.undo", &json!({})).unwrap();
     s.execute("select.set", &json!({"ids": [id]})).unwrap();
     s.execute("object.rasterize", &json!({"ppi": 72, "background": "black"})).unwrap();
     let doc = &s.doc().unwrap().doc;
-    let terrazon_doc::NodeKind::Image(im) = &doc.layers[0].children().unwrap()[0].kind else { panic!("rasterized to an image") };
+    let terrazon_doc::NodeKind::Image(im) = &doc.node(doc.default_layer().unwrap()).unwrap().children().unwrap()[0].kind else {
+        panic!("rasterized to an image")
+    };
     assert_eq!(rgba(&doc.images[&im.key].bytes).get_pixel(0, 0).0, [0, 0, 0, 255]);
     assert!(s.execute("object.rasterize", &json!({"antiAlias": "fuzzy"})).is_err());
 }

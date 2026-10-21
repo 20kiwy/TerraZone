@@ -99,7 +99,10 @@ fn plane_widgets_drag_with_shift_and_alt() {
     // Alt copies the objects; a plain drag moves the plane alone.
     let g = grid(&s);
     let (_, w) = g.plane_widgets().into_iter().find(|(p, _)| *p == Plane::Right).unwrap();
-    let count = |s: &Session| s.doc().unwrap().doc.layers[0].children().unwrap().len();
+    let count = |s: &Session| {
+        let d = &s.doc().unwrap().doc;
+        d.node(d.default_layer().unwrap()).unwrap().children().unwrap().len()
+    };
     let k = count(&s);
     drag(&mut s, &[w, w + Vec2::new(-12.0, 0.0), w + Vec2::new(-12.0, 0.0)], Mods { alt: true, ..Default::default() });
     assert_eq!(count(&s), k + 1);

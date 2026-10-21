@@ -23,9 +23,15 @@ fn frame(app: &mut TerrazoneApp, modifiers: Modifiers, events: Vec<Event>) -> eg
 
 fn last_object_bounds(app: &TerrazoneApp) -> (f64, f64) {
     let st = app.session.active().unwrap();
-    let id = st.doc.layers[0].children().unwrap().last().unwrap().id;
+    let id = drawing_layer(&st.doc).children().unwrap().last().unwrap().id;
     let b = st.doc.node(id).unwrap().geometric_bounds().unwrap();
     (b.x0, b.y0)
+}
+
+/// The layer new art lands on ("Layer 1", the default drawing layer — the base Map layer is
+/// the tiles' home and takes no art).
+fn drawing_layer(d: &terrazon_doc::Document) -> &terrazon_doc::Node {
+    d.node(d.default_layer().unwrap()).unwrap()
 }
 
 #[test]
@@ -46,10 +52,10 @@ fn cmd_shift_v_pastes_in_place() {
         .unwrap();
     // The text egui read from the clipboard comes with the chord still held.
     frame(&mut app, Modifiers::COMMAND | Modifiers::SHIFT, vec![Event::Paste(svg.clone())]);
-    assert_eq!(app.session.active().unwrap().doc.layers[0].children().unwrap().len(), 2);
+    assert_eq!(drawing_layer(&app.session.active().unwrap().doc).children().unwrap().len(), 2);
     assert_eq!(last_object_bounds(&app), (10.0, 20.0), "Cmd+Shift+V pastes in place");
     frame(&mut app, Modifiers::COMMAND, vec![Event::Paste(svg)]);
-    assert_eq!(app.session.active().unwrap().doc.layers[0].children().unwrap().len(), 3);
+    assert_eq!(drawing_layer(&app.session.active().unwrap().doc).children().unwrap().len(), 3);
     assert_ne!(last_object_bounds(&app), (10.0, 20.0), "Cmd+V pastes offset or centred");
 }
 

@@ -48,6 +48,12 @@ fn triangle() -> PathData {
     PathData::single(SubPath::polyline(&[Point::new(0.0, 0.0), Point::new(30.0, 0.0), Point::new(15.0, 20.0)], true))
 }
 
+/// The layer new art lands on ("Layer 1", the default drawing layer — the base Map layer is
+/// the tiles' home and takes no art).
+fn drawing_layer(d: &terrazon_doc::Document) -> &terrazon_doc::Node {
+    d.node(d.default_layer().unwrap()).unwrap()
+}
+
 #[test]
 fn object_filter_recolours_the_selection_as_one_undo_step() {
     let mut s = session();
@@ -90,7 +96,7 @@ fn object_filters_add_replace_and_generate_objects() {
     assert_eq!(ids[0], a);
     let st = s.doc().unwrap();
     assert!(st.doc.node(b).is_none());
-    let layer: Vec<NodeId> = st.doc.layers[0].children().unwrap().iter().map(|n| n.id).collect();
+    let layer: Vec<NodeId> = drawing_layer(&st.doc).children().unwrap().iter().map(|n| n.id).collect();
     assert_eq!(layer, [a, ids[1]]);
     assert_eq!(st.doc.node(ids[1]).unwrap().name.as_deref(), Some("Tri"));
     assert_eq!(st.selection.objects, ids);
@@ -100,7 +106,7 @@ fn object_filters_add_replace_and_generate_objects() {
     run(&mut s, "select.none", json!({}));
     let r = run(&mut s, "plugin.run", json!({"id": "test.engine.generate"}));
     let made = NodeId(r["ids"][0].as_u64().unwrap());
-    assert_eq!(s.doc().unwrap().doc.layers[0].children().unwrap().last().unwrap().id, made);
+    assert_eq!(drawing_layer(&s.doc().unwrap().doc).children().unwrap().last().unwrap().id, made);
 }
 
 #[test]

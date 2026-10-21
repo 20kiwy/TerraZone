@@ -197,10 +197,10 @@ fn hidden_layers_are_kept_hidden_when_asked() {
         assert!(kept.contains("id=\"Notes\"") && kept.contains("display") && kept.matches("<path").count() == 2, "{kept}");
         // Viewers don't show it.
         assert_eq!(resvg_render(&kept, 100, 100).pixel(70, 70), [255, 255, 255, 255], "{kept}");
-        // It reopens as a hidden layer with its art.
+        // It reopens as a hidden layer with its art (the empty drawing layer rides along).
         let back = import(&kept).unwrap();
-        assert_eq!(back.layers.len(), 2, "{kept}");
-        let notes = &back.layers[1];
+        assert_eq!(back.layers.len(), 3, "{kept}");
+        let notes = &back.layers[2];
         assert_eq!((notes.name.as_deref(), notes.visible), (Some("Notes"), false));
         assert_eq!(notes.children().unwrap().len(), 1);
         assert!(back.layers[0].visible);
@@ -401,7 +401,11 @@ fn top_level_groups_become_named_layers() {
     assert_eq!(outline(&import(&switched).unwrap()), expected, "{switched}");
     // Art beside the groups puts everything in one layer, as before.
     let loose = EXPORTED_LAYERS.replace("</svg>", "<rect x=\"1\" y=\"1\" width=\"2\" height=\"2\"/></svg>");
-    assert_eq!(import(&loose).unwrap().layers.iter().map(|l| l.name.as_deref()).collect::<Vec<_>>(), [Some("Map")]);
+    assert_eq!(
+        import(&loose).unwrap().layers.iter().map(|l| l.name.as_deref()).collect::<Vec<_>>(),
+        [Some("Map"), Some("Layer 1")],
+        "the art rides the first layer; the empty drawing one keeps its row"
+    );
 }
 
 /// Layer "Base" holding a path, a named group, a clipping sublayer and a hidden sublayer "Notes"
@@ -453,21 +457,24 @@ fn sublayers_round_trip() {
         "    Path",
         "    Layer Deep",
         "      Path",
+        "Layer Layer 1",
         "Layer Top",
         "  Path",
     ];
-    assert_eq!(outline(&d), expected);
+    assert_eq!(outline(&d), expected, "the drawing layer rides between the built layers");
+    let roundtripped = expected;
     let styles = [terrazon_svg::Styling::PresentationAttributes, terrazon_svg::Styling::InlineStyle, terrazon_svg::Styling::InternalCss];
     for styling in styles {
         // Saved with the hidden sublayer: the same tree comes back.
         let kept = export(&d, &ExportOptions { hidden_layers: true, styling, ..Default::default() });
         assert_eq!(kept.matches("data-vc-layer").count(), 3, "sublayers only: {kept}");
         let back = import(&kept).unwrap();
-        assert_eq!(outline(&back), expected, "{kept}");
+        assert_eq!(outline(&back), roundtripped, "{kept}");
         // A sublayer takes its layer's colour.
         back.walk(|n| {
             if let NodeKind::Layer { color, .. } = &n.kind
                 && n.name.as_deref() != Some("Top")
+                && n.name.as_deref() != Some("Layer 1")
             {
                 assert_eq!(*color, terrazon_doc::LayerColor::Preset(0), "{:?}", n.name);
             }
@@ -479,7 +486,19 @@ fn sublayers_round_trip() {
     let plain = import(&export(&d, &ExportOptions::default())).unwrap();
     assert_eq!(
         outline(&plain),
-        ["Layer Base", "  Path", "  Group Pair", "    Path", "    Path", "  Layer Window", "    Path", "    Path", "Layer Top", "  Path"]
+        [
+            "Layer Base",
+            "  Path",
+            "  Group Pair",
+            "    Path",
+            "    Path",
+            "  Layer Window",
+            "    Path",
+            "    Path",
+            "Layer Layer 1",
+            "Layer Top",
+            "  Path",
+        ]
     );
 }
 
@@ -490,7 +509,11 @@ fn a_root_element_names_the_one_layer() {
   <rect x="20" y="50" width="120" height="60" style="fill:none;stroke:#000;stroke-width:4"/>
   <g id="HiddenSub" style="display:none;"><circle cx="45" cy="175" r="25"/></g>
 </svg>"##;
-    assert_eq!(outline(&import(svg).unwrap()), ["Layer Main", "  Path", "  Group HiddenSub (hidden)", "    Path"]);
+    assert_eq!(
+        outline(&import(svg).unwrap()),
+        ["Layer Main", "  Path", "  Group HiddenSub (hidden)", "    Path", "Layer Layer 1"],
+        "the art rides the first layer; the empty drawing one keeps its row"
+    );
     // `data-name` when the id can't hold the name.
     let named = svg.replace("id=\"Main\"", "id=\"Main_Art\" data-name=\"Main Art\"");
     assert_eq!(import(&named).unwrap().layers[0].name.as_deref(), Some("Main Art"));
@@ -499,7 +522,7 @@ fn a_root_element_names_the_one_layer() {
     assert_eq!(names(&svg.replace("<rect", "<g id=\"Art\"><rect").replace("stroke-width:4\"/>", "stroke-width:4\"/></g>")), ["Art", "HiddenSub"]);
     // Nor from the id Inkscape gives its root.
     let inkscape = svg.replace("id=\"Main\"", "id=\"svg8\" xmlns:inkscape=\"http://www.inkscape.org/namespaces/inkscape\" inkscape:version=\"1.3\"");
-    assert_eq!(names(&inkscape), ["Map"]);
+    assert_eq!(names(&inkscape), ["Map", "Layer 1"], "the Inkscape root id is not a name; the drawing layer keeps its own");
 }
 
 #[test]

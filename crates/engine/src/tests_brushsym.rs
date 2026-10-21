@@ -212,7 +212,7 @@ fn new_symbol_replaces_selection_with_instance_of_same_bounds() {
     assert!(close(n.geometric_bounds().unwrap(), b, 1e-9), "{:?} vs {b:?}", n.geometric_bounds());
     let d = &s.doc().unwrap().doc;
     assert_eq!(d.symbols.len(), 1);
-    assert_eq!(d.layers[0].children().unwrap().len(), 1);
+    assert_eq!(d.node(d.default_layer().unwrap()).unwrap().children().unwrap().len(), 1);
     let l = s.execute("symbol.list", &json!({})).unwrap();
     assert_eq!(l["symbols"][0]["instances"], 1);
     assert_eq!(l["symbols"][0]["size"], json!([80.0, 40.0]));

@@ -425,7 +425,7 @@ fn line_family_tools_draw_and_click_asks_dialog() {
     drag(&mut s, "spiral", &[(400.0, 300.0), (450.0, 300.0)], Mods::default());
     drag(&mut s, "rectangularGrid", &[(100.0, 300.0), (200.0, 400.0)], Mods::default());
     drag(&mut s, "polarGrid", &[(500.0, 100.0), (600.0, 200.0)], Mods::default());
-    let top = s.doc().unwrap().doc.layers[0].children().unwrap().len();
+    let top = s.doc().unwrap().doc.node(s.doc().unwrap().doc.default_layer().unwrap()).unwrap().children().unwrap().len();
     assert_eq!(top, 4);
     let b = paths(&s)[0].1.bounds().unwrap();
     assert!((b.width() - 100.0).abs() < 1e-6 && (b.height() - 50.0).abs() < 1e-6, "{b:?}");

@@ -299,7 +299,7 @@ mod tests {
         let st = app.session.doc().unwrap();
         assert_eq!(st.history.undo.len(), undo + 1);
         let mut images = 0;
-        st.doc.layers[0].walk(&mut |n| images += matches!(n.kind, terrazon_doc::NodeKind::Image(_)) as usize);
+        st.doc.node(st.doc.default_layer().unwrap()).unwrap().walk(&mut |n| images += matches!(n.kind, terrazon_doc::NodeKind::Image(_)) as usize);
         assert_eq!(images, 1, "balance 0 rasterizes");
         assert!(!transparent_left(&app));
     }

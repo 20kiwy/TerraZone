@@ -57,7 +57,7 @@ fn compressed_saves_open_by_their_content() {
     for name in ["a.terrazon", "a.drawcraft", "a.svgz", "a.bin"] {
         let r = open(&mut s, name, &packed);
         assert_eq!(r["format"], "terrazon", "{name}");
-        assert_eq!(s.doc().unwrap().doc.node_count(), 2);
+        assert_eq!(s.doc().unwrap().doc.node_count(), 3, "the Map layer, the drawing layer and the rectangle");
     }
 }
 
@@ -84,7 +84,7 @@ fn saves_for_older_versions() {
         let j = json_of(&bytes);
         assert_eq!((j["format"].as_str(), j["version"].as_u64()), (Some("drawcraft"), Some(v)));
         open(&mut s, "old.drawcraft", &bytes);
-        assert_eq!(s.doc().unwrap().doc.node_count(), 2);
+        assert_eq!(s.doc().unwrap().doc.node_count(), 3, "the Map layer, the drawing layer and the rectangle");
     }
     for bad in [json!({"version": 0}), json!({"version": 9}), json!({"version": "two"})] {
         assert!(s.execute("document.save", &bad).is_err(), "{bad}");

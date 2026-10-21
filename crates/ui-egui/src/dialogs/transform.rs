@@ -127,7 +127,8 @@ mod tests {
         crate::dialogs::confirm(&mut app).unwrap();
         let prefs = &app.session.prefs;
         assert_eq!((prefs.scale_strokes, prefs.scale_corners), (false, true));
-        let n = &app.session.doc().unwrap().doc.layers[0].children().unwrap()[0];
+        let d = &app.session.doc().unwrap().doc;
+        let n = &d.node(d.default_layer().unwrap()).unwrap().children().unwrap()[0];
         assert_eq!(n.appearance.stroke_width(), 1.0);
         let (cmd, p) = app.session.journal.last().unwrap();
         assert_eq!((cmd.as_str(), &p["strokes"], &p["corners"]), ("object.scale", &json!(false), &json!(true)));

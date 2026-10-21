@@ -291,10 +291,33 @@ pub fn bolt_signed_phone(app: &TerrazoneApp) -> Option<String> {
 /// the markers cover (the document's own view, wherever it is drawn).
 pub fn tick(app: &mut TerrazoneApp, view: Option<FleetView>) {
     // Frame-one housekeeping: a document the engine just created or opened picks its Fleet group
-    // up here (background sync — no undo step), the same way the Map layer is always there. And
-    // a session the user kept in the settings vault re-attaches itself: Bolt's sign-in outlives
-    // documents, so a fresh one is live again without anyone typing anything.
-    if app.session.active().is_some_and(|st| !st.doc.layers.iter().any(|n| n.name.as_deref() == Some("Fleet"))) {
+    // up here (background sync — no undo step), the same way the Map layer is always there. An
+    // older file whose Fleet group rode on top of every user layer, or whose feeds drifted from
+    // the canonical order (Waze Roads against the tiles), or that lost its drawing layer, heals
+    // with the same sync.
+    let needs_sync = app.session.active().is_some_and(|st| {
+        let d = &st.doc;
+        let map = d.layers.iter().position(|n| n.name.as_deref() == Some("Map"));
+        match d.layers.iter().position(|n| n.name.as_deref() == Some("Fleet")) {
+            None => true,
+            Some(f) => {
+                map.is_some_and(|m| f != m + 1)
+                    || !d.layers.iter().any(|l| !l.locked && l.name.as_deref() != Some("Map"))
+                    || d.layers[f].children().is_some_and(|ch| {
+                        let want = ["Waze Roads", "Bolt", "Marine Radar", "Flight Radar", "SGR Trains", "Demo"];
+                        let mut last = -1i32;
+                        ch.iter().filter_map(|c| want.iter().position(|w| c.name.as_deref() == Some(*w)).map(|i| i as i32)).any(|i| {
+                            if i < last {
+                                return true;
+                            }
+                            last = i;
+                            false
+                        })
+                    })
+            }
+        }
+    });
+    if needs_sync {
         let _ = app.run("fleet.syncTree", serde_json::json!({}));
     }
     // The deployment's own trust: a username + device pair in the environment (or a ready

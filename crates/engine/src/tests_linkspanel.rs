@@ -116,7 +116,8 @@ fn go_to_selects_the_image() {
     let r = run(&mut s, "links.goTo", json!({"id": id.0}));
     assert_eq!(r, json!({"id": id.0, "bounds": [-100.0, 0.0, 500.0, 300.0]}));
     assert_eq!(s.doc().unwrap().selection.objects, vec![id]);
-    let rect = s.doc().unwrap().doc.layers[0].children().unwrap()[1].id;
+    let d = &s.doc().unwrap().doc;
+    let rect = d.node(d.default_layer().unwrap()).unwrap().children().unwrap()[1].id;
     assert!(s.execute("links.goTo", &json!({"id": rect.0})).is_err(), "not an image");
 }
 
@@ -249,7 +250,7 @@ fn placement_options_read_set_and_round_trip() {
     save(&mut s, &doc_path);
     let saved: Value = serde_json::from_slice(&std::fs::read(&doc_path).unwrap()).unwrap();
     assert_eq!(
-        saved["document"]["layers"][0]["kind"]["children"][0]["kind"]["placement"],
+        saved["document"]["layers"][1]["kind"]["children"][0]["kind"]["placement"],
         json!({"preserve": "fill", "align": "topRight", "clip": true})
     );
     open(&mut s, &doc_path);
@@ -259,7 +260,7 @@ fn placement_options_read_set_and_round_trip() {
     run(&mut s, "links.placementOptions", json!({"preserve": "bounds", "align": "center", "clip": false}));
     save(&mut s, &doc_path);
     let saved: Value = serde_json::from_slice(&std::fs::read(&doc_path).unwrap()).unwrap();
-    assert_eq!(saved["document"]["layers"][0]["kind"]["children"][0]["kind"]["placement"], Value::Null, "the default isn't written");
+    assert_eq!(saved["document"]["layers"][1]["kind"]["children"][0]["kind"]["placement"], Value::Null, "the default isn't written");
 }
 
 #[test]

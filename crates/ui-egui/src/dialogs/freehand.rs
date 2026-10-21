@@ -201,7 +201,14 @@ mod tests {
             }
             crate::canvas::dispatch(app, &pointer(terrazon_tools::PointerKind::Up, pts[40]), view);
             let doc = &app.session.doc().unwrap().doc;
-            doc.layers[0].children().unwrap().last().unwrap().path_data().map_or(0, |p| p.subpaths.iter().map(|s| s.anchors.len()).sum::<usize>())
+            doc.node(doc.default_layer().unwrap())
+                .unwrap()
+                .children()
+                .unwrap()
+                .last()
+                .unwrap()
+                .path_data()
+                .map_or(0, |p| p.subpaths.iter().map(|s| s.anchors.len()).sum::<usize>())
         };
         let precise = anchors(&mut app, 100.0);
         app.run("tool.options", json!({"tool": "pencil"})).unwrap();

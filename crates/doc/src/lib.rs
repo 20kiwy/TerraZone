@@ -744,6 +744,11 @@ impl Document {
         // The base layer every document starts with is "Map": the tiles the Tiles panel pins are
         // its sub-layers, like QGIS's base layer, so a fresh document reads as the map it is.
         d.layers.push(Arc::new(Node::layer(id, "Map", LayerColor::Preset(0))));
+        // And above it, the drawing layer: "Layer 1" is where new art lands (the Fleet group
+        // slots in between when the runtime syncs it), so nothing a user draws ever rides the
+        // tiles or the feeds — "always make the default layer Layer 1 for all canvas".
+        let id = d.alloc_id();
+        d.layers.push(Arc::new(Node::layer(id, "Layer 1", LayerColor::Preset(0))));
         d
     }
 
@@ -899,30 +904,48 @@ impl Document {
         Some((parent, idx, n))
     }
 
-    /// Default target layer: the topmost visible, unlocked layer.
+    /// Default target layer: the topmost visible, unlocked layer that isn't the base "Map"
+    /// (new art must never land on the tiles — the Map layer is the basemap's home, not a
+    /// drawing layer). A document of nothing but the base layers still targets the Map layer.
     pub fn default_layer(&self) -> Option<NodeId> {
-        self.layers.iter().rev().find(|l| l.visible && !l.locked).or(self.layers.last()).map(|l| l.id)
+        self.layers
+            .iter()
+            .rev()
+            .find(|l| l.visible && !l.locked && l.name.as_deref() != Some("Map"))
+            .or_else(|| self.layers.iter().rev().find(|l| l.visible && !l.locked))
+            .or(self.layers.last())
+            .map(|l| l.id)
     }
 
     /// Add a new top-level layer above all others.
     pub fn add_layer(&mut self, name: Option<&str>) -> NodeId {
         let id = self.alloc_id();
-        let n = self.layers.len();
         let name = name.map(str::to_string).unwrap_or_else(|| self.next_layer_name());
-        self.layers.push(Arc::new(Node::layer(id, &name, LayerColor::Preset((n % LAYER_COLORS.len()) as u8))));
+        // The colour is the first preset no top-level layer wears yet (siblings read apart),
+        // cycling once they are all taken.
+        let used: std::collections::HashSet<u8> = self
+            .layers
+            .iter()
+            .filter_map(|l| match &l.kind {
+                NodeKind::Layer { color: LayerColor::Preset(i), .. } => Some(i % LAYER_COLORS.len() as u8),
+                _ => None,
+            })
+            .collect();
+        let colour = (0..LAYER_COLORS.len() as u8).find(|i| !used.contains(i)).unwrap_or_else(|| (self.layers.len() % LAYER_COLORS.len()) as u8);
+        self.layers.push(Arc::new(Node::layer(id, &name, LayerColor::Preset(colour))));
         id
     }
     /// The default name of a new layer or sublayer, "Layer N". Layers and sublayers share the
-    /// numbering: it starts after the number of layers there are and skips any layer's name.
+    /// numbering: the first "Layer N" no layer's name takes (the default drawing layer itself
+    /// is "Layer 1", so a fresh document's first new layer is "Layer 2").
     pub fn next_layer_name(&self) -> String {
-        let (mut count, mut taken) = (0, std::collections::HashSet::new());
+        let mut taken = std::collections::HashSet::new();
         self.walk(|n| {
             if n.is_layer() {
-                count += 1;
                 taken.extend(n.name.as_deref());
             }
         });
-        (count + 1..).map(|i| format!("Layer {i}")).find(|name| !taken.contains(name.as_str())).unwrap_or_default()
+        (1..).map(|i| format!("Layer {i}")).find(|name| !taken.contains(name.as_str())).unwrap_or_default()
     }
 
     /// Visit every node depth first in paint order (bottom to top).
@@ -1186,8 +1209,10 @@ mod tests {
     #[test]
     fn new_document_has_layer_and_artboard() {
         let d = Document::new(612.0, 792.0);
-        assert_eq!(d.layers.len(), 1);
+        assert_eq!(d.layers.len(), 2);
         assert_eq!(d.layers[0].display_name(), "Map", "the base layer is the map itself, not a generic Layer 1");
+        assert_eq!(d.layers[1].display_name(), "Layer 1", "the drawing layer every canvas starts with");
+        assert_eq!(d.default_layer(), Some(d.layers[1].id), "new art lands on Layer 1, never on the Map layer");
         assert_eq!(d.artboards[0].rect, Rect::new(0.0, 0.0, 612.0, 792.0));
     }
 
@@ -1215,7 +1240,7 @@ mod tests {
         assert_eq!(d.parent_of(a), Some(d.layers[0].id));
         assert_eq!(d.layer_of(b), Some(d.layers[0].id));
         assert!(d.node(NodeId(999)).is_none());
-        assert_eq!(d.node_count(), 3);
+        assert_eq!(d.node_count(), 4, "the two rects, the Map layer and the drawing layer");
     }
 
     #[test]

@@ -110,7 +110,7 @@ fn save_keeps_hidden_layers_and_export_leaves_them_out() {
     let d = &s.doc().unwrap().doc;
     let layers: Vec<(Option<&str>, bool, usize)> =
         d.layers.iter().map(|l| (l.name.as_deref(), l.visible, l.children().map_or(0, Vec::len))).collect();
-    assert_eq!(layers, [(Some("Map"), true, 1), (Some("Notes"), false, 1)]);
+    assert_eq!(layers, [(Some("Map"), true, 0), (Some("Layer 1"), true, 1), (Some("Notes"), false, 1)]);
 }
 
 #[test]

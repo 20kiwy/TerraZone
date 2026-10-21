@@ -248,14 +248,14 @@ fn layers_become_dxf_layers() {
     let layers: Vec<(String, String)> =
         table(&out, "LAYER").iter().map(|o| (get(o, 2).unwrap().to_string(), get(o, 62).unwrap().to_string())).collect();
     let names: Vec<&str> = layers.iter().map(|l| l.0.as_str()).collect();
-    assert_eq!(names, ["0", "Map", "Dims_ _top_", "Notes"], "the template layer is left out");
-    assert!(layers[3].1.starts_with('-'), "a hidden layer is switched off");
+    assert_eq!(names, ["0", "Map", "Layer 1", "Dims_ _top_", "Notes"], "the template layer is left out (the empty drawing layer rides along)");
+    assert!(layers[4].1.starts_with('-'), "a hidden layer is switched off");
     let on: Vec<String> = entities(&out).iter().map(|e| get(e, 8).unwrap().to_string()).collect();
     assert_eq!(on, ["Map", "Map", "Map", "Map", "Dims_ _top_", "Dims_ _top_", "Notes", "Notes"]);
     // Before 2000: capitals, letters, digits and $-_ only.
     let r12 = export(&d, &DxfOptions { version: DxfVersion::R12, ..opts(&d) }).unwrap();
     let names: Vec<String> = table(&r12, "LAYER").iter().map(|o| get(o, 2).unwrap().to_string()).collect();
-    assert_eq!(names, ["0", "MAP", "DIMS___TOP_", "NOTES"]);
+    assert_eq!(names, ["0", "MAP", "LAYER_1", "DIMS___TOP_", "NOTES"]);
 }
 
 #[test]

@@ -80,7 +80,7 @@ fn a_50k_path_save_returns_at_once_and_the_file_appears_later() {
     assert_eq!(st.path.as_deref(), Some("/docs/big.terrazon"));
     assert_eq!(app.ui.status, "Saved /docs/big.terrazon");
     let bytes = files.lock().unwrap()[0].1.clone();
-    assert_eq!(terrazon_format::load(&bytes).unwrap().node_count(), 50_001);
+    assert_eq!(terrazon_format::load(&bytes).unwrap().node_count(), 50_002); // 50k paths + the Map and drawing layers
 }
 
 #[test]
@@ -96,7 +96,7 @@ fn the_dirty_state_follows_the_snapshot() {
     background::wait_all(&mut app);
     assert!(app.session.doc().unwrap().is_dirty(), "the edit came after the snapshot");
     let saved = terrazon_format::load(&files.lock().unwrap()[0].1).unwrap();
-    assert_eq!(saved.node_count(), 2, "the file holds the snapshot");
+    assert_eq!(saved.node_count(), 3, "the file holds the snapshot"); // the rectangle + the two layers
     // Undoing back to the snapshot is clean again.
     app.run("edit.undo", json!({})).unwrap();
     assert!(!app.session.doc().unwrap().is_dirty());

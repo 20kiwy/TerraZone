@@ -235,7 +235,7 @@ mod tests {
         let names = symbols(&mut app);
         assert_eq!(names.len(), 1, "{names:?}");
         let doc = &app.session.active().unwrap().doc;
-        let first = doc.layers[0].children().unwrap().first().unwrap();
+        let first = doc.node(doc.default_layer().unwrap()).unwrap().children().unwrap().first().unwrap();
         assert!(matches!(first.kind, NodeKind::SymbolInstance { .. }), "the art became an instance");
         // Dragging the symbol's tile out of the panel carries the symbol.
         frame(&ctx, &mut app, vec![]);

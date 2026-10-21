@@ -84,7 +84,8 @@ pub(super) fn pasted(app: &TerrazoneApp) -> Vec<Node> {
 }
 
 fn count(app: &TerrazoneApp) -> usize {
-    app.session.active().unwrap().doc.layers[0].children().unwrap().len()
+    let d = &app.session.active().unwrap().doc;
+    d.node(d.default_layer().unwrap()).unwrap().children().unwrap().len()
 }
 
 /// A 4 × 2 px blue PNG.

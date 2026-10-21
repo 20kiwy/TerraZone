@@ -121,7 +121,7 @@ mod tests {
         assert!(app.ui.dialog.is_none());
         let doc = &app.session.active().unwrap().doc;
         assert_eq!(PerspectiveGrid::current(doc).right_offset, 40.0);
-        assert_eq!(doc.layers[0].children().unwrap().len(), 2, "copied");
+        assert_eq!(doc.node(doc.default_layer().unwrap()).unwrap().children().unwrap().len(), 2, "copied");
         // The UI command opens it too; unknown planes are refused.
         app.run("ui.perspectivePlane", json!({"plane": "ground"})).unwrap();
         assert_eq!(heading(app.ui.dialog.as_ref().unwrap()), "Horizontal Plane");

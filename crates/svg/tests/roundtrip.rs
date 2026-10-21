@@ -109,8 +109,8 @@ fn multiple_layers_roundtrip() {
     let n2 = rect_node(&mut d, Rect::new(5.0, 5.0, 50.0, 50.0), Appearance::default_art());
     d.insert(Some(l2), 0, n2).unwrap();
     let r = roundtrip(&d);
-    assert_eq!(r.layers.len(), 2);
-    assert_eq!(r.layers[1].name.as_deref(), Some("Top"));
+    assert_eq!(r.layers.len(), 3, "the base Map layer, the empty drawing one, Top");
+    assert_eq!(r.layers[2].name.as_deref(), Some("Top"));
     assert_eq!(r.node_count(), d.node_count());
 }
 

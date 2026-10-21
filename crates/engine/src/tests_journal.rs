@@ -174,7 +174,7 @@ fn a_batch_that_opens_a_new_document_is_journaled_and_replays() {
     assert_eq!(s.documents().len(), 2);
     assert_eq!(s.active_index(), Some(1));
     for (st, objects) in s.documents().iter().zip([1, 2]) {
-        assert_eq!(st.doc.node_count(), 1 + objects);
+        assert_eq!(st.doc.node_count(), 2 + objects, "the Map layer, the drawing layer and the objects");
         assert_eq!(st.history.undo.iter().map(|h| h.label.as_str()).collect::<Vec<_>>(), ["Two documents"]);
         assert!(st.interaction.is_none());
     }
@@ -187,7 +187,7 @@ fn a_batch_that_opens_a_new_document_is_journaled_and_replays() {
     assert_eq!(r.active_index(), s.active_index());
     // Undo in the new document takes its part of the batch back.
     s.execute("edit.undo", &json!({})).unwrap();
-    assert_eq!(s.doc().unwrap().doc.node_count(), 1);
+    assert_eq!(s.doc().unwrap().doc.node_count(), 2);
 }
 
 #[test]
@@ -236,7 +236,7 @@ fn a_failed_batch_brings_back_a_document_it_reverted() {
 fn a_failed_batch_gives_back_the_highlighted_rows_and_the_current_layer() {
     let mut s = Session::new();
     s.execute("file.new", &json!({"created": null})).unwrap();
-    let layer = s.doc().unwrap().doc.layers[0].id;
+    let layer = s.doc().unwrap().doc.default_layer().unwrap();
     // A step that highlights the layer's row, then one that fails: the highlight goes back too.
     let steps = json!([{"command": "layer.setCurrent", "params": {"id": layer.0}}, {"command": "no.such.command"}]);
     assert!(s.execute("command.batch", &json!({ "commands": steps })).is_err());

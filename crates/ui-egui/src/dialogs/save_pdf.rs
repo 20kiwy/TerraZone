@@ -1047,8 +1047,12 @@ mod tests {
         assert_eq!(r["warnings"], json!([]));
         let back = terrazon_pdf::import(&written.borrow()[0].1).unwrap();
         let names: Vec<_> = back.layers.iter().filter_map(|l| l.name.clone()).collect();
-        // The empty pages of the other artboards come in as page layers.
-        assert_eq!(names[..2], ["Map", "Notes"]);
+        // Every layer comes back: the base Map layer, the drawing one, the Notes layer with the
+        // ellipse, and the empty pages of the other artboards as their own page layers (an empty
+        // layer reopens after them — the pages mark the art-bearing layers first).
+        assert_eq!(names, ["Map", "Layer 1", "Page 2", "Page 3", "Notes"]);
+        let notes = back.layers.iter().find(|l| l.name.as_deref() == Some("Notes")).unwrap();
+        assert!(notes.children().unwrap().iter().any(|n| n.path_data().is_some()), "the ellipse rides Notes");
     }
 
     #[test]

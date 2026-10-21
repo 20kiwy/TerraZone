@@ -25,9 +25,10 @@ fn psd_options_pick_flat_or_layers_and_the_colour_model() {
     let (path, psd) = written.borrow()[0].clone();
     assert_eq!(path, "/out/Untitled-1.psd");
     assert_eq!(&psd[..4], b"8BPS");
-    // A group with the ellipse: three records, the merged image's alpha their transparency.
+    // A group with the ellipse: five records now (the Map and Layer 1 layers join them), the
+    // merged image's alpha their transparency.
     let at = 26 + 4 + 4 + u32::from_be_bytes(psd[30..34].try_into().unwrap()) as usize;
-    assert_eq!(i16::from_be_bytes([psd[at + 8], psd[at + 9]]), -3);
+    assert_eq!(i16::from_be_bytes([psd[at + 8], psd[at + 9]]), -5);
     assert!(app.ui.dialog.is_none());
 
     // Flat: flattened on white, so the background list starts at White.

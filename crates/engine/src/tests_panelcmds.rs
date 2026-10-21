@@ -116,7 +116,7 @@ fn duplicate_artboard_copies_its_art() {
     assert_eq!(left(&s, copies[0]), 830.0, "the copy sits on the new artboard as the original on its own");
     s.execute("edit.undo", &json!({})).unwrap();
     let d = &s.doc().unwrap().doc;
-    assert_eq!((d.artboards.len(), d.layers[0].children().unwrap().len()), (1, 1), "one undo step");
+    assert_eq!((d.artboards.len(), d.node(d.default_layer().unwrap()).unwrap().children().unwrap().len()), (1, 1), "one undo step");
     // Off (the tool's option or the param): the artboard alone.
     s.set_tool_options(Some("artboard"), json!({"moveArt": false}).as_object().unwrap());
     assert_eq!(s.execute("artboard.duplicate", &json!({})).unwrap()["ids"], json!([]));

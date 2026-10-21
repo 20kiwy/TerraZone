@@ -438,7 +438,7 @@ mod tests {
         let st = s.doc().unwrap();
         assert!(st.doc.node(NodeId(a)).unwrap().mask.is_none());
         assert_eq!(st.selection.len(), 2);
-        assert_eq!(st.doc.layers[0].children().unwrap().len(), 2);
+        assert_eq!(st.doc.node(st.doc.default_layer().unwrap()).unwrap().children().unwrap().len(), 2);
         s.execute("edit.undo", &json!({})).unwrap();
         assert!(s.doc().unwrap().doc.node(NodeId(a)).unwrap().mask.is_some());
     }

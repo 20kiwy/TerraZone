@@ -77,7 +77,7 @@ fn release_while_editing_leaves_editing_first() {
     let st = s.doc().unwrap();
     assert!(st.doc.mask_edit.is_none() && st.isolation.is_none() && !has_edit_layer(&st.doc));
     assert!(mask(&s, obj).is_none());
-    let layer = &st.doc.layers[0];
+    let layer = st.doc.node(st.doc.default_layer().unwrap()).unwrap();
     let kids = layer.children().unwrap();
     assert_eq!(kids.len(), 2, "the object and its released mask art");
     assert_eq!(kids[1].geometric_bounds().unwrap().x0, 50.0);
@@ -205,7 +205,7 @@ fn saving_while_editing_writes_no_editing_layer() {
     let bytes = data(&s.execute("document.save", &json!({})).unwrap());
     let back = terrazon_format::load(&bytes).unwrap();
     assert!(back.mask_edit.is_none() && !has_edit_layer(&back));
-    assert_eq!(back.layers.len(), 1);
+    assert_eq!(back.layers.len(), 2, "the Map layer and the drawing layer");
     // The edit made while editing is in the saved mask.
     assert_eq!(back.node(obj).unwrap().mask.as_ref().unwrap().art.geometric_bounds().unwrap().x0, 50.0);
     // Still editing in the session.
@@ -216,7 +216,7 @@ fn saving_while_editing_writes_no_editing_layer() {
     v["document"]["layers"] = full["layers"].clone();
     v["document"]["mask_edit"] = json!({"object": obj.0, "layer": doc(&s).mask_edit.unwrap().layer.0});
     let old = terrazon_format::load(&serde_json::to_vec(&v).unwrap()).unwrap();
-    assert!(old.mask_edit.is_none() && !has_edit_layer(&old) && old.layers.len() == 1);
+    assert!(old.mask_edit.is_none() && !has_edit_layer(&old) && old.layers.len() == 2, "clean, with the Map and drawing layers");
 }
 
 #[test]

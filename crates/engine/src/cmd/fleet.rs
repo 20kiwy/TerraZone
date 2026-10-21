@@ -27,6 +27,15 @@ fn fleet_group_index(d: &Document) -> Option<usize> {
     d.layers.iter().position(|n| n.name.as_deref() == Some("Fleet"))
 }
 
+/// The base Map layer's index among the top-level layers.
+fn map_layer_index(d: &Document) -> Option<usize> {
+    d.layers.iter().position(|n| n.name.as_deref() == Some("Map"))
+}
+
+/// The feeds' order in the group: Waze Roads first — it rides against the tiles (the vendor's
+/// roads paint just over the basemap, under every marker), then the radars, the demo last.
+const FEED_ORDER: [&str; 6] = ["Waze Roads", "Bolt", "Marine Radar", "Flight Radar", "SGR Trains", "Demo"];
+
 /// What each feed draws, as the layer registry's rows under its feed row: everything the
 /// canvas shows for a feed is registered where the feed is — the vehicles, the H3 cells
 /// they ride, the SGR's rail atlas, stations and trains — each with its own eye.
@@ -46,7 +55,11 @@ pub(crate) fn parts_for(provider: Option<Provider>) -> &'static [&'static str] {
 /// sub-layer node (Bolt, Marine Radar, Flight Radar, Demo) like the tiles sit locked under
 /// "Map", and every drawn artifact holds its own locked row under its feed ("Vehicles",
 /// "H3 Cells", the SGR's "Rail Atlas", "Stations", "Trains"). An old file whose fleet block
-/// lacks the system layers is healed here too.
+/// lacks the system layers is healed here too: the group slots in directly ABOVE the Map
+/// layer (under every user layer, so anything new a user adds rides on top of the fleet and
+/// the tiles), the feeds keep the canonical order with Waze Roads against the tiles, and a
+/// document with no unlocked drawing layer grows a "Layer 1" on top — the default layer new
+/// art lands on.
 ///
 /// Returns the ids of the rows this sync **created** (the group's first one included), so the
 /// runtime can open them in the Layers panel — a row born folded reads as missing.
@@ -59,18 +72,30 @@ pub(crate) fn sync_fleet_tree(d: &mut Document) -> Vec<NodeId> {
     ensure_system_layer(d, Provider::Flight);
     ensure_system_layer(d, Provider::Sgr);
     ensure_system_layer(d, Provider::Waze);
+    // The group sits directly above the base Map layer (below every user layer): the fleet
+    // paints over the tiles, and the user's own layers stack on top of both. An old file whose
+    // Fleet group rode on top of everything is moved down here.
+    let place = map_layer_index(d).map(|i| i + 1).unwrap_or(usize::MAX);
     let gi = match fleet_group_index(d) {
-        Some(i) => i,
+        Some(i) => {
+            if map_layer_index(d).is_some() && i != place {
+                let group = d.layers.remove(i);
+                let at = map_layer_index(d).map(|mi| mi + 1).unwrap_or(d.layers.len());
+                d.layers.insert(at.min(d.layers.len()), group);
+            }
+            fleet_group_index(d).unwrap_or(i)
+        }
         None => {
             let id = d.alloc_id();
             let mut group = Node::layer(id, "Fleet", LayerColor::Preset(1));
-            // Locked: a system group. New art keeps landing on the drawing layers (Map and
-            // friends) — `default_layer` skips locked layers — and the panel ops can't drag,
-            // merge or delete the feeds' rows out from under the runtime.
+            // Locked: a system group. New art keeps landing on the drawing layers (Layer 1 and
+            // friends) — `default_layer` skips locked layers and the base Map layer — and the
+            // panel ops can't drag, merge or delete the feeds' rows out from under the runtime.
             group.locked = true;
-            d.layers.push(Arc::new(group));
+            let at = place.min(d.layers.len());
+            d.layers.insert(at, Arc::new(group));
             created.push(id);
-            d.layers.len() - 1
+            at
         }
     };
     // Keep an existing group locked too (a file saved by an older build may have it unlocked).
@@ -108,6 +133,15 @@ pub(crate) fn sync_fleet_tree(d: &mut Document) -> Vec<NodeId> {
             children.push(Arc::new(child));
             created.push(id);
         }
+    }
+    // The feeds keep the canonical order — Waze Roads at the group's bottom, against the
+    // tiles it paints over; the rest above it; rows the user added under the group stay,
+    // after the system's (their order is theirs).
+    {
+        let node = Arc::make_mut(&mut d.layers[gi]);
+        let NodeKind::Layer { children, .. } = &mut node.kind else { return created };
+        let rank = |n: &Arc<Node>| FEED_ORDER.iter().position(|f| Some(*f) == n.name.as_deref()).unwrap_or(FEED_ORDER.len());
+        children.sort_by_key(rank);
     }
     // The drawn artifacts: every feed row holds the rows of what it draws, each locked (the
     // runtime owns their existence) and visible (the eye is the user's control). A part row
@@ -159,6 +193,18 @@ pub(crate) fn sync_fleet_tree(d: &mut Document) -> Vec<NodeId> {
             born_parents.push(feed_id);
         }
         created.extend(born_parents);
+    }
+    // The drawing layer: every canvas carries a "Layer 1" for the user's own art — a document
+    // of nothing but the system rows (the Map layer and the feeds) grows one on top here, so
+    // drawings never land on the tiles or the fleet ("always make the default layer Layer 1
+    // for all canvas"). A document the user stripped of every layer of their own on purpose
+    // grows it back with the next sync — the row is part of the document like the Map layer.
+    if !d.layers.iter().any(|l| !l.locked && l.name.as_deref() != Some("Map")) {
+        let name = d.next_layer_name();
+        let id = d.alloc_id();
+        let layer = Node::layer(id, &name, LayerColor::Preset(0));
+        d.layers.push(Arc::new(layer));
+        created.push(id);
     }
     created
 }
@@ -554,7 +600,7 @@ mod tests {
         s.execute("fleet.syncTree", &json!({})).unwrap();
         assert_eq!(s.active().unwrap().history.undo.len(), undo_before, "the sync is background work");
         let i = fleet_group(&s).expect("the Fleet group is part of every document");
-        assert_eq!(fleet_children(&s), vec!["Marine Radar", "Flight Radar", "SGR Trains", "Waze Roads"]);
+        assert_eq!(fleet_children(&s), vec!["Waze Roads", "Marine Radar", "Flight Radar", "SGR Trains"]);
         let group = &s.active().unwrap().doc.layers[i];
         assert!(group.locked, "the Fleet group is a locked system group (new art never lands in it)");
         match &group.kind {
@@ -673,9 +719,9 @@ mod tests {
     fn signing_in_adds_bolt_and_history_stays_clean() {
         let mut s = session();
         s.execute("fleet.syncTree", &json!({})).unwrap();
-        assert_eq!(fleet_children(&s), vec!["Marine Radar", "Flight Radar", "SGR Trains", "Waze Roads"]);
+        assert_eq!(fleet_children(&s), vec!["Waze Roads", "Marine Radar", "Flight Radar", "SGR Trains"]);
         s.execute("fleet.setAuth", &json!({ "provider": "bolt", "token": "tok123" })).unwrap();
-        assert_eq!(fleet_children(&s), vec!["Marine Radar", "Flight Radar", "SGR Trains", "Waze Roads", "Bolt"]);
+        assert_eq!(fleet_children(&s), vec!["Waze Roads", "Bolt", "Marine Radar", "Flight Radar", "SGR Trains"]);
         let q = s.execute("fleet.sources", &json!({})).unwrap();
         let bolt = q["layers"].as_array().unwrap().iter().find(|l| l["provider"] == "Bolt").unwrap().clone();
         assert_eq!(bolt["authSet"], true);
@@ -685,7 +731,7 @@ mod tests {
         // session landings and every poll) is a background edit — the undo list stays at
         // zero, so the user's Ctrl+Z never walks a session the machine refreshed itself.
         assert!(s.active().unwrap().history.undo.is_empty(), "the sign-in is not tracked history");
-        assert_eq!(fleet_children(&s), vec!["Marine Radar", "Flight Radar", "SGR Trains", "Waze Roads", "Bolt"]);
+        assert_eq!(fleet_children(&s), vec!["Waze Roads", "Bolt", "Marine Radar", "Flight Radar", "SGR Trains"]);
     }
 
     #[test]
@@ -702,7 +748,7 @@ mod tests {
         s.execute("fleet.clearAuth", &json!({ "provider": "marine" })).unwrap();
         let m = s.active().unwrap().doc.fleet.layer(terrazon_fleet::Provider::Marine).unwrap();
         assert!(m.auth.is_system() && m.needs_bootstrap());
-        assert_eq!(fleet_children(&s), vec!["Marine Radar", "Flight Radar", "SGR Trains", "Waze Roads"], "the row never leaves");
+        assert_eq!(fleet_children(&s), vec!["Waze Roads", "Marine Radar", "Flight Radar", "SGR Trains"], "the row never leaves");
         // A cookie override still lands through setAuth (scripts), and reset takes it back too.
         s.execute("fleet.setAuth", &json!({ "provider": "marine", "cookie": "k=v" })).unwrap();
         let m = s.active().unwrap().doc.fleet.layer(terrazon_fleet::Provider::Marine).unwrap();
@@ -712,7 +758,7 @@ mod tests {
         // Bolt's sign-out still removes its row entirely.
         s.execute("fleet.setAuth", &json!({ "provider": "bolt", "token": "t" })).unwrap();
         s.execute("fleet.clearAuth", &json!({ "provider": "bolt" })).unwrap();
-        assert_eq!(fleet_children(&s), vec!["Marine Radar", "Flight Radar", "SGR Trains", "Waze Roads"]);
+        assert_eq!(fleet_children(&s), vec!["Waze Roads", "Marine Radar", "Flight Radar", "SGR Trains"]);
     }
 
     #[test]
@@ -760,7 +806,7 @@ mod tests {
         let mut s = session();
         s.execute("fleet.syncTree", &json!({})).unwrap();
         s.execute("fleet.demo", &json!({ "on": true })).unwrap();
-        assert_eq!(fleet_children(&s), vec!["Marine Radar", "Flight Radar", "SGR Trains", "Waze Roads", "Demo"]);
+        assert_eq!(fleet_children(&s), vec!["Waze Roads", "Marine Radar", "Flight Radar", "SGR Trains", "Demo"]);
         s.execute("fleet.setAuth", &json!({ "provider": "flight", "cookie": "c" })).unwrap();
         let children = fleet_children(&s);
         assert!(children.contains(&"Demo".to_string()) && children.contains(&"Flight Radar".to_string()));
@@ -779,7 +825,7 @@ mod tests {
         }
         // The demo off removes its sub-layer but the group (and the radars) stay.
         s.execute("fleet.demo", &json!({ "on": false })).unwrap();
-        assert_eq!(fleet_children(&s), vec!["Marine Radar", "Flight Radar", "SGR Trains", "Waze Roads"]);
+        assert_eq!(fleet_children(&s), vec!["Waze Roads", "Marine Radar", "Flight Radar", "SGR Trains"]);
     }
 
     #[test]

@@ -100,7 +100,7 @@ fn batch_is_one_undo_step_and_rolls_back_on_error() {
         ]}),
     );
     assert_eq!(s.doc().unwrap().history.undo.len(), before + 1);
-    assert_eq!(s.doc().unwrap().doc.node_count(), 4);
+    assert_eq!(s.doc().unwrap().doc.node_count(), 5, "the Map layer, the drawing layer, the group and its two members");
     let snapshot = doc_json(&s.doc().unwrap().doc);
     // A failing step rolls the whole batch back and leaves no interaction open.
     let r = s.execute(
@@ -118,7 +118,7 @@ fn batch_is_one_undo_step_and_rolls_back_on_error() {
     assert!(r.is_err());
     assert!(!s.in_interaction());
     exec(&mut s, "edit.undo", json!({}));
-    assert_eq!(s.doc().unwrap().doc.node_count(), 1);
+    assert_eq!(s.doc().unwrap().doc.node_count(), 2, "back to the Map and drawing layers");
 }
 
 #[test]

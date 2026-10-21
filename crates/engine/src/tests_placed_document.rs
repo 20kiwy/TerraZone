@@ -171,7 +171,7 @@ fn the_preview_is_saved_so_the_document_shows_it_without_its_file() {
     std::fs::create_dir_all(dir.file("poster")).unwrap();
     save(&mut s, &doc_path);
     let saved: Value = serde_json::from_slice(&std::fs::read(&doc_path).unwrap()).unwrap();
-    let kind = &saved["document"]["layers"][0]["kind"]["children"][0]["kind"];
+    let kind = &saved["document"]["layers"][1]["kind"]["children"][0]["kind"];
     assert_eq!(kind["type"], "placeddocument");
     assert_eq!(kind["link"]["relative"], "../logo.terrazon");
     let key = kind["key"].as_str().unwrap();
@@ -194,7 +194,7 @@ fn the_preview_is_saved_so_the_document_shows_it_without_its_file() {
     // Saved for older apps: the art it shows (here its preview), as plain objects.
     let old: Value =
         serde_json::from_slice(&decode(&s.execute("document.serialize", &json!({"format": "terrazon", "version": 2})).unwrap())).unwrap();
-    let old = old["document"]["layers"][0]["kind"]["children"][0].to_string();
+    let old = old["document"]["layers"][1]["kind"]["children"][0].to_string();
     assert!(old.contains("\"image\"") && !old.contains("placeddocument"), "{old}");
 }
 

@@ -90,7 +90,10 @@ fn fast_web_view_through_every_pdf_path() {
     let v = s.execute("document.open", &json!({"dataBase64": terrazon_format::base64_encode(&pdf), "name": "web.pdf"})).unwrap();
     assert!(v.is_object());
     assert_eq!(s.doc().unwrap().doc.artboards.len(), 3);
-    assert!(s.doc().unwrap().doc.layers[0].children().unwrap().iter().any(|n| n.path_data().is_some()), "the ellipse is back");
+    assert!(
+        s.doc().unwrap().doc.node(s.doc().unwrap().doc.default_layer().unwrap()).unwrap().children().unwrap().iter().any(|n| n.path_data().is_some()),
+        "the ellipse is back"
+    );
     // document.export takes the same options; without them the file isn't linearised.
     let v = s.execute("document.export", &json!({"format": "pdf", "fastWebView": true, "range": "2"})).unwrap();
     assert!(linearised(&terrazon_format::base64_decode(v["dataBase64"].as_str().unwrap()).unwrap()));

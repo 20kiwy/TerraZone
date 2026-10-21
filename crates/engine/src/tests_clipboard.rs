@@ -514,7 +514,7 @@ fn front_and_back_without_a_selection_use_the_current_layers_ends() {
     let a = rect(&mut s, 0.0, 0.0, 10.0, 10.0);
     let b = rect(&mut s, 20.0, 0.0, 10.0, 10.0);
     copy(&mut s, &[a, b]);
-    let layer = |s: &Session| doc(s).layers[0].children().unwrap().iter().map(|n| n.id).collect::<Vec<_>>();
+    let layer = |s: &Session| doc(s).node(doc(s).default_layer().unwrap()).unwrap().children().unwrap().iter().map(|n| n.id).collect::<Vec<_>>();
     s.execute("select.none", &json!({})).unwrap();
     let back = ids_of(&s.execute("edit.pasteInBack", &json!({})).unwrap());
     assert_eq!(&layer(&s)[..2], &back[..], "pasted at the bottom (index 0), in order");
@@ -574,12 +574,12 @@ fn in_place_pastes_go_onto_the_artboard_named() {
 #[test]
 fn paste_remembers_layers_restores_the_source_layers() {
     let mut s = session();
-    let first = doc(&s).layers[0].id;
+    let first = doc(&s).default_layer().unwrap();
     let a = rect(&mut s, 0.0, 0.0, 10.0, 10.0);
     let art = id_of(&s.execute("layer.new", &json!({"name": "Art"})).unwrap());
     let b = rect(&mut s, 20.0, 0.0, 10.0, 10.0);
     copy(&mut s, &[a, b]);
-    assert_eq!(s.clipboard.source_layers, [Some("Map".to_string()), Some("Art".to_string())]);
+    assert_eq!(s.clipboard.source_layers, [Some("Layer 1".to_string()), Some("Art".to_string())]);
     let other = id_of(&s.execute("layer.new", &json!({"name": "Other"})).unwrap());
     assert_eq!(s.execute("layer.pasteRemembersLayers", &json!({})).unwrap()["on"], true);
     assert!(doc(&s).paste_remembers_layers);
@@ -592,8 +592,8 @@ fn paste_remembers_layers_restores_the_source_layers() {
     s.execute("layer.pasteRemembersLayers", &json!({"on": true})).unwrap();
     let ids = ids_of(&s.execute("edit.paste", &json!({})).unwrap());
     let names: Vec<_> = ids.iter().map(|id| doc(&s).node(doc(&s).parent_of(*id).unwrap()).unwrap().name.clone().unwrap()).collect();
-    assert_eq!(names, ["Map", "Art"]);
-    assert_eq!(doc(&s).layers.len(), 2, "Map exists; Art is new");
+    assert_eq!(names, ["Layer 1", "Art"]);
+    assert_eq!(doc(&s).layers.len(), 3, "Map and Layer 1 exist; Art is new");
     // The option is an undoable document setting.
     s.execute("edit.undo", &json!({})).unwrap();
     s.execute("edit.undo", &json!({})).unwrap();

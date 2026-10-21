@@ -98,6 +98,9 @@ enum LayersDrag {
     Rows(Vec<NodeId>),
     /// The selected-art square: the selected objects go to the row it is dropped on.
     Art,
+    /// A pinned tile layer's row, dragged to reorder the pin stack (dropped on another tile
+    /// row, above or below it).
+    Tile(String),
 }
 
 /// A drag down the eye or lock column: every row it passes takes `value`.
@@ -230,6 +233,7 @@ struct RowsKey {
     open: u64,
     layers_only: bool,
     query: String,
+    tiles_open: bool,
 }
 
 /// The rows the panel shows, top down: the layers (only the opacity mask's while one is edited)
@@ -283,27 +287,34 @@ fn push_rows(
 }
 
 /// The rows of the active document as [`list_disp`] lists them, listed again only when the
-/// document, its open rows, the search or Show Layers Only changed.
-fn rows_of_doc(ui: &Ui, st: &terrazon_engine::DocState, opts: &PanelOptions, query: &str) -> Arc<Vec<DispRow>> {
-    let now =
-        RowsKey { uid: st.uid, revision: st.revision, open: st.layers_open.generation(), layers_only: opts.layers_only, query: query.to_string() };
+/// document, its open rows, the search, Show Layers Only or the Tiles group's fold changed.
+fn rows_of_doc(ui: &Ui, st: &terrazon_engine::DocState, opts: &PanelOptions, query: &str, tiles_open: bool) -> Arc<Vec<DispRow>> {
+    let now = RowsKey {
+        uid: st.uid,
+        revision: st.revision,
+        open: st.layers_open.generation(),
+        layers_only: opts.layers_only,
+        query: query.to_string(),
+        tiles_open,
+    };
     let id = key("rows");
     if let Some((was, rows)) = ui.data(|d| d.get_temp::<(RowsKey, Arc<Vec<DispRow>>)>(id))
         && was == now
     {
         return rows;
     }
-    let rows = Arc::new(list_disp(&st.doc, &st.layers_open, opts, query));
+    let rows = Arc::new(list_disp(&st.doc, &st.layers_open, opts, query, tiles_open));
     ui.data_mut(|d| d.insert_temp(id, (now, rows.clone())));
     rows
 }
 
 /// The panel's flat display list: the document's node rows, with the map's tile layers and
-/// sources nested where they belong — the Map layer's own children (the tiles draw under its
-/// art, the sources under the tiles) — shown while the Map row is open, folded away with it.
-/// A document without a Map row (a paper file that pinned tiles anyway) keeps the old
-/// appendix at the bottom.
-fn list_disp(doc: &Document, open: &OpenRows, opts: &PanelOptions, query: &str) -> Vec<DispRow> {
+/// sources nested where they belong — under the Map layer's own children (the tiles draw
+/// under its art, the sources under the tiles), gathered under a "Tiles" group row the way
+/// the feeds gather under Fleet: one row with its own eye makes the whole tile stack
+/// invisible at once. A document without a Map row (a paper file that pinned tiles anyway)
+/// keeps the old appendix at the bottom, under its own Tiles group row.
+fn list_disp(doc: &Document, open: &OpenRows, opts: &PanelOptions, query: &str, tiles_open: bool) -> Vec<DispRow> {
     let mut out: Vec<DispRow> = list_rows(doc, open, opts, query).into_iter().map(DispRow::Node).collect();
     let tiles: Vec<terrazon_map::TileLayer> =
         doc.map.tile_layers.iter().filter(|tl| query.is_empty() || tl.name.to_lowercase().contains(query)).cloned().collect();
@@ -312,9 +323,24 @@ fn list_disp(doc: &Document, open: &OpenRows, opts: &PanelOptions, query: &str) 
     if tiles.is_empty() && sources.is_empty() {
         return out;
     }
+    // The Tiles group's own row: the master eye covers the basemap and every pinned tile
+    // layer (the sources ride the basemap's eye, `map.visible`).
+    let group = DispRow::TileGroup {
+        visible: doc.map.visible || tiles.iter().any(|tl| tl.visible),
+        count: tiles.len() + sources.len(),
+        open: tiles_open || !query.is_empty(),
+    };
+    // The pinned tile layers over the basemap, top-most first (the last pinned draws last,
+    // over its siblings); the sources the bottom-most children — one indent deeper, inside
+    // the group.
+    let block = |depth: usize| -> Vec<DispRow> {
+        let mut ins: Vec<DispRow> = tiles.iter().rev().cloned().map(|tl| DispRow::Tile(tl, depth)).collect();
+        ins.extend(sources.iter().cloned().map(|src| DispRow::Source(src, depth)));
+        ins
+    };
     let Some(at) = out.iter().position(|r| matches!(r, DispRow::Node(row) if row.depth == 0 && row.node.name.as_deref() == Some("Map"))) else {
-        out.extend(tiles.iter().rev().cloned().map(DispRow::Tile));
-        out.extend(sources.into_iter().map(DispRow::Source));
+        out.push(group);
+        out.extend(block(0));
         return out;
     };
     // The tiles show while the Map row is open (a search opens every row); closed, they fold
@@ -324,21 +350,21 @@ fn list_disp(doc: &Document, open: &OpenRows, opts: &PanelOptions, query: &str) 
     }
     // After the Map row's own subtree (its art rows), before the next top-level layer.
     let end = at + 1 + out[at + 1..].iter().take_while(|r| matches!(r, DispRow::Node(row) if row.depth > 0)).count();
-    // The pinned tile layers over the basemap, top-most first (the last pinned draws last,
-    // over its siblings); the sources the bottom-most children.
-    let mut ins: Vec<DispRow> = tiles.iter().rev().cloned().map(DispRow::Tile).collect();
-    ins.extend(sources.into_iter().map(DispRow::Source));
+    let mut ins = vec![group];
+    ins.extend(block(1));
     out.splice(end..end, ins);
     out
 }
 
-/// One row of the panel's flat display list: a document node, or one of the map's tile rows
+/// One row of the panel's flat display list: a document node, one of the map's tile rows
 /// (the pinned tile layers and the basemap sources — not nodes, but registered in the tree
-/// where they draw: the Map layer's children).
+/// where they draw: the Map layer's children), or the "Tiles" group row that gathers them
+/// (the second number is the indent steps past the tile rows' own).
 enum DispRow {
     Node(Row),
-    Tile(terrazon_map::TileLayer),
-    Source(terrazon_map::TileSource),
+    Tile(terrazon_map::TileLayer, usize),
+    Source(terrazon_map::TileSource, usize),
+    TileGroup { visible: bool, count: usize, open: bool },
 }
 
 /// Everything one frame of the panel reads.
@@ -371,6 +397,8 @@ struct Out {
     toggle: Vec<(NodeId, bool)>,
     /// A pinned tile layer's row clicked: (its id, add to the picks rather than replace them).
     tile_pick: Option<(String, bool)>,
+    /// The Tiles group row's chevron: fold or unfold it (the row itself is not a node).
+    tiles_fold: Option<bool>,
 }
 
 pub fn show(app: &mut TerrazoneApp, ui: &mut Ui) {
@@ -406,7 +434,8 @@ pub fn show(app: &mut TerrazoneApp, ui: &mut Ui) {
     }
     let query = crate::widgets::search_field(ui, egui::Id::new("layers-search"), tl!("Search All")).trim().to_lowercase();
     let Some(st) = app.session.active() else { return };
-    let list = rows_of_doc(ui, st, &app.ui.layers_panel, &query);
+    let tiles_open: bool = ui.data(|d| d.get_temp(key("tiles-open"))).unwrap_or(true);
+    let list = rows_of_doc(ui, st, &app.ui.layers_panel, &query, tiles_open);
     let total_rows = list.len();
     let view = View {
         doc: &doc,
@@ -436,8 +465,9 @@ pub fn show(app: &mut TerrazoneApp, ui: &mut Ui) {
             for r in list.get(range.start..range.end).unwrap_or_default() {
                 match r {
                     DispRow::Node(item) => row(ui, &view, item, &mut out),
-                    DispRow::Tile(tl) => tile_row(ui, &view, tl, &mut out),
-                    DispRow::Source(src) => source_row(ui, &view, src, &mut out),
+                    DispRow::Tile(tl, depth) => tile_row(ui, &view, tl, *depth, &mut out),
+                    DispRow::Source(src, depth) => source_row(ui, &view, src, *depth, &mut out),
+                    DispRow::TileGroup { visible, count, open } => tiles_group_row(ui, &view, *visible, *count, *open, &mut out),
                 }
             }
         })
@@ -461,6 +491,10 @@ pub fn show(app: &mut TerrazoneApp, ui: &mut Ui) {
             st.layers_open.set(id, open);
         }
     }
+    // The Tiles group's fold (the row is not a node, its state lives with the panel).
+    if let Some(open) = out.tiles_fold.take() {
+        ui.data_mut(|d| d.insert_temp(key("tiles-open"), open));
+    }
     // The column drag: live while it lasts, one undo step when the button is released.
     let released = ui.input(|i| i.pointer.any_released());
     let changed = out.column.is_some();
@@ -483,11 +517,13 @@ pub fn show(app: &mut TerrazoneApp, ui: &mut Ui) {
     // Dragged rows show as a dimmed row under the pointer.
     if !released
         && let Some(drag) = egui::DragAndDrop::payload::<LayersDrag>(ui.ctx())
-        && let LayersDrag::Rows(ids) = &*drag
-        && let Some(src) = ids.first()
         && let Some(pos) = ui.input(|i| i.pointer.latest_pos())
     {
-        drag_ghost(ui, &view, *src, pos);
+        match &*drag {
+            LayersDrag::Rows(ids) if let Some(src) = ids.first() => drag_ghost(ui, &view, *src, pos),
+            LayersDrag::Tile(id) => tile_ghost(ui, &view, id, pos),
+            _ => {}
+        }
     }
     // Keyboard: Delete removes the highlighted rows while the panel has the keyboard (a row was
     // clicked last, not the canvas).
@@ -621,8 +657,66 @@ fn takes(n: &Node, drag: &LayersDrag, doc: &Document) -> bool {
         NodeKind::Group { .. } => match drag {
             LayersDrag::Rows(ids) => !ids.iter().any(|i| doc.node(*i).is_some_and(Node::is_layer)),
             LayersDrag::Art => true,
+            LayersDrag::Tile(_) => false,
         },
         _ => false,
+    }
+}
+
+/// The Lucide icon that names a feed, per provider — the bolt, the train, the ship, the
+/// plane and the waze arrow (the pin covers the demo feed's sample markers).
+fn provider_icon(p: terrazon_fleet::Provider) -> &'static str {
+    match p {
+        terrazon_fleet::Provider::Bolt => "zap",
+        terrazon_fleet::Provider::Sgr => "train-front",
+        terrazon_fleet::Provider::Marine => "ship",
+        terrazon_fleet::Provider::Flight => "plane",
+        terrazon_fleet::Provider::Waze => "navigation",
+    }
+}
+
+/// The vendor's own type colour, the one the provider's markers draw with (`Provider::color`).
+fn provider_colour(p: terrazon_fleet::Provider) -> Color32 {
+    let [r, g, b] = p.color();
+    Color32::from_rgb(r, g, b)
+}
+
+/// What a fleet row wears in place of its thumbnail: `(icon, colour, feed)` — the type
+/// colours are the vendors' own, the ones the markers draw with (`Provider::color`: Bolt's
+/// green, the deep marine navy, radar amber, SGR rail brick, Waze's cyan). The Fleet group
+/// wears the radar in its own layer colour; a feed row its provider's icon at full colour;
+/// a part row ("Vehicles", "H3 Cells", "Roads", "Trains"…) the same icon dimmed, the feed
+/// it belongs to showing through. `None` for everything that isn't the fleet's (`None` as
+/// the colour paints in the theme's icon colour — the demo's kinds ride every tint).
+fn fleet_row_icon(doc: &Document, n: &Node) -> Option<(&'static str, Option<Color32>, bool)> {
+    let chain = doc.ancestry(n.id)?;
+    if !chain.iter().any(|id| doc.node(*id).is_some_and(|p| p.name.as_deref() == Some("Fleet"))) {
+        return None;
+    }
+    match chain.len() {
+        // The Fleet group's own row.
+        1 => {
+            let NodeKind::Layer { color, .. } = &n.kind else { return None };
+            let [r, g, b] = color.rgb();
+            Some(("radar", Some(Color32::from_rgb(r, g, b)), false))
+        }
+        // A feed row just under the group.
+        2 => match terrazon_fleet::Provider::parse(n.name.as_deref().unwrap_or_default()) {
+            Some(p) => Some((provider_icon(p), Some(provider_colour(p)), true)),
+            // The demo feed ("Demo") — the sample row, no vendor to borrow a colour from.
+            None if n.name.as_deref() == Some("Demo") => Some(("pin", None, true)),
+            None => None,
+        },
+        // A part row under a feed: the feed's icon, dimmed a step.
+        _ => {
+            let feed = doc.node(chain[1]).and_then(|p| p.name.as_deref()).unwrap_or_default();
+            let p = match terrazon_fleet::Provider::parse(feed) {
+                Some(p) => p,
+                None if feed == "Demo" => return Some(("pin", None, false)),
+                None => return None,
+            };
+            Some((provider_icon(p), Some(provider_colour(p).gamma_multiply(0.62)), false))
+        }
     }
 }
 
@@ -679,12 +773,28 @@ fn row(ui: &mut Ui, view: &View, item: &Row, out: &mut Out) {
         }
     }
     x += 16.0;
-    // Thumbnail.
-    let thumb_rect = view.opts.thumb(n).then(|| {
-        let th = row_thumb(ui, view, n, r, x);
-        x = th.right() + 4.0;
-        th
-    });
+    // Thumbnail — except a fleet row, which wears its type icon there instead of an empty
+    // white box (the feeds draw live data, there is nothing for a thumbnail to render).
+    let thumb_rect = if let Some((icon, colour, _)) = fleet_row_icon(doc, n) {
+        let s = (view.h - 8.0).max(15.0);
+        let ir = egui::Rect::from_center_size(egui::pos2(x + s / 2.0 + 2.0, r.center().y), vec2(s, s));
+        let dim = item.dim;
+        let c = match colour {
+            Some(c) if !dim => c,
+            Some(c) => c.gamma_multiply(0.45),
+            None if dim => t.text_disabled,
+            None => t.icon,
+        };
+        icons::paint(ui, icon, ir, c);
+        x = ir.right() + 6.0;
+        None
+    } else {
+        view.opts.thumb(n).then(|| {
+            let th = row_thumb(ui, view, n, r, x);
+            x = th.right() + 4.0;
+            th
+        })
+    };
     // Name.
     let name = if doc.mask_edit.is_some_and(|m| m.layer == n.id) { "<Opacity Mask>".to_string() } else { n.display_name() };
     let font = egui::FontId::proportional(13.0);
@@ -853,11 +963,13 @@ fn eye_and_lock(ui: &mut Ui, view: &View, n: &Node, r: egui::Rect, out: &mut Out
 
 /// A pinned tile layer's row: the same eye and lock columns as a node row, then the tile kind's
 /// chip, the name and its source, and an ⨯ that unpins it. Clicking picks it (Ctrl/Cmd adds);
-/// the eye and the lock run `map.updateTileLayer`, the ⨯ `map.removeTileLayers`.
-fn tile_row(ui: &mut Ui, view: &View, tl: &terrazon_map::TileLayer, out: &mut Out) {
+/// the eye and the lock run `map.updateTileLayer`, the ⨯ `map.removeTileLayers`. Dragging the
+/// row onto another tile row reorders the pin stack (`map.moveTileLayer`) — the layer draws
+/// above or below the one it landed on. `depth` is the indent steps past the tile rows' own.
+fn tile_row(ui: &mut Ui, view: &View, tl: &terrazon_map::TileLayer, depth: usize, out: &mut Out) {
     let t = &view.t;
     let h = view.h;
-    let (r, resp) = ui.allocate_exact_size(vec2(ui.available_width(), h), egui::Sense::click());
+    let (r, resp) = ui.allocate_exact_size(vec2(ui.available_width(), h), egui::Sense::click_and_drag());
     let picked = view.tiles_sel.iter().any(|id| id == &tl.id);
     if picked {
         ui.painter().rect_filled(r, 0.0, t.row_selected);
@@ -891,7 +1003,7 @@ fn tile_row(ui: &mut Ui, view: &View, tl: &terrazon_map::TileLayer, out: &mut Ou
     }
     // The kind chip, then the name with the source after it (dim, cut short by the ⨯).
     let kind = view.doc.map.sources.iter().find(|s| s.id == tl.source).map(|s| s.kind).unwrap_or_default();
-    let mut x = r.left() + 2.0 * COLUMN + 2.0 + INDENT;
+    let mut x = r.left() + 2.0 * COLUMN + 2.0 + INDENT * (1.0 + depth as f32);
     let chip_text = match kind {
         terrazon_map::TileKind::Raster => tl.name.clone(),
         terrazon_map::TileKind::Vector => format!("{} · mvt", tl.name),
@@ -938,14 +1050,55 @@ fn tile_row(ui: &mut Ui, view: &View, tl: &terrazon_map::TileLayer, out: &mut Ou
     if resp.clicked() {
         out.tile_pick = Some((tl.id.clone(), m.command || m.ctrl));
     }
+    // The drag: a tile row carries itself onto another tile row to reorder the pin stack.
+    if resp.drag_started() {
+        egui::DragAndDrop::set_payload(ui.ctx(), LayersDrag::Tile(tl.id.clone()));
+    }
+    if resp.dragged() {
+        ui.ctx().set_cursor_icon(egui::CursorIcon::Grabbing);
+    }
+    tile_drop_target(ui, view, tl, r, &resp, out);
     resp.on_hover_text(format!("{}\n{} · z{}/{}/{} · {}%", tl.name, tl.source, tl.z, tl.x, tl.y, (tl.opacity * 100.0).round()));
 }
 
-/// A tile source's row, the Map layer's bottom-most child (the basemap the tiles draw on): the
-/// same eye and lock columns as a node row, then the kind chip and the name. The eye shows or
-/// hides the tiles — an inactive source's eye makes it the basemap; the lock is a signpost, the
-/// tiles are edited in the Tiles panel. The row click acts like the eye.
-fn source_row(ui: &mut Ui, view: &View, src: &terrazon_map::TileSource, out: &mut Out) {
+/// Row `tl` at `r` as a drop target for a dragged tile row: a line above or below it shows
+/// where the layer lands, and the release moves it (`map.moveTileLayer`).
+fn tile_drop_target(ui: &Ui, view: &View, tl: &terrazon_map::TileLayer, r: egui::Rect, resp: &egui::Response, out: &mut Out) {
+    let Some(drag) = resp.dnd_hover_payload::<LayersDrag>() else { return };
+    let LayersDrag::Tile(id) = &*drag else { return };
+    if id == &tl.id {
+        return;
+    }
+    let Some(p) = ui.input(|i| i.pointer.hover_pos()) else { return };
+    let above = p.y < r.center().y;
+    let stroke = Stroke::new(2.0, view.t.accent);
+    let y = if above { r.top() } else { r.bottom() };
+    ui.painter().line_segment([egui::pos2(r.left() + COLUMN, y), egui::pos2(r.right(), y)], stroke);
+    if resp.dnd_release_payload::<LayersDrag>().is_some() {
+        out.actions.push(("map.moveTileLayer".into(), json!({ "id": id, "target": tl.id, "above": above })));
+    }
+}
+
+/// A dragged tile row, dimmed, following the pointer at `pos`: the tile chip and its name.
+fn tile_ghost(ui: &Ui, view: &View, id: &str, pos: egui::Pos2) {
+    let Some(tl) = view.doc.map.tile_layers.iter().find(|t| t.id == id) else { return };
+    let (t, h) = (&view.t, view.h);
+    let r = egui::Rect::from_min_size(pos - vec2(h, h / 2.0), vec2(220.0, h));
+    let id = key("tile-ghost");
+    let mut ui = Ui::new(ui.ctx().clone(), id, egui::UiBuilder::new().layer_id(egui::LayerId::new(egui::Order::Tooltip, id)).max_rect(r));
+    ui.set_opacity(GHOST_OPACITY);
+    let p = ui.painter();
+    p.rect_filled(r, 0.0, t.row_selected);
+    p.rect_stroke(r, 0.0, Stroke::new(1.0, t.accent), StrokeKind::Inside);
+    let x = r.left() + 2.0 * COLUMN + 2.0 + 12.0;
+    p.text(egui::pos2(x, r.center().y), egui::Align2::LEFT_CENTER, &tl.name, egui::FontId::proportional(13.0), t.text);
+}
+
+/// A tile source's row, the Tiles group's bottom-most children (the basemap the tiles draw
+/// on): the same eye and lock columns as a node row, then the kind chip and the name. The eye
+/// shows or hides the tiles — an inactive source's eye makes it the basemap; the lock is a
+/// signpost, the tiles are edited in the Tiles panel. The row click acts like the eye.
+fn source_row(ui: &mut Ui, view: &View, src: &terrazon_map::TileSource, depth: usize, out: &mut Out) {
     let t = &view.t;
     let h = view.h;
     let map = &view.doc.map;
@@ -985,7 +1138,7 @@ fn source_row(ui: &mut Ui, view: &View, src: &terrazon_map::TileSource, out: &mu
     lr.on_hover_text(tl!("Locked — edit tiles in the Tiles panel"));
     // The kind chip, then the name (dim when it isn't the basemap).
     let kind = src.kind;
-    let mut x = r.left() + 2.0 * COLUMN + 2.0 + INDENT;
+    let mut x = r.left() + 2.0 * COLUMN + 2.0 + INDENT * (1.0 + depth as f32);
     let chip_text = match kind {
         terrazon_map::TileKind::Raster => src.name.clone(),
         terrazon_map::TileKind::Vector => format!("{} · mvt", src.name),
@@ -1009,6 +1162,71 @@ fn source_row(ui: &mut Ui, view: &View, src: &terrazon_map::TileSource, out: &mu
     resp.on_hover_text(format!("{}\n{}–z{}\n{}", src.name, src.min_zoom, src.max_zoom, src.attribution));
 }
 
+/// The "Tiles" group's row, where the map's tile layers and the basemap sources gather (the
+/// way the feeds gather under Fleet): the same eye and lock columns as a node row, then the
+/// layers icon, the name and the row count. The eye is the group's master switch — the
+/// basemap's `visible` and every pinned tile layer's `visible` flip together
+/// (`map.setTilesVisible`, one undo step); the lock is a signpost, the tiles are edited in
+/// the Tiles panel; the chevron folds the group away.
+fn tiles_group_row(ui: &mut Ui, view: &View, visible: bool, count: usize, open: bool, out: &mut Out) {
+    let t = &view.t;
+    let h = view.h;
+    let (r, resp) = ui.allocate_exact_size(vec2(ui.available_width(), h), egui::Sense::click());
+    if resp.hovered() {
+        ui.painter().rect_filled(r, 0.0, t.hover.gamma_multiply(0.6));
+    }
+    ui.painter().line_segment([r.left_bottom(), r.right_bottom()], Stroke::new(1.0, t.input_border));
+    let eye = egui::Rect::from_min_size(r.min, vec2(COLUMN, h));
+    let lock = egui::Rect::from_min_size(r.min + vec2(COLUMN, 0.0), vec2(COLUMN, h));
+    ui.painter().line_segment([eye.right_top(), eye.right_bottom()], Stroke::new(1.0, t.input_border));
+    ui.painter().line_segment([lock.right_top(), lock.right_bottom()], Stroke::new(1.0, t.input_border));
+    let er = ui.interact(eye, ui.id().with("tiles-group-eye"), Sense::click());
+    let eye_clicked = er.clicked();
+    if visible {
+        icons::paint(ui, "eye", egui::Rect::from_center_size(eye.center(), vec2(14.0, 14.0)), t.icon);
+    } else {
+        icons::paint(ui, "eye-off", egui::Rect::from_center_size(eye.center(), vec2(14.0, 14.0)), t.text_disabled);
+    }
+    er.on_hover_text(if visible { tl!("Hide Tiles") } else { tl!("Show Tiles") });
+    let lr = ui.interact(lock, ui.id().with("tiles-group-lock"), Sense::click());
+    icons::paint(ui, "lock", egui::Rect::from_center_size(lock.center(), vec2(12.0, 12.0)), if lr.hovered() { t.text_dim } else { t.text_disabled });
+    lr.on_hover_text(tl!("Locked — edit tiles in the Tiles panel"));
+    // The chevron (the fold is the panel's own state, the row is not a node), then the
+    // layers icon and the name with the count after it, dim.
+    let mut x = r.left() + 2.0 * COLUMN + 2.0;
+    let chev = egui::Rect::from_center_size(egui::pos2(x + 8.0, r.center().y), vec2(14.0, 16.0));
+    icons::paint(ui, if open { "chevron-down" } else { "chevron-right" }, chev, t.text_dim);
+    let dresp = ui.interact(chev, ui.id().with("tiles-group-chev"), Sense::click());
+    if dresp.clicked() {
+        out.tiles_fold = Some(!open);
+    } else if eye_clicked || resp.clicked() {
+        out.actions.push(("map.setTilesVisible".into(), json!({ "on": !visible })));
+    }
+    x += 20.0;
+    icons::paint(
+        ui,
+        "layers",
+        egui::Rect::from_center_size(egui::pos2(x + 7.0, r.center().y), vec2(13.0, 13.0)),
+        if visible { t.text_dim } else { t.text_disabled },
+    );
+    x += 18.0;
+    let painter = ui.painter();
+    let name = painter.text(
+        egui::pos2(x, r.center().y),
+        egui::Align2::LEFT_CENTER,
+        tl!("Tiles"),
+        egui::FontId::proportional(13.0),
+        if visible { t.text } else { t.text_dim },
+    );
+    painter.text(
+        egui::pos2(name.right() + 8.0, r.center().y),
+        egui::Align2::LEFT_CENTER,
+        format!("({count})"),
+        egui::FontId::proportional(11.0),
+        t.text_dim,
+    );
+}
+
 /// Row `n` at `r` as a drop target for dragged rows or the selected-art square: shows where they
 /// would go (a line above or below it, or a box around it for inside) and moves them on release
 /// (Alt copies). `indent` is where the row's content starts.
@@ -1019,6 +1237,8 @@ fn drop_target(ui: &Ui, view: &View, n: &Node, r: egui::Rect, indent: f32, open:
     let moving: Vec<NodeId> = match &*drag {
         LayersDrag::Rows(ids) => ids.clone(),
         LayersDrag::Art => view.sel.iter().copied().collect(),
+        // A dragged tile row lands on tile rows only (the pin stack reorders among itself).
+        LayersDrag::Tile(_) => return,
     };
     // Never into itself or a row inside it.
     let around = doc.ancestry(n.id).unwrap_or_default();
@@ -1034,6 +1254,7 @@ fn drop_target(ui: &Ui, view: &View, n: &Node, r: egui::Rect, indent: f32, open:
         LayersDrag::Rows(_) if inside && rel >= 0.25 && (rel <= 0.75 || open) => Place::Inside,
         LayersDrag::Rows(_) if rel < 0.5 => Place::Above,
         LayersDrag::Rows(_) => Place::Below,
+        LayersDrag::Tile(_) => return,
     };
     let stroke = Stroke::new(2.0, view.t.accent);
     match place {
@@ -1053,6 +1274,7 @@ fn drop_target(ui: &Ui, view: &View, n: &Node, r: egui::Rect, indent: f32, open:
             // The selection's top objects, as Arrange and Group take them.
             LayersDrag::Art => doc.paint_order(moving.iter().copied()).iter().map(|i| i.0).collect(),
             LayersDrag::Rows(ids) => ids.iter().map(|i| i.0).collect(),
+            LayersDrag::Tile(_) => return,
         };
         out.actions.push(("layer.move".into(), json!({"ids": ids, "target": n.id.0, "place": place.id(), "copy": copy})));
     }
@@ -1405,9 +1627,9 @@ mod tests {
         run(&mut app, "layer.new", json!({}));
         run(&mut app, "layer.new", json!({}));
         let ctx = egui::Context::default();
-        // Rows top first: Layers 3, 2, 1.
+        // Rows top first: Layers 3, 2, 1, Map (the empty base layer every document starts with).
         let (circles, _) = frame(&mut app, &ctx, vec![], false);
-        assert_eq!(circles.len(), 3);
+        assert_eq!(circles.len(), 4);
         let state =
             |app: &TerrazoneApp| -> Vec<(bool, bool)> { app.session.active().unwrap().doc.layers.iter().map(|l| (l.visible, l.locked)).collect() };
         let click = |app: &mut TerrazoneApp, at: egui::Pos2, alt: bool| {
@@ -1418,35 +1640,35 @@ mod tests {
         let (eye, lock) = (egui::pos2(12.0, circles[1].y), egui::pos2(37.0, circles[1].y));
         let undo = |app: &TerrazoneApp| app.session.active().unwrap().history.undo.len();
         let before = undo(&app);
-        // Alt-click Layer 2's eye: Layers 1 and 3 hide in one step; again, they show.
+        // Alt-click Layer 2's eye: Layers 1, 3 and Map hide in one step; again, they show.
         click(&mut app, eye, true);
-        assert_eq!(state(&app), [(false, false), (true, false), (false, false)]);
+        assert_eq!(state(&app), [(false, false), (false, false), (true, false), (false, false)]);
         assert_eq!(undo(&app), before + 1);
         click(&mut app, eye, true);
-        assert_eq!(state(&app), [(true, false); 3]);
-        // Alt-click its lock: the others lock; again, every layer unlocks.
+        assert_eq!(state(&app), [(true, false); 4]);
+        // Alt-click its lock: the others lock (Map too); again, every layer unlocks.
         click(&mut app, lock, true);
-        assert_eq!(state(&app), [(true, true), (true, false), (true, true)]);
+        assert_eq!(state(&app), [(true, true), (true, true), (true, false), (true, true)]);
         assert_eq!(app.session.active().unwrap().history.undo.last().map(|u| u.label.as_str()), Some("Lock Others"));
         // A plain click still toggles only that layer.
         click(&mut app, eye, false);
-        assert_eq!(state(&app), [(true, true), (false, false), (true, true)]);
+        assert_eq!(state(&app), [(true, true), (true, true), (false, false), (true, true)]);
         click(&mut app, lock, true);
-        assert_eq!(state(&app), [(true, false), (false, false), (true, false)]);
+        assert_eq!(state(&app), [(true, false), (true, false), (false, false), (true, false)]);
         // A sublayer's row stands for its top-level layer: the other layers hide.
         click(&mut app, eye, false);
-        let layer2 = app.session.active().unwrap().doc.layers[1].id.0;
+        let layer2 = app.session.active().unwrap().doc.layers[2].id.0;
         let sub = run(&mut app, "layer.newSublayer", json!({"parent": layer2}));
-        // Rows: Layer 3, Layer 2, its sublayer, Layer 1.
+        // Rows: Layer 3, Layer 2, its sublayer, Layer 1, Map.
         let (circles, _) = frame(&mut app, &ctx, vec![], false);
-        assert_eq!(circles.len(), 4);
+        assert_eq!(circles.len(), 5);
         click(&mut app, egui::pos2(12.0, circles[2].y), true);
-        assert_eq!(state(&app), [(false, false), (true, false), (false, false)]);
+        assert_eq!(state(&app), [(false, false), (false, false), (true, false), (false, false)]);
         let doc = &app.session.active().unwrap().doc;
         assert!(doc.node(NodeId(sub["id"].as_u64().unwrap())).unwrap().visible);
     }
 
-    /// A document with two rectangles on one layer → (app, layer, [bottom, top]).
+    /// A document with two rectangles on its drawing layer → (app, layer, [bottom, top]).
     fn two_rects() -> (TerrazoneApp, NodeId, [NodeId; 2]) {
         let mut app = TerrazoneApp::new(Session::new(), Default::default());
         let run = |app: &mut TerrazoneApp, id: &str, p: serde_json::Value| app.session.execute(id, &p).unwrap();
@@ -1454,7 +1676,7 @@ mod tests {
         let a = run(&mut app, "shape.rectangle", json!({"x": 0, "y": 0, "width": 50, "height": 50}))["id"].as_u64().unwrap();
         let b = run(&mut app, "shape.rectangle", json!({"x": 60, "y": 0, "width": 50, "height": 50}))["id"].as_u64().unwrap();
         run(&mut app, "select.none", json!({}));
-        let layer = app.session.active().unwrap().doc.layers[0].id;
+        let layer = app.session.active().unwrap().doc.default_layer().unwrap();
         (app, layer, [NodeId(a), NodeId(b)])
     }
 
@@ -1462,9 +1684,9 @@ mod tests {
     fn clicking_a_target_circle_targets_the_layer() {
         let (mut app, layer, [a, b]) = two_rects();
         let ctx = egui::Context::default();
-        // Rows top down: the layer, the top rectangle, the bottom one.
+        // Rows top down: the layer, the top rectangle, the bottom one, Map.
         let (c, _) = frame(&mut app, &ctx, vec![], false);
-        assert_eq!(c.len(), 3);
+        assert_eq!(c.len(), 4);
         for e in [egui::Event::PointerMoved(c[0]), button(c[0], true), button(c[0], false)] {
             frame(&mut app, &ctx, vec![e], false);
         }
@@ -1517,13 +1739,13 @@ mod tests {
         app.session.execute("file.new", &json!({"width": 200, "height": 200})).unwrap();
         app.session.execute("layer.new", &json!({})).unwrap();
         let ctx = egui::Context::default();
-        // Rows top first: Layer 2, Layer 1. Grab Layer 2 by its name, left of its target circle.
+        // Rows top first: Layer 2, Layer 1, Map. Grab Layer 2 by its name, left of its target circle.
         let (c, _) = frame(&mut app, &ctx, vec![], false);
-        let top = app.session.active().unwrap().doc.layers[1].id;
+        let top = app.session.active().unwrap().doc.layers[2].id;
         let trash = trash_pos(&mut app, &ctx);
         drag(&mut app, &ctx, c[0] - vec2(100.0, 0.0), trash, false);
         let doc = &app.session.active().unwrap().doc;
-        assert_eq!(doc.layers.len(), 1);
+        assert_eq!(doc.layers.len(), 2);
         assert!(doc.node(top).is_none());
     }
 
@@ -1590,7 +1812,7 @@ mod tests {
         assert!(texts.iter().any(|(t, _)| t == "<Opacity Mask>"), "{texts:?}");
         app.session.execute("transparency.stopEditingOpacityMask", &json!({})).unwrap();
         let (c, after) = frame(&mut app, &ctx, vec![], false);
-        assert_eq!(c.len(), 3);
+        assert_eq!(c.len(), 4);
         assert!(after > before + 1, "a dashed underline: {before} → {after}");
     }
 
@@ -1598,13 +1820,13 @@ mod tests {
 
     /// Layer 1 holding rectangle `c` and a sublayer holding rectangle `a` and a group of
     /// rectangle `b`, every row open, nothing selected → (app, [layer, sub, g, b, a, c]): the rows
-    /// top down.
+    /// top down (Map's empty row closes the list).
     fn nested() -> (TerrazoneApp, [NodeId; 6]) {
         let mut app = TerrazoneApp::new(Session::new(), Default::default());
         let run = |app: &mut TerrazoneApp, id: &str, p: serde_json::Value| app.session.execute(id, &p).unwrap();
         let id = |v: serde_json::Value| NodeId(v["id"].as_u64().unwrap());
         run(&mut app, "file.new", json!({"width": 400, "height": 400}));
-        let layer = app.session.active().unwrap().doc.layers[0].id;
+        let layer = app.session.active().unwrap().doc.default_layer().unwrap();
         let c = id(run(&mut app, "shape.rectangle", json!({"x": 300, "y": 0, "width": 20, "height": 20})));
         let sub = id(run(&mut app, "layer.newSublayer", json!({"name": "Sub"})));
         let a = id(run(&mut app, "shape.rectangle", json!({"x": 0, "y": 0, "width": 20, "height": 20})));
@@ -1634,7 +1856,7 @@ mod tests {
         let (mut app, [layer, sub, g, b, a, c]) = nested();
         let ctx = egui::Context::default();
         let (circles, _) = frame(&mut app, &ctx, vec![], false);
-        assert_eq!(circles.len(), 6, "a row for the layer, the sublayer, the group, both rectangles in it and the one on the layer");
+        assert_eq!(circles.len(), 7, "a row for the layer, the sublayer, the group, both rectangles in it, the one on the layer and Map");
         let name = |i: usize| egui::pos2(150.0, circles[i].y);
         for (i, row, current) in [(1, sub, sub), (2, g, sub), (3, b, sub), (4, a, sub), (5, c, layer), (0, layer, layer)] {
             click_with(&mut app, &ctx, name(i), egui::Modifiers::NONE);
@@ -1658,7 +1880,7 @@ mod tests {
         frame(&mut app, &ctx, vec![del], false);
         let d = &app.session.active().unwrap().doc;
         assert!(d.node(sub).is_none() && d.node(c).is_none());
-        assert_eq!(d.layers.len(), 1);
+        assert_eq!(d.layers.len(), 2);
     }
 
     /// The selection squares drawn: (big ones on rows whose object is selected, small ones on rows
@@ -1739,20 +1961,20 @@ mod tests {
         let (mut app, [layer, sub, ..]) = nested();
         let ctx = egui::Context::default();
         let count = |app: &mut TerrazoneApp| frame(app, &ctx, vec![], false).0.len();
-        assert_eq!(count(&mut app), 6);
+        assert_eq!(count(&mut app), 7);
         let (circles, _) = frame(&mut app, &ctx, vec![], false);
         let triangle = |depth: f32, y: f32| egui::pos2(2.0 * COLUMN + 8.0 + depth * INDENT + 7.0, y);
         // Close the sublayer: its group, the group's rectangle and its own rectangle go.
         click_with(&mut app, &ctx, triangle(1.0, circles[1].y), egui::Modifiers::NONE);
-        assert_eq!(count(&mut app), 3);
-        // Alt-click the layer's: everything inside closes, and opens again.
+        assert_eq!(count(&mut app), 4);
+        // Alt-click the layer's: everything inside closes, and opens again (Map stays).
         click_with(&mut app, &ctx, triangle(0.0, circles[0].y), egui::Modifiers::ALT);
-        assert_eq!(count(&mut app), 1);
+        assert_eq!(count(&mut app), 2);
         click_with(&mut app, &ctx, triangle(0.0, circles[0].y), egui::Modifiers::ALT);
-        assert_eq!(count(&mut app), 6);
+        assert_eq!(count(&mut app), 7);
         // Show Layers Only (Panel Options).
         app.ui.layers_panel.layers_only = true;
-        assert_eq!(count(&mut app), 2);
+        assert_eq!(count(&mut app), 3);
         app.ui.layers_panel = PanelOptions { row_size: ROW_LARGE, ..Default::default() };
         let (c, _) = frame(&mut app, &ctx, vec![], false);
         assert!((c[1].y - c[0].y - ROW_LARGE).abs() < 0.5, "large rows");
@@ -1764,24 +1986,24 @@ mod tests {
         let (mut app, [layer, sub, g, _, a, c]) = nested();
         let ctx = egui::Context::default();
         let l2 = NodeId(app.session.execute("layer.new", &json!({"top": true, "name": "Top"})).unwrap()["id"].as_u64().unwrap());
-        // Rows: Top, Layer 1, Sub, g, b, a, c.
+        // Rows: Top, Layer 1, Sub, g, b, a, c, Map.
         let (circles, _) = frame(&mut app, &ctx, vec![], false);
-        assert_eq!(circles.len(), 7);
+        assert_eq!(circles.len(), 8);
         let name = |i: usize| egui::pos2(150.0, circles[i].y);
         let parent = |app: &TerrazoneApp, id: NodeId| app.session.active().unwrap().doc.parent_of(id);
         // Rectangle a onto the middle of the Top layer's row: into it.
         drag(&mut app, &ctx, name(5), name(0), false);
         assert_eq!(parent(&app, a), Some(l2));
-        // Rows: Top, a, Layer 1, Sub, g, b, c. The sublayer onto the upper edge of Layer 1's row:
-        // above it, a top-level layer now.
+        // Rows: Top, a, Layer 1, Sub, g, b, c, Map. The sublayer onto the upper edge of Layer 1's
+        // row: above it, a top-level layer now.
         let (circles, _) = frame(&mut app, &ctx, vec![], false);
-        assert_eq!(circles.len(), 7);
+        assert_eq!(circles.len(), 8);
         drag(&mut app, &ctx, egui::pos2(150.0, circles[3].y), egui::pos2(150.0, circles[2].y - ROW_MEDIUM * 0.4), false);
         assert_eq!(parent(&app, sub), None);
         let d = &app.session.active().unwrap().doc;
-        assert_eq!(d.layers.iter().map(|l| l.id).collect::<Vec<_>>(), vec![layer, sub, l2]);
-        // Rows: Top, a, Sub, g, b, Layer 1, c. Alt-drag the group into Layer 1: a copy goes there,
-        // the group stays.
+        assert_eq!(d.layers.iter().map(|l| l.id).collect::<Vec<_>>(), vec![d.layers[0].id, layer, sub, l2]);
+        // Rows: Top, a, Sub, g, b, Layer 1, c, Map. Alt-drag the group into Layer 1: a copy goes
+        // there, the group stays.
         let (circles, _) = frame(&mut app, &ctx, vec![], false);
         let count = app.session.active().unwrap().doc.node_count();
         drag(&mut app, &ctx, egui::pos2(150.0, circles[3].y), egui::pos2(150.0, circles[5].y), true);
@@ -1832,26 +2054,27 @@ mod tests {
     fn dropping_rows_on_new_layer_duplicates_them() {
         let (mut app, first, _) = two_rects();
         let second = app.session.execute("layer.new", &json!({"name": "Top"})).unwrap()["id"].as_u64().map(NodeId).unwrap();
+        let map = app.session.active().unwrap().doc.layers[0].id;
         let ctx = egui::Context::default();
         crate::theme::install_fonts(&ctx);
         let layers = |app: &TerrazoneApp| app.session.active().unwrap().doc.layers.iter().map(|l| l.id).collect::<Vec<_>>();
-        // Rows top down: Top, Layer 1 (expanded: its two rectangles).
+        // Rows top down: Top, Layer 1 (expanded: its two rectangles), Map.
         let (c, _) = frame(&mut app, &ctx, vec![], false);
         let buttons = bar_buttons(&mut app, &ctx);
         // Layer 1 dropped on New Layer: a copy of it right above it.
-        let shown = drag_row(&mut app, &ctx, egui::pos2(150.0, c[1].y), buttons[1], "Map");
+        let shown = drag_row(&mut app, &ctx, egui::pos2(150.0, c[1].y), buttons[1], "Layer 1");
         assert_eq!(shown, 2, "the row and its ghost under the pointer");
         let after = layers(&app);
-        assert_eq!(after.len(), 3);
-        assert_eq!((after[0], after[2]), (first, second));
-        assert_eq!(app.session.active().unwrap().doc.node(after[1]).unwrap().children().map(Vec::len), Some(2));
+        assert_eq!(after.len(), 4);
+        assert_eq!((after[0], after[1], after[3]), (map, first, second));
+        assert_eq!(app.session.active().unwrap().doc.node(after[2]).unwrap().children().map(Vec::len), Some(2));
         assert_eq!(texts(&mut app, &ctx, vec![], "Map"), 1, "the ghost is gone after the drop");
         // One undo step takes the copy away.
         app.session.execute("edit.undo", &json!({})).unwrap();
-        assert_eq!(layers(&app), vec![first, second]);
+        assert_eq!(layers(&app), vec![map, first, second]);
         // The other bottom-bar buttons are no drop targets.
         drag_row(&mut app, &ctx, egui::pos2(150.0, c[0].y), buttons[2], "Top");
-        assert_eq!(layers(&app), vec![first, second]);
+        assert_eq!(layers(&app), vec![map, first, second]);
     }
 
     #[test]
@@ -1864,7 +2087,7 @@ mod tests {
         // From the sublayer's (small) square onto Layer 1's row.
         drag(&mut app, &ctx, square(1), egui::pos2(150.0, circles[0].y), false);
         let d = &app.session.active().unwrap().doc;
-        assert_eq!(d.node(d.layers[0].id).unwrap().children().unwrap().iter().map(|n| n.id).collect::<Vec<_>>(), vec![c, sub, a, g]);
+        assert_eq!(d.node(d.layers[1].id).unwrap().children().unwrap().iter().map(|n| n.id).collect::<Vec<_>>(), vec![c, sub, a, g]);
         assert_eq!(app.session.active().unwrap().selection.objects.len(), 2, "still selected");
     }
 
@@ -1890,12 +2113,20 @@ mod tests {
             "Release to Layers (Build)",
             "Reverse Order",
             "Template",
-            "Show All Layers",
-            "Preview All Layers",
-            "Unlock All Layers",
+            "Hide Others",
+            "Outline Others",
+            "Lock Others",
             "Paste Remembers Layers",
             "Panel Options…",
         ] {
+            assert!(texts.iter().any(|(t, _)| t.trim() == label), "{label} missing from {texts:?}");
+        }
+        // With every other layer hidden, outlined and locked, the menu reads Show/Preview/Unlock
+        // All Layers instead.
+        let map = app.session.active().unwrap().doc.layers[0].id.0;
+        app.session.execute("layer.setProps", &json!({"ids": [map], "visible": false, "preview": false, "locked": true})).unwrap();
+        let texts = super::super::tests_appearance::frame_events(&ctx, &mut app, vec![], menu);
+        for label in ["Show All Layers", "Preview All Layers", "Unlock All Layers"] {
             assert!(texts.iter().any(|(t, _)| t.trim() == label), "{label} missing from {texts:?}");
         }
     }
@@ -1930,7 +2161,7 @@ mod tests {
             frame(&mut app, vec![]);
         }
         let circles = frame(&mut app, vec![]);
-        assert_eq!(circles.len(), 6, "every row shows in the flyout");
+        assert_eq!(circles.len(), 7, "every row shows in the flyout");
         assert!(circles.iter().all(|c| screen.contains(*c)));
         let at = circles[1] - vec2(120.0, 0.0);
         frame(&mut app, vec![egui::Event::PointerMoved(at), button(at, true)]);

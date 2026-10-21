@@ -255,10 +255,11 @@ mod tests {
     #[test]
     fn layer_options_edit_the_layer_and_ok_is_one_undo_step() {
         let mut app = app();
-        let layer = app.session.doc().unwrap().doc.layers[0].id;
+        // With no id given, the dialog opens on the current (drawing) layer.
+        let layer = app.session.doc().unwrap().doc.default_layer().unwrap();
         app.run("ui.layerOptions", json!({})).unwrap();
         let d = app.ui.dialog.clone().unwrap();
-        assert_eq!((d.kind.as_str(), d.str("name"), d.str("color")), (KIND, "Map".to_string(), "Light Blue".to_string()));
+        assert_eq!((d.kind.as_str(), d.str("name"), d.str("color")), (KIND, "Layer 1".to_string(), "Light Blue".to_string()));
         draw(&mut app);
         set(&mut app, "name", json!("Sky"));
         set(&mut app, "color", json!("#00ff00"));
@@ -278,7 +279,8 @@ mod tests {
     fn new_layer_options_make_a_layer_and_objects_get_name_show_and_lock() {
         let mut app = app();
         app.run("ui.newLayer", json!({})).unwrap();
-        assert_eq!(app.ui.dialog.as_ref().unwrap().str("name"), "Layer 2");
+        // The fresh document's two layers (Map and Layer 1) count, so the prefill skips to 3.
+        assert_eq!(app.ui.dialog.as_ref().unwrap().str("name"), "Layer 3");
         set(&mut app, "name", json!("Ink"));
         set(&mut app, "template", json!(true));
         set(&mut app, "locked", json!(true));

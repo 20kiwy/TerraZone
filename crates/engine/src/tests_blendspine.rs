@@ -124,7 +124,7 @@ fn release_keeps_the_spine_as_a_path() {
     let pts: Vec<Point> = n.path_data().unwrap().anchors().map(|(_, _, a)| a.p).collect();
     assert_eq!(pts, vec![Point::new(5.0, 5.0), Point::new(55.0, 60.0), Point::new(105.0, 5.0)]);
     let d = &s.doc().unwrap().doc;
-    let layer = d.layers[0].children().unwrap().iter().map(|c| c.id).collect::<Vec<_>>();
+    let layer = d.node(d.default_layer().unwrap()).unwrap().children().unwrap().iter().map(|c| c.id).collect::<Vec<_>>();
     assert_eq!(layer, vec![spine, a, b], "the spine below the keys");
 }
 

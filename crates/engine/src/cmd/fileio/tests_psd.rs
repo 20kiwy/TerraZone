@@ -46,11 +46,19 @@ fn layers(f: &[u8]) -> (u16, i16, Vec<String>) {
 fn psd_writes_layers_groups_and_text_named_after_it() {
     let mut s = session();
     let (mode, count, names) = layers(&export(&mut s, json!({})));
-    assert_eq!((mode, count, names), (3, -2, vec!["Map".to_string(), "Words".to_string()]), "a pixel layer per top-level layer");
+    assert_eq!(
+        (mode, count, names),
+        (3, -3, vec!["Map".to_string(), "Layer 1".to_string(), "Words".to_string()]),
+        "a pixel layer per top-level layer"
+    );
 
     let (_, count, names) = layers(&export(&mut s, json!({"maxEditability": true})));
-    assert_eq!(count, -6);
-    assert_eq!(names, ["</Layer group>", "<Rectangle>", "Map", "</Layer group>", "Hello", "Words"], "groups, and text named after its text");
+    assert_eq!(count, -8);
+    assert_eq!(
+        names,
+        ["</Layer group>", "Map", "</Layer group>", "<Rectangle>", "Layer 1", "</Layer group>", "Hello", "Words"],
+        "groups, and text named after its text"
+    );
 
     let (mode, count, names) = layers(&export(&mut s, json!({"layers": false, "colorModel": "cmyk"})));
     assert_eq!((mode, count, names.len()), (4, 0, 0), "flat CMYK");
@@ -58,13 +66,13 @@ fn psd_writes_layers_groups_and_text_named_after_it() {
 
     // A white background is a Background layer under the others.
     let (_, count, names) = layers(&export(&mut s, json!({"background": "white"})));
-    assert_eq!((count, names[0].as_str()), (3, "Background"));
+    assert_eq!((count, names[0].as_str()), (4, "Background"));
 
     // Hidden layers: left out, unless asked for.
-    let words = s.doc().unwrap().doc.layers[1].id;
+    let words = s.doc().unwrap().doc.layers[2].id;
     s.execute("layer.setProps", &json!({"id": words.0, "visible": false})).unwrap();
-    assert_eq!(layers(&export(&mut s, json!({}))).2, ["Map"]);
-    assert_eq!(layers(&export(&mut s, json!({"hiddenLayers": true}))).2, ["Map", "Words"]);
+    assert_eq!(layers(&export(&mut s, json!({}))).2, ["Map", "Layer 1"]);
+    assert_eq!(layers(&export(&mut s, json!({"hiddenLayers": true}))).2, ["Map", "Layer 1", "Words"]);
 
     assert!(s.execute("document.export", &json!({"format": "psd", "colorModel": "lab"})).is_err());
 }

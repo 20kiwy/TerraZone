@@ -84,9 +84,10 @@ pub(crate) fn near(a: [u8; 3], b: [u8; 3]) -> bool {
     a.iter().zip(b).all(|(x, y)| x.abs_diff(y) <= 6)
 }
 
-/// The first image object's JSON in a saved document.
+/// The first image object's JSON in a saved document (it lives on the drawing layer; the base
+/// Map layer takes no art).
 fn saved_image(v: &mut Value) -> &mut Value {
-    &mut v["document"]["layers"][0]["kind"]["children"][0]["kind"]
+    &mut v["document"]["layers"][1]["kind"]["children"][0]["kind"]
 }
 
 pub(crate) fn save(s: &mut Session, path: &str) {
@@ -245,7 +246,7 @@ fn links_from_older_files_load_and_keep_their_pixels() {
     let r = open(&mut s, &doc_path);
     assert_eq!((r["missingLinks"].clone(), r["modifiedLinks"].clone()), (json!([]), json!([])), "{r}");
     let st = s.doc().unwrap();
-    let id = st.doc.layers[0].children().unwrap()[0].id;
+    let id = st.doc.node(st.doc.default_layer().unwrap()).unwrap().children().unwrap()[0].id;
     let im = image(&s, id);
     let link = im.link.unwrap();
     assert_eq!((link.path.as_str(), link.size), (pic.as_str(), Some(bytes.len() as u64)), "the details are filled in");

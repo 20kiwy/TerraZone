@@ -50,7 +50,11 @@ fn layer_names_round_trip_exactly() {
     assert!(s.contains("<g id=\"Map\">"), "{s}");
     assert!(s.contains("data-name=\"Top &amp; Front\""), "{s}");
     let back = import(&s).unwrap();
-    assert_eq!(back.layers.iter().map(|l| l.name.clone().unwrap()).collect::<Vec<_>>(), ["Map", "Top & Front"]);
+    assert_eq!(
+        back.layers.iter().map(|l| l.name.clone().unwrap()).collect::<Vec<_>>(),
+        ["Map", "Layer 1", "Top & Front"],
+        "the drawing layer rides the round trip"
+    );
     assert!(names(&back).contains(&"Logo mark (v2)".to_string()), "{:?}", names(&back));
     // An id that is the name already gets no data-name.
     let mut d = Document::new(10.0, 10.0);

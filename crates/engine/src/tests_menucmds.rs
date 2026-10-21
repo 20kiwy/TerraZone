@@ -98,8 +98,8 @@ fn hide_all_artwork_above() {
 fn lock_and_hide_other_layers() {
     let mut s = session();
     let a = rect(&mut s, 0.0, 0.0, 10.0, 10.0);
+    let l1 = s.doc().unwrap().doc.default_layer().unwrap();
     let l2 = id_of(&s.execute("layer.new", &json!({})).unwrap_or(json!({"id": 0})));
-    let l1 = s.doc().unwrap().doc.layers[0].id;
     assert_ne!(l1, l2);
     sel(&mut s, &[a]);
     s.execute("object.lock.otherLayers", &json!({})).unwrap();

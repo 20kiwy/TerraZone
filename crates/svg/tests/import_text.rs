@@ -81,8 +81,9 @@ fn text_keeps_its_parent_group_clip_and_mask() {
           <text id="masked" y="90" mask="url(#m)">Masked</text>
         </g><rect width="5" height="5"/>"##,
     );
-    // Two top-level children (a group and a rect): no layers, everything stays on Layer 1.
-    assert_eq!(d.layers.len(), 1);
+    // Two top-level children (a group and a rect): no layers in the file, so the art stays in
+    // the first top-level layer (the base Map layer — the drawing one rides along empty).
+    assert_eq!(d.layers.len(), 2);
     let top = d.layers[0].children().unwrap();
     assert_eq!(top.len(), 2);
     assert_eq!(top[0].name.as_deref(), Some("outer"));

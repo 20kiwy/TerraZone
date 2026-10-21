@@ -796,6 +796,12 @@ mod tests {
     use super::*;
     use terrazon_engine::Session;
 
+    /// The layer new art lands on ("Layer 1", the default drawing layer — the base Map layer is
+    /// the tiles' home and takes no art).
+    fn drawing_layer(d: &terrazon_doc::Document) -> &terrazon_doc::Node {
+        d.node(d.default_layer().unwrap()).unwrap()
+    }
+
     /// The texts `draw` paints in one headless frame with `events`.
     fn frame_with(ctx: &egui::Context, events: Vec<egui::Event>, draw: impl FnMut(&mut Ui)) -> Vec<String> {
         fn texts(s: &egui::Shape, out: &mut Vec<String>) {
@@ -880,7 +886,7 @@ mod tests {
         assert_eq!(tex(&app, i, Preview::Square), red);
         assert_ne!(tex(&app, i, Preview::Text), red, "each preview shape has its own");
         // Redefining the style changes its look: a new thumbnail; the others are kept.
-        let rect = app.session.active().unwrap().doc.layers[0].children().unwrap()[0].id;
+        let rect = drawing_layer(&app.session.active().unwrap().doc).children().unwrap()[0].id;
         app.session.execute("paint.setFill", &json!({"color": "#0000ff", "ids": [rect.0]})).unwrap();
         app.session.execute("graphicStyle.redefine", &json!({"name": "Red", "id": rect.0})).unwrap();
         assert_ne!(tex(&app, i, Preview::Square), red);
@@ -919,7 +925,7 @@ mod tests {
         frame_with(&ctx, release(pos2(60.0, 6.0)), |ui| show(&mut app, ui));
         assert_eq!(names(&app)[0], "Both");
         // Art dragged off the canvas onto the panel becomes a new style.
-        let rect = app.session.active().unwrap().doc.layers[0].children().unwrap()[0].id;
+        let rect = drawing_layer(&app.session.active().unwrap().doc).children().unwrap()[0].id;
         egui::DragAndDrop::set_payload(&ctx, PanelDrag::Art(vec![rect]));
         frame_with(&ctx, release(pos2(60.0, 116.0)), |ui| show(&mut app, ui));
         let d = app.session.active().unwrap().doc.clone();

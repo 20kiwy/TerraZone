@@ -107,7 +107,16 @@ fn metafiles_open_and_place() {
         let st = s.doc().unwrap();
         let ab = st.doc.artboards[0].rect;
         assert!((ab.width() - 100.0).abs() < 0.05 && (ab.height() - 100.0).abs() < 0.05, "{ab:?}");
-        let fill = st.doc.layers[0].children().unwrap().iter().find(|n| matches!(n.kind, NodeKind::Path { .. })).unwrap().clone();
+        let fill = st
+            .doc
+            .node(st.doc.default_layer().unwrap())
+            .unwrap()
+            .children()
+            .unwrap()
+            .iter()
+            .find(|n| matches!(n.kind, NodeKind::Path { .. }))
+            .unwrap()
+            .clone();
         let b = fill.geometric_bounds().unwrap();
         assert!((b.x0 - 10.0).abs() < 0.05 && (b.width() - 30.0).abs() < 0.05, "{b:?}");
         // Save can't write the file back: the document has no path.
@@ -119,7 +128,7 @@ fn metafiles_open_and_place() {
     assert_eq!(r["format"], "emf");
     assert!((r["width"].as_f64().unwrap() - 100.0).abs() < 0.05);
     let st = s.doc().unwrap();
-    let placed = st.doc.layers[0].children().unwrap().last().unwrap().clone();
+    let placed = st.doc.node(st.doc.default_layer().unwrap()).unwrap().children().unwrap().last().unwrap().clone();
     assert_eq!(placed.name.as_deref(), Some("pic.emf"));
     assert!(matches!(placed.kind, NodeKind::Group { clip: true, .. }));
     let ext = fileio::PLACE_EXTS;
@@ -152,7 +161,10 @@ fn a_pasted_metafile_becomes_objects() {
     let r = s.execute("clipboard.importEmf", &json!({"dataBase64": terrazon_format::base64_encode(&emf), "center": [150, 150]})).unwrap();
     assert_eq!(r["count"], 1);
     s.execute("edit.paste", &json!({"center": [150, 150]})).unwrap();
-    let pasted = s.doc().unwrap().doc.layers[0].children().unwrap().clone();
+    let pasted = {
+        let d = &s.doc().unwrap().doc;
+        d.node(d.default_layer().unwrap()).unwrap().children().unwrap().clone()
+    };
     assert_eq!(pasted.len(), 1);
     let b = pasted[0].geometric_bounds().unwrap();
     assert!((b.center().x - 150.0).abs() < 0.05 && (b.width() - 30.0).abs() < 0.05, "{b:?}");

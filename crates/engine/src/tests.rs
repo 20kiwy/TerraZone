@@ -10,6 +10,12 @@ fn session() -> Session {
     s
 }
 
+/// The layer new art lands on ("Layer 1", the default drawing layer — the base Map layer is
+/// the tiles' home and takes no art).
+fn drawing_layer(d: &terrazon_doc::Document) -> &terrazon_doc::Node {
+    d.node(d.default_layer().unwrap()).unwrap()
+}
+
 fn rect(s: &mut Session, x: f64, y: f64, w: f64, h: f64) -> NodeId {
     let r = s.execute("shape.rectangle", &json!({"x": x, "y": y, "width": w, "height": h})).unwrap();
     NodeId(r["id"].as_u64().unwrap())
@@ -48,7 +54,7 @@ fn group_ungroup() {
     s.execute("object.ungroup", &json!({})).unwrap();
     let d = &s.doc().unwrap().doc;
     assert!(d.node(g).is_none());
-    assert_eq!(d.parent_of(a), d.layers.first().map(|l| l.id));
+    assert_eq!(d.parent_of(a), d.default_layer(), "back on the drawing layer");
     assert_eq!(s.doc().unwrap().selection.len(), 2);
 }
 
@@ -60,7 +66,10 @@ fn arrange_order() {
     let c = rect(&mut s, 0.0, 0.0, 10.0, 10.0);
     s.execute("select.set", &json!({"ids": [a.0]})).unwrap();
     s.execute("object.arrange.bringToFront", &json!({})).unwrap();
-    let order = |s: &Session| s.doc().unwrap().doc.layers[0].children().unwrap().iter().map(|n| n.id).collect::<Vec<_>>();
+    let order = |s: &Session| {
+        let d = &s.doc().unwrap().doc;
+        drawing_layer(d).children().unwrap().iter().map(|n| n.id).collect::<Vec<_>>()
+    };
     assert_eq!(order(&s), vec![b, c, a]);
     s.execute("object.arrange.sendBackward", &json!({})).unwrap();
     assert_eq!(order(&s), vec![b, a, c]);
@@ -79,7 +88,7 @@ fn transform_and_again() {
     let b = s.doc().unwrap().doc.node(a).unwrap().geometric_bounds().unwrap();
     assert_eq!(b.x0, 10.0);
     s.execute("object.move", &json!({"dx": 0, "dy": 20, "copy": true})).unwrap();
-    assert_eq!(s.doc().unwrap().doc.layers[0].children().unwrap().len(), 2);
+    assert_eq!(drawing_layer(&s.doc().unwrap().doc).children().unwrap().len(), 2);
 }
 
 #[test]
@@ -111,9 +120,9 @@ fn copy_paste_front_back() {
     let d = &s.doc().unwrap().doc;
     assert_eq!(d.index_path(c).unwrap()[1], 1);
     s.execute("edit.paste", &json!({})).unwrap();
-    assert_eq!(s.doc().unwrap().doc.layers[0].children().unwrap().len(), 4);
+    assert_eq!(drawing_layer(&s.doc().unwrap().doc).children().unwrap().len(), 4);
     s.execute("edit.cut", &json!({})).unwrap();
-    assert_eq!(s.doc().unwrap().doc.layers[0].children().unwrap().len(), 3);
+    assert_eq!(drawing_layer(&s.doc().unwrap().doc).children().unwrap().len(), 3);
 }
 
 #[test]
@@ -260,8 +269,8 @@ fn rectangle_tool_draws() {
     s.pointer(&PointerEvent::new(PointerKind::Drag, 110.0, 60.0), v).unwrap();
     s.pointer(&PointerEvent::new(PointerKind::Up, 110.0, 60.0), v).unwrap();
     let d = &s.doc().unwrap().doc;
-    assert_eq!(d.layers[0].children().unwrap().len(), 1);
-    let b = d.layers[0].children().unwrap()[0].geometric_bounds().unwrap();
+    assert_eq!(drawing_layer(d).children().unwrap().len(), 1);
+    let b = drawing_layer(d).children().unwrap()[0].geometric_bounds().unwrap();
     assert_eq!((b.width(), b.height()), (100.0, 50.0));
     assert_eq!(s.doc().unwrap().history.undo.len(), 1);
 }
@@ -278,7 +287,7 @@ fn pen_tool_draws_closed_path() {
     s.pointer(&PointerEvent::new(PointerKind::Down, 10.0, 10.0), v).unwrap();
     s.pointer(&PointerEvent::new(PointerKind::Up, 10.0, 10.0), v).unwrap();
     let d = &s.doc().unwrap().doc;
-    let n = &d.layers[0].children().unwrap()[0];
+    let n = &drawing_layer(d).children().unwrap()[0];
     let p = n.path_data().unwrap();
     assert_eq!(p.anchor_count(), 3);
     assert!(p.is_closed());
@@ -300,14 +309,14 @@ fn pen_click_on_a_selected_path_adds_an_anchor_unless_disabled() {
     };
     click(&mut s);
     let d = &s.doc().unwrap().doc;
-    assert_eq!(d.layers[0].children().unwrap().len(), 1);
+    assert_eq!(drawing_layer(d).children().unwrap().len(), 1);
     assert_eq!(d.node(id).unwrap().path_data().unwrap().anchor_count(), 4);
     s.execute("edit.undo", &json!({})).unwrap();
     s.execute("prefs.set", &json!({"key": "disableAutoAddDelete", "value": true})).unwrap();
     s.execute("select.all", &json!({})).unwrap();
     click(&mut s);
     let d = &s.doc().unwrap().doc;
-    assert_eq!(d.layers[0].children().unwrap().len(), 2, "a new path starts");
+    assert_eq!(drawing_layer(d).children().unwrap().len(), 2, "a new path starts");
     assert_eq!(d.node(id).unwrap().path_data().unwrap().anchor_count(), 3);
 }
 
@@ -475,6 +484,7 @@ fn document_inspect_slices_the_layer_tree() {
 fn document_find_searches_names_kinds_and_text() {
     let mut s = session();
     let a = rect(&mut s, 0.0, 0.0, 10.0, 10.0).0;
+    let layer = s.doc().unwrap().doc.default_layer().unwrap().0;
     s.execute("object.setProps", &json!({"ids": [a], "name": "Hero Banner"})).unwrap();
     rect(&mut s, 20.0, 0.0, 10.0, 10.0);
     s.execute("select.all", &json!({})).unwrap();
@@ -484,7 +494,7 @@ fn document_find_searches_names_kinds_and_text() {
     let v = find(json!({"name": "hero"}));
     assert_eq!(v["total"], 1);
     assert_eq!(v["matches"][0]["id"], a);
-    assert_eq!(v["matches"][0]["path"], json!([1, group]));
+    assert_eq!(v["matches"][0]["path"], json!([layer, group]));
 
     let v = find(json!({"kind": "group"}));
     assert_eq!(v["total"], 1);
@@ -647,8 +657,11 @@ fn stale_current_layer_id_never_targets_a_reused_id() {
     let doc = &s.doc().unwrap().doc;
     assert!(doc.node(c).unwrap().children().unwrap().iter().all(|n| n.path_data().is_some()));
     assert!(doc.parent_of(d).is_some_and(|p| doc.node(p).unwrap().is_layer()));
-    // layer.delete without an id must not delete the compound path.
-    s.execute("layer.delete", &json!({})).ok();
+    // layer.delete must not leave the document without a layer: naming every top-level
+    // layer is refused, and the compound path survives.
+    let doc2 = &s.doc().unwrap().doc;
+    let both: Vec<u64> = doc2.layers.iter().map(|l| l.id.0).collect();
+    assert!(s.execute("layer.delete", &json!({"ids": both})).is_err());
     assert!(s.doc().unwrap().doc.node(c).is_some());
 }
 

@@ -477,6 +477,12 @@ fn digit_of(k: Key) -> Option<u8> {
 mod tests {
     use super::*;
 
+    /// The layer new art lands on ("Layer 1", the default drawing layer — the base Map layer is
+    /// the tiles' home and takes no art).
+    fn drawing_layer(d: &terrazon_doc::Document) -> &terrazon_doc::Node {
+        d.node(d.default_layer().unwrap()).unwrap()
+    }
+
     /// One headless frame delivering `events` to the shortcut handler.
     fn frame(app: &mut TerrazoneApp, events: Vec<egui::Event>) -> egui::FullOutput {
         let ctx = egui::Context::default();
@@ -571,13 +577,13 @@ mod tests {
         assert!(svg.contains("<svg"));
         // Pasting our own SVG back uses the internal clipboard; foreign SVG replaces it.
         frame(&mut app, vec![egui::Event::Paste(svg)]);
-        assert_eq!(app.session.doc().unwrap().doc.layers[0].children().unwrap().len(), 2);
+        assert_eq!(drawing_layer(&app.session.doc().unwrap().doc).children().unwrap().len(), 2);
         let foreign = r##"<svg xmlns="http://www.w3.org/2000/svg"><circle cx="5" cy="5" r="5"/><circle cx="20" cy="5" r="5"/><circle cx="35" cy="5" r="5"/></svg>"##;
         frame(&mut app, vec![egui::Event::Paste(foreign.into())]);
-        assert_eq!(app.session.doc().unwrap().doc.layers[0].children().unwrap().len(), 5);
+        assert_eq!(drawing_layer(&app.session.doc().unwrap().doc).children().unwrap().len(), 5);
         // Plain text is not art: nothing is pasted from it (the internal clipboard is reused).
         frame(&mut app, vec![egui::Event::Paste("hello".into())]);
-        assert_eq!(app.session.doc().unwrap().doc.layers[0].children().unwrap().len(), 8);
+        assert_eq!(drawing_layer(&app.session.doc().unwrap().doc).children().unwrap().len(), 8);
     }
 
     /// While a grid is dragged out, ↑/↓ change its rows and ←/→ its columns.
@@ -598,7 +604,7 @@ mod tests {
             }
             app.session.pointer(&PointerEvent::new(PointerKind::Up, 300.0, 220.0), view).unwrap();
             let d = &app.session.doc().unwrap().doc;
-            let g = d.layers[0].children().unwrap().last().unwrap().clone();
+            let g = drawing_layer(d).children().unwrap().last().unwrap().clone();
             let terrazon_doc::NodeKind::Group { children, .. } = &g.kind else { panic!("not a grid: {:?}", g.kind) };
             let bounds: Vec<_> = children.iter().filter_map(|c| c.geometric_bounds()).collect();
             (bounds.iter().filter(|b| b.height() < 0.5).count(), bounds.iter().filter(|b| b.width() < 0.5).count())
@@ -678,7 +684,7 @@ mod tests {
         let b = app.session.execute("shape.ellipse", &json!({"x": 20, "y": 20, "width": 50, "height": 50})).unwrap()["id"].clone();
         app.session.execute("select.set", &json!({"ids": [a]})).unwrap();
         let order =
-            |app: &TerrazoneApp| -> Vec<u64> { app.session.doc().unwrap().doc.layers[0].children().unwrap().iter().map(|n| n.id.0).collect() };
+            |app: &TerrazoneApp| -> Vec<u64> { drawing_layer(&app.session.doc().unwrap().doc).children().unwrap().iter().map(|n| n.id.0).collect() };
         let (a, b) = (a.as_u64().unwrap(), b.as_u64().unwrap());
         assert_eq!(order(&app), [a, b]);
         let press = |key, modifiers| egui::Event::Key { key, physical_key: None, pressed: true, repeat: false, modifiers };

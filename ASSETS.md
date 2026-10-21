@@ -265,6 +265,9 @@ Generated-in-code art is original and has no file to list. This covers the defau
 | `assets/icons/pilcrow.svg` | Lucide Icons and Contributors | https://lucide.dev (lucide-static v1.49.0; header kept in file) | ISC (`assets/icons/LICENSE-lucide.txt`) |  |
 | `assets/icons/pin.svg` | Lucide Icons and Contributors | https://lucide.dev (lucide-static v1.49.0; header kept in file) | ISC (`assets/icons/LICENSE-lucide.txt`) |  |
 | `assets/icons/pipette.svg` | Lucide Icons and Contributors | https://lucide.dev (lucide-static v1.49.0; header kept in file) | ISC (`assets/icons/LICENSE-lucide.txt`) |  |
+| `assets/icons/navigation.svg` | Lucide Icons and Contributors | https://lucide.dev (lucide-static v1.49.0; header kept in file) | ISC (`assets/icons/LICENSE-lucide.txt`) |  |
+| `assets/icons/plane.svg` | Lucide Icons and Contributors | https://lucide.dev (lucide-static v1.49.0; header kept in file) | ISC (`assets/icons/LICENSE-lucide.txt`) |  |
+| `assets/icons/radar.svg` | Lucide Icons and Contributors | https://lucide.dev (lucide-static v1.49.0; header kept in file) | ISC (`assets/icons/LICENSE-lucide.txt`) |  |
 | `assets/icons/plus.svg` | Lucide Icons and Contributors | https://lucide.dev (lucide-static v1.49.0; header kept in file) | ISC; derived from Feather, also MIT (`assets/icons/LICENSE-lucide.txt`) |  |
 | `assets/icons/printer.svg` | Lucide Icons and Contributors | https://lucide.dev (lucide-static v1.49.0; header kept in file) | ISC (`assets/icons/LICENSE-lucide.txt`) |  |
 | `assets/icons/redo-2.svg` | Lucide Icons and Contributors | https://lucide.dev (lucide-static v1.49.0; header kept in file) | ISC (`assets/icons/LICENSE-lucide.txt`) |  |
@@ -277,6 +280,7 @@ Generated-in-code art is original and has no file to list. This covers the defau
 | `assets/icons/scissors.svg` | Lucide Icons and Contributors | https://lucide.dev (lucide-static v1.49.0; header kept in file) | ISC (`assets/icons/LICENSE-lucide.txt`) |  |
 | `assets/icons/search.svg` | Lucide Icons and Contributors | https://lucide.dev (lucide-static v1.49.0; header kept in file) | ISC; derived from Feather, also MIT (`assets/icons/LICENSE-lucide.txt`) |  |
 | `assets/icons/settings.svg` | Lucide Icons and Contributors | https://lucide.dev (lucide-static v1.49.0; header kept in file) | ISC (`assets/icons/LICENSE-lucide.txt`) |  |
+| `assets/icons/ship.svg` | Lucide Icons and Contributors | https://lucide.dev (lucide-static v1.49.0; header kept in file) | ISC (`assets/icons/LICENSE-lucide.txt`) |  |
 | `assets/icons/shapes.svg` | Lucide Icons and Contributors | https://lucide.dev (lucide-static v1.49.0; header kept in file) | ISC (`assets/icons/LICENSE-lucide.txt`) |  |
 | `assets/icons/share-2.svg` | Lucide Icons and Contributors | https://lucide.dev (lucide-static v1.49.0; header kept in file) | ISC (`assets/icons/LICENSE-lucide.txt`) |  |
 | `assets/icons/slice.svg` | Lucide Icons and Contributors | https://lucide.dev (lucide-static v1.49.0; header kept in file) | ISC (`assets/icons/LICENSE-lucide.txt`) |  |
@@ -296,6 +300,7 @@ Generated-in-code art is original and has no file to list. This covers the defau
 | `assets/icons/swatch-book.svg` | Lucide Icons and Contributors | https://lucide.dev (lucide-static v1.49.0; header kept in file) | ISC (`assets/icons/LICENSE-lucide.txt`) |  |
 | `assets/icons/text-cursor-input.svg` | Lucide Icons and Contributors | https://lucide.dev (lucide-static v1.49.0; header kept in file) | ISC (`assets/icons/LICENSE-lucide.txt`) |  |
 | `assets/icons/tornado.svg` | Lucide Icons and Contributors | https://lucide.dev (lucide-static v1.49.0; header kept in file) | ISC (`assets/icons/LICENSE-lucide.txt`) |  |
+| `assets/icons/train-front.svg` | Lucide Icons and Contributors | https://lucide.dev (lucide-static v1.49.0; header kept in file) | ISC (`assets/icons/LICENSE-lucide.txt`) |  |
 | `assets/icons/trash-2.svg` | Lucide Icons and Contributors | https://lucide.dev (lucide-static v1.49.0; header kept in file) | ISC; derived from Feather, also MIT (`assets/icons/LICENSE-lucide.txt`) |  |
 | `assets/icons/triangle.svg` | Lucide Icons and Contributors | https://lucide.dev (lucide-static v1.49.0; header kept in file) | ISC; derived from Feather, also MIT (`assets/icons/LICENSE-lucide.txt`) |  |
 | `assets/icons/type.svg` | Lucide Icons and Contributors | https://lucide.dev (lucide-static v1.49.0; header kept in file) | ISC; derived from Feather, also MIT (`assets/icons/LICENSE-lucide.txt`) |  |
@@ -304,6 +309,7 @@ Generated-in-code art is original and has no file to list. This covers the defau
 | `assets/icons/wand-sparkles.svg` | Lucide Icons and Contributors | https://lucide.dev (lucide-static v1.49.0; header kept in file) | ISC (`assets/icons/LICENSE-lucide.txt`) |  |
 | `assets/icons/waves.svg` | Lucide Icons and Contributors | https://lucide.dev (lucide-static v1.49.0; header kept in file) | ISC (`assets/icons/LICENSE-lucide.txt`) |  |
 | `assets/icons/x.svg` | Lucide Icons and Contributors | https://lucide.dev (lucide-static v1.49.0; header kept in file) | ISC; derived from Feather, also MIT (`assets/icons/LICENSE-lucide.txt`) |  |
+| `assets/icons/zap.svg` | Lucide Icons and Contributors | https://lucide.dev (lucide-static v1.49.0; header kept in file) | ISC (`assets/icons/LICENSE-lucide.txt`) |  |
 | `assets/icons/zoom-in.svg` | Lucide Icons and Contributors | https://lucide.dev (lucide-static v1.49.0; header kept in file) | ISC; derived from Feather, also MIT (`assets/icons/LICENSE-lucide.txt`) |  |
 | `docs/images/dusk-poster.png` | TerraZone contributors | Rendered by TerraZone from `examples/dusk-poster.terrazon` | MIT OR Apache-2.0 |  |
 | `examples/dusk-poster.terrazon` | TerraZone contributors | Original artwork built through the TerraZone command API | MIT OR Apache-2.0 |  |
@@ -312,6 +318,16 @@ Generated-in-code art is original and has no file to list. This covers the defau
 | `docs/images/shot-2-ribbons.png` | TerraZone contributors | Screenshot of TerraZone itself, editing `examples/ribbons.terrazon` | MIT OR Apache-2.0 |  |
 | `docs/images/shot-3-sheet.png` | TerraZone contributors | Screenshot of TerraZone itself, editing `examples/feature-sheet.terrazon` | MIT OR Apache-2.0 |  |
 | `docs/images/shot-4-bezier.png` | TerraZone contributors | Screenshot of TerraZone itself, editing `examples/feature-sheet.terrazon` | MIT OR Apache-2.0 |  |
+| `docs/images/TerraZone-0.21.0-bolt-dar.png` | TerraZone contributors | Screenshot of TerraZone itself, the Bolt feed live over Dar es Salaam | MIT OR Apache-2.0 |  |
+| `docs/images/TerraZone-0.21.0-fleet-live.png` | TerraZone contributors | Screenshot of TerraZone itself, the Fleet panel with the live feeds | MIT OR Apache-2.0 |  |
+| `docs/images/TerraZone-0.21.0-kariakoo.png` | TerraZone contributors | Screenshot of TerraZone itself, street zoom over Kariakoo | MIT OR Apache-2.0 |  |
+| `docs/images/TerraZone-0.22.0-map-grid-lines.png` | TerraZone contributors | Screenshot of TerraZone itself, the map grid lines round | MIT OR Apache-2.0 |  |
+| `docs/images/TerraZone-0.22.0-network-z8.png` | TerraZone contributors | Screenshot of TerraZone itself, the network at z8 | MIT OR Apache-2.0 |  |
+| `docs/images/TerraZone-0.22.0-sgr-whole-day.png` | TerraZone contributors | Screenshot of TerraZone itself, the SGR whole-day timetable | MIT OR Apache-2.0 |  |
+| `docs/images/TerraZone-0.26.0-sgr-corridor-day.png` | TerraZone contributors | Screenshot of TerraZone itself, the SGR corridor day at a glance | MIT OR Apache-2.0 |  |
+| `docs/images/TerraZone-0.26.0-sgr-tree.png` | TerraZone contributors | Screenshot of TerraZone itself, the SGR trains as the layers-panel tree | MIT OR Apache-2.0 |  |
+| `docs/images/TerraZone-0.27.0-waze-roads.png` | TerraZone contributors | Screenshot of TerraZone itself, the Waze roads over the basemap | MIT OR Apache-2.0 |  |
+| `docs/images/TerraZone-0.27.0-waze-tree.png` | TerraZone contributors | Screenshot of TerraZone itself, the Waze roads tree in the Fleet panel | MIT OR Apache-2.0 |  |
 | `docs/images/shot-5-perspective.png` | TerraZone contributors | Screenshot of TerraZone itself, editing `examples/perspective-city.terrazon` | MIT OR Apache-2.0 |  |
 | `docs/images/art-neon-drive.png` | TerraZone contributors | Rendered by TerraZone from `examples/neon-drive.terrazon` | MIT OR Apache-2.0 |  |
 | `docs/images/art-ribbons.png` | TerraZone contributors | Rendered by TerraZone from `examples/ribbons.terrazon` | MIT OR Apache-2.0 |  |

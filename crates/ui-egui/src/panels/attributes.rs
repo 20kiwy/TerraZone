@@ -217,7 +217,8 @@ mod tests {
         assert_eq!(open_url(&mut app, &json!({})).unwrap()["url"], "https://example.com/a");
         // Two objects whose values differ show blanks.
         let b = run(&mut app, "shape.ellipse", json!({"x": 60, "y": 0, "width": 30, "height": 30}))["id"].clone();
-        let a = app.session.active().unwrap().doc.layers[0].children().unwrap()[0].id.0;
+        let d = &app.session.active().unwrap().doc;
+        let a = d.node(d.default_layer().unwrap()).unwrap().children().unwrap()[0].id.0;
         run(&mut app, "select.set", json!({"ids": [a, b]}));
         let texts = frame(&mut app);
         assert!(!texts.iter().any(|t| t == "https://example.com/a" || t == "first note"), "{texts:?}");

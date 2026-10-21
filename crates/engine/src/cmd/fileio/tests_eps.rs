@@ -60,7 +60,7 @@ fn eps_covers_the_art_y_up_from_the_first_artboard_with_a_preview_and_the_docume
     assert!(!ps.contains(" rg\n") && ps.contains(" k\n"), "{ps}");
     // The document comes back whole, and so does a thumbnail.
     let native = terrazon_format::load(&terrazon_eps::native(&bytes).unwrap()).unwrap();
-    assert_eq!(native.layers[0].children().unwrap().len(), 1);
+    assert_eq!(native.layers.last().unwrap().children().unwrap().len(), 1, "the art rides the drawing layer");
     assert!(terrazon_eps::thumbnail(&bytes).unwrap().starts_with(b"\x89PNG"));
     // Without the preview, thumbnail and CMYK: plain PostScript in RGB.
     let r = s.execute("document.exportEps", &json!({"previewFormat": "none", "thumbnails": false, "cmykPostScript": false, "level": 2})).unwrap();
@@ -119,9 +119,9 @@ fn transparency_is_flattened_with_the_flattener_preset() {
     assert_eq!(colours, ["0.5 0.5 1 rg", "1 0 0 rg", "0.5 0 0.5 rg"], "{ps}");
     // The document is left as it was, and reopens with its transparency.
     let doc = &s.doc().unwrap().doc;
-    assert_eq!(doc.layers[0].children().unwrap().len(), 2);
+    assert_eq!(doc.node(doc.default_layer().unwrap()).unwrap().children().unwrap().len(), 2);
     let native = terrazon_format::load(&terrazon_eps::native(&b64(&r)).unwrap()).unwrap();
-    assert!(native.layers[0].children().unwrap().iter().any(|c| c.opacity < 1.0));
+    assert!(native.layers.last().unwrap().children().unwrap().iter().any(|c| c.opacity < 1.0));
     // A saved preset by name; an unknown one is refused.
     s.execute("flattener.presets.save", &json!({"name": "All Raster", "balance": 0})).unwrap();
     let r = s.execute("document.exportEps", &json!({"flattenerPreset": "All Raster", "previewFormat": "none"})).unwrap();

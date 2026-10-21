@@ -2673,7 +2673,9 @@ mod tests {
         app.select_tool("rectangle");
         let ctx = egui::Context::default();
         frame(&mut app, &ctx, vec![]);
-        let count = |app: &TerrazoneApp| app.session.active().unwrap().doc.layers[0].children().unwrap().len();
+        let count = |app: &TerrazoneApp| {
+            app.session.active().unwrap().doc.node(app.session.active().unwrap().doc.default_layer().unwrap()).unwrap().children().unwrap().len()
+        };
         let c = app.canvas_rect.unwrap().center();
         let touch = |n: u64, phase, pos| egui::Event::Touch { device_id: egui::TouchDeviceId(1), id: egui::TouchId(n), phase, pos, force: None };
         let button = |pos, pressed| egui::Event::PointerButton { pos, button: egui::PointerButton::Primary, pressed, modifiers: Default::default() };
@@ -3414,7 +3416,8 @@ mod tests {
             let moved = (after.center - before.center) * after.zoom;
             assert!((after.zoom / before.zoom - 1.0).abs() < 1e-9, "no zoom: {wheel_zooms}");
             assert!((moved.x + 30.0).abs() < 0.5 && (moved.y + 24.0).abs() < 0.5, "the content follows the fingers ({wheel_zooms}): {moved:?}");
-            assert_eq!(app.session.active().unwrap().doc.layers[0].children().unwrap().len(), 0, "nothing drawn");
+            let d = app.session.active().unwrap();
+            assert_eq!(d.doc.node(d.doc.default_layer().unwrap()).unwrap().children().unwrap().len(), 0, "nothing drawn");
         }
     }
 

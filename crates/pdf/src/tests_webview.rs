@@ -388,7 +388,7 @@ fn pdf_layers_stay_with_a_linearised_file() {
     let text = String::from_utf8_lossy(&r.bytes);
     let at = text.find("/OCGs[").unwrap() + 6;
     let ocgs: Vec<u32> = text[at..at + text[at..].find(']').unwrap()].split(" 0 R").filter_map(|n| n.trim().parse().ok()).collect();
-    assert!(ocgs.len() == 2 && ocgs.iter().all(|n| l.first_part.contains(n)), "{ocgs:?}");
+    assert!(ocgs.len() == 3 && ocgs.iter().all(|n| l.first_part.contains(n)), "{ocgs:?}");
     assert_eq!(l.pages.len(), 3);
     let back = import(&r.bytes).unwrap();
     assert!(back.layers.len() >= 2, "the layers come back");

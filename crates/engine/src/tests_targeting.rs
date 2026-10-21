@@ -30,7 +30,7 @@ fn a_targeted_layer_takes_transparency_appearance_and_effects() {
     let mut s = session();
     let a = rect(&mut s, 20.0);
     let b = rect(&mut s, 100.0);
-    let layer = s.doc().unwrap().doc.layers[0].id;
+    let layer = s.doc().unwrap().doc.default_layer().unwrap();
     let r = run(&mut s, "layer.target", json!({"id": layer.0}));
     assert_eq!(r["selected"], json!([a.0, b.0]), "the layer's art is selected");
     assert_eq!(s.doc().unwrap().selection.target, Some(layer));
@@ -65,7 +65,7 @@ fn targeting_an_object_selects_it_and_locked_layers_cannot_be_targeted() {
     run(&mut s, "select.none", json!({}));
     run(&mut s, "layer.target", json!({"id": a.0}));
     assert_eq!(s.doc().unwrap().selection.objects, vec![a]);
-    let layer = s.doc().unwrap().doc.layers[0].id;
+    let layer = s.doc().unwrap().doc.default_layer().unwrap();
     run(&mut s, "layer.setProps", json!({"id": layer.0, "locked": true}));
     assert!(s.execute("layer.target", &json!({"id": layer.0})).is_err());
     assert!(s.execute("layer.target", &json!({"id": 9999})).is_err());
@@ -75,7 +75,7 @@ fn targeting_an_object_selects_it_and_locked_layers_cannot_be_targeted() {
 fn a_targeted_layer_gets_an_opacity_mask() {
     let mut s = session();
     rect(&mut s, 20.0);
-    let layer = s.doc().unwrap().doc.layers[0].id;
+    let layer = s.doc().unwrap().doc.default_layer().unwrap();
     run(&mut s, "layer.target", json!({"id": layer.0}));
     assert_eq!(run(&mut s, "transparency.makeOpacityMask", json!({}))["id"], json!(layer.0));
     run(&mut s, "transparency.stopEditingOpacityMask", json!({}));
@@ -101,7 +101,7 @@ fn transfer_moves_or_copies_the_appearance() {
     assert_eq!(nb.appearance, src.appearance);
     assert!((nb.opacity - 0.3).abs() < 1e-6 && nb.blend == BlendMode::Screen);
     // Move onto the layer: the source is left cleared; one undo step brings it back.
-    let layer = s.doc().unwrap().doc.layers[0].id;
+    let layer = s.doc().unwrap().doc.default_layer().unwrap();
     run(&mut s, "appearance.transfer", json!({"source": a.0, "target": layer.0}));
     let (na, nl) = (node(&s, a), node(&s, layer));
     assert_eq!(nl.appearance.items.len(), src.appearance.items.len());

@@ -56,7 +56,8 @@ fn top_left(app: &TerrazoneApp, id: NodeId) -> (f64, f64) {
 }
 
 fn object_count(app: &TerrazoneApp) -> usize {
-    app.session.active().unwrap().doc.layers[0].children().unwrap().len()
+    let d = &app.session.active().unwrap().doc;
+    d.node(d.default_layer().unwrap()).unwrap().children().unwrap().len()
 }
 
 #[test]

@@ -95,7 +95,7 @@ fn cancel_new_pattern_removes_it() {
     s.execute("object.pattern.cancel", &json!({})).unwrap();
     assert!(doc(&s).pattern("P").is_none());
     assert!(doc(&s).swatch("P").is_none());
-    assert_eq!(doc(&s).layers.len(), 1);
+    assert_eq!(doc(&s).layers.len(), 2, "the Map layer and the drawing layer");
 }
 
 #[test]
@@ -266,7 +266,7 @@ fn save_load_roundtrip_keeps_patterns_and_repeats() {
     let back = terrazon_format::load(&bytes).unwrap();
     assert_eq!(back.patterns, doc(&s).patterns);
     assert_eq!(back.node(big).unwrap().appearance.fill_paint(), node(&s, big).appearance.fill_paint());
-    assert!(back.layers[0].children().unwrap().iter().any(|n| matches!(n.kind, NodeKind::Repeat(_))));
+    assert!(back.node(back.default_layer().unwrap()).unwrap().children().unwrap().iter().any(|n| matches!(n.kind, NodeKind::Repeat(_))));
 }
 
 #[test]
@@ -402,7 +402,7 @@ fn release_restores_source() {
     let b = rect(&mut s, 20.0, 0.0, 10.0, 10.0);
     sel(&mut s, &[a, b]);
     s.execute("object.repeat.mirror", &json!({})).unwrap();
-    assert!(doc(&s).layers[0].children().unwrap().len() == 1);
+    assert!(doc(&s).node(doc(&s).default_layer().unwrap()).unwrap().children().unwrap().len() == 1);
     let v = s.execute("object.repeat.release", &json!({})).unwrap();
     assert_eq!(v["ids"], json!([a.0, b.0]));
     assert_eq!(node(&s, a).geometric_bounds(), Some(Rect::new(0.0, 0.0, 10.0, 10.0)));

@@ -49,7 +49,7 @@ fn undos(s: &Session) -> usize {
 /// Layer 1 holding a sublayer `sub` with a rectangle `a` and a group `g` of rectangle `b`, plus a
 /// rectangle `c` on Layer 1 itself → (layer, sub, a, g, b, c). Nothing selected.
 fn tree(s: &mut Session) -> (NodeId, NodeId, NodeId, NodeId, NodeId, NodeId) {
-    let layer = s.doc().unwrap().doc.layers[0].id;
+    let layer = s.doc().unwrap().doc.default_layer().unwrap();
     let c = rect(s, 300.0);
     let sub = id(&run(s, "layer.newSublayer", json!({"name": "Sub"})));
     let a = rect(s, 0.0);
@@ -340,7 +340,8 @@ fn delete_and_duplicate_rows() {
     assert!(s.doc().unwrap().doc.node(c).is_none() && s.doc().unwrap().doc.node(a).is_none());
     run(&mut s, "edit.undo", json!({}));
     assert!(s.doc().unwrap().doc.node(c).is_some());
-    assert!(s.execute("layer.delete", &json!({"ids": [layer.0]})).is_err(), "the last layer stays");
+    let base = s.doc().unwrap().doc.layers[0].id;
+    assert!(s.execute("layer.delete", &json!({"ids": [layer.0, base.0]})).is_err(), "the last layer stays");
     run(&mut s, "layer.setCurrent", json!({"id": sub.0}));
     run(&mut s, "layer.delete", json!({}));
     assert!(s.doc().unwrap().doc.node(sub).is_none());
@@ -384,7 +385,7 @@ fn collect_merge_flatten_and_reverse() {
 #[test]
 fn release_to_layers_sequence_and_build() {
     let mut s = session();
-    let layer = s.doc().unwrap().doc.layers[0].id;
+    let layer = s.doc().unwrap().doc.default_layer().unwrap();
     let (a, b, c) = (rect(&mut s, 0.0), rect(&mut s, 50.0), rect(&mut s, 100.0));
     let new = ids(&run(&mut s, "layer.releaseToLayers", json!({"id": layer.0})));
     assert_eq!(new.len(), 3);
@@ -414,7 +415,7 @@ fn hide_lock_and_outline_others_and_their_all_counterparts() {
     let l3 = id(&run(&mut s, "layer.new", json!({})));
     run(&mut s, "layer.setCurrent", json!({"id": l2.0}));
     let flags = |s: &Session, f: fn(&Node) -> bool| [l1, l2, l3].map(|l| f(&node(s, l)));
-    assert_eq!(run(&mut s, "layer.hideOthers", json!({}))["count"], 2);
+    assert_eq!(run(&mut s, "layer.hideOthers", json!({}))["count"], 3, "the base Map layer and the drawing layer hide too");
     assert_eq!(flags(&s, |n| n.visible), [false, true, false]);
     run(&mut s, "layer.showAll", json!({}));
     assert_eq!(flags(&s, |n| n.visible), [true; 3]);
@@ -458,7 +459,7 @@ fn merging_into_a_clipping_layer_keeps_its_mask_at_the_bottom() {
     let mut s = session();
     // A layer below, and a clipping layer above it: the top rectangle becomes the mask, at the
     // bottom.
-    let low = s.doc().unwrap().doc.layers[0].id;
+    let low = s.doc().unwrap().doc.default_layer().unwrap();
     let other = rect(&mut s, 200.0);
     let top = id(&run(&mut s, "layer.new", json!({"name": "Top", "top": true})));
     let a = rect(&mut s, 100.0);
@@ -481,7 +482,7 @@ fn merging_into_a_clipping_layer_keeps_its_mask_at_the_bottom() {
 #[test]
 fn reversing_keeps_a_clipping_layers_mask_at_the_bottom() {
     let mut s = session();
-    let layer = s.doc().unwrap().doc.layers[0].id;
+    let layer = s.doc().unwrap().doc.default_layer().unwrap();
     let a = rect(&mut s, 100.0);
     let b = rect(&mut s, 200.0);
     let mask = rect(&mut s, 0.0);

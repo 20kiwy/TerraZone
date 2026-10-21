@@ -13,7 +13,8 @@ fn warnings(v: &Value) -> Vec<String> {
     v["warnings"].as_array().expect("warnings").iter().map(|w| w.as_str().unwrap().to_string()).collect()
 }
 
-/// A document with a rectangle on "Map" and one on a hidden, non-printing layer "Notes".
+/// A document with a rectangle on the drawing layer ("Layer 1" — the base "Map" layer stays
+/// empty, the tiles' home) and one on a hidden, non-printing layer "Notes".
 fn session() -> Session {
     let mut s = Session::new();
     s.execute("file.new", &json!({"width": 100, "height": 80})).unwrap();
@@ -35,7 +36,7 @@ fn export_pdf_create_layers_writes_layers_that_reopen_as_layers() {
         .iter()
         .map(|l| (l.name.clone().unwrap_or_default(), l.visible, matches!(l.kind, terrazon_doc::NodeKind::Layer { printable: true, .. })))
         .collect();
-    assert_eq!(layers, [("Map".to_string(), true, true), ("Notes".to_string(), false, false)]);
+    assert_eq!(layers, [("Map".to_string(), true, true), ("Layer 1".to_string(), true, true), ("Notes".to_string(), false, false)]);
     // The default preset carries the editing data too.
     let v = s.execute("document.exportPdf", &json!({"createLayers": true})).unwrap();
     assert!(warnings(&v).is_empty(), "{:?}", warnings(&v));
@@ -84,8 +85,11 @@ fn ai_files_write_their_layers_and_sublayers_as_pdf_layers() {
     let v = s.execute("document.export", &json!({"format": "ai"})).unwrap();
     let back = terrazon_pdf::import(&b64(&v)).unwrap();
     let art = || "art".to_string();
-    assert_eq!(rows(&back.layers), [("Map".to_string(), true, vec![art(), "Sketch".into()]), ("Notes".to_string(), false, vec![art()])]);
-    let sketch = back.layers.first().and_then(|l| l.children()?.last().cloned()).unwrap();
+    assert_eq!(
+        rows(&back.layers),
+        [("Map".to_string(), true, vec![]), ("Layer 1".to_string(), true, vec![art(), "Sketch".into()]), ("Notes".to_string(), false, vec![art()])]
+    );
+    let sketch = back.layers[1].children().and_then(|c| c.last().cloned()).unwrap();
     assert_eq!(rows(&[sketch]), [("Sketch".to_string(), false, vec![art()])]);
     // Asked not to, it writes none.
     let v = s.execute("document.export", &json!({"format": "ai", "createLayers": false})).unwrap();

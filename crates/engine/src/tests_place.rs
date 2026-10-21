@@ -156,7 +156,7 @@ fn template_puts_the_art_on_a_locked_template_layer_below_the_current_one() {
     let r = place(&mut s, "sketch.png", &png(10, 10, [0, 0, 0, 255], None), json!({"template": true}));
     let st = s.doc().unwrap();
     let layers = &st.doc.layers;
-    assert_eq!(layers.len(), 3);
+    assert_eq!(layers.len(), 4, "Map, Layer 1, the template below the current layer, and the current one");
     let t = layers.iter().position(|l| l.name.as_deref() == Some("Template sketch.png")).unwrap();
     assert_eq!(layers[t + 1].id, current, "right below the current layer");
     assert!(layers[t].locked && matches!(layers[t].kind, NodeKind::Layer { template: true, .. }));

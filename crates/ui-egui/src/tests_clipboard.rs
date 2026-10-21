@@ -22,9 +22,10 @@ fn copy(app: &mut TerrazoneApp, id: NodeId) {
     run(app, "edit.copy", json!({}));
 }
 
-/// Objects on the active document's first layer.
+/// Objects on the active document's drawing layer.
 fn objects(app: &TerrazoneApp) -> Vec<NodeId> {
-    app.session.active().unwrap().doc.layers[0].children().unwrap().iter().map(|n| n.id).collect()
+    let d = &app.session.active().unwrap().doc;
+    d.node(d.default_layer().unwrap()).unwrap().children().unwrap().iter().map(|n| n.id).collect()
 }
 
 fn swatch(app: &mut TerrazoneApp, name: &str, hex: &str) {

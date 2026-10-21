@@ -259,5 +259,5 @@ fn pins_are_never_saved() {
     s.execute("document.open", &json!({"name": "pins.terrazon", "dataBase64": data})).unwrap();
     let st = s.doc().unwrap();
     assert!(st.doc.puppet.is_none());
-    assert_eq!(st.doc.node_count(), 2, "layer + rectangle");
+    assert_eq!(st.doc.node_count(), 3, "the Map layer, the drawing layer and the rectangle");
 }

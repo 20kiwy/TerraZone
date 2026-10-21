@@ -8,6 +8,12 @@ fn session() -> Session {
     s
 }
 
+/// The layer new art lands on ("Layer 1", the default drawing layer — the base Map layer is
+/// the tiles' home and takes no art).
+fn drawing_layer(d: &terrazon_doc::Document) -> &terrazon_doc::Node {
+    d.node(d.default_layer().unwrap()).unwrap()
+}
+
 #[test]
 fn batch_is_one_undo_step() {
     let mut s = session();
@@ -25,10 +31,10 @@ fn batch_is_one_undo_step() {
     let st = s.doc().unwrap();
     assert_eq!(st.history.undo.len(), 1);
     assert_eq!(st.history.undo[0].label, "Logo");
-    assert_eq!(st.doc.layers[0].children().unwrap().len(), 2);
+    assert_eq!(drawing_layer(&st.doc).children().unwrap().len(), 2);
     assert_eq!(s.journal.iter().filter(|(c, _)| c == "command.batch").count(), 1);
     s.execute("edit.undo", &json!({})).unwrap();
-    assert_eq!(s.doc().unwrap().doc.layers[0].children().unwrap().len(), 0);
+    assert_eq!(drawing_layer(&s.doc().unwrap().doc).children().unwrap().len(), 0);
 }
 
 #[test]
@@ -42,7 +48,7 @@ fn batch_rolls_back_on_error() {
         ]}),
     );
     assert!(r.is_err());
-    assert_eq!(s.doc().unwrap().doc.layers[0].children().unwrap().len(), 0);
+    assert_eq!(drawing_layer(&s.doc().unwrap().doc).children().unwrap().len(), 0);
     assert!(s.doc().unwrap().history.undo.is_empty());
     assert!(!s.in_interaction());
 }
@@ -56,7 +62,7 @@ fn serialize_and_reopen() {
     assert!(svg.contains("<svg"));
     s.execute("document.open", &json!({"name": "copy.terrazon", "dataBase64": b64})).unwrap();
     assert_eq!(s.documents().len(), 2);
-    assert_eq!(s.doc().unwrap().doc.node_count(), 2);
+    assert_eq!(s.doc().unwrap().doc.node_count(), 3, "the Map layer, the drawing layer and the ellipse");
     let png = s.execute("document.serialize", &json!({"format": "png", "scale": 0.5})).unwrap()["dataBase64"].as_str().unwrap().to_string();
     assert!(png.len() > 100);
 }
@@ -94,7 +100,7 @@ fn draw_behind_and_inside() {
     let a = s.execute("shape.rectangle", &json!({"x": 0, "y": 0, "width": 100, "height": 100})).unwrap()["id"].as_u64().unwrap();
     s.execute("view.drawMode", &json!({"mode": "behind"})).unwrap();
     let b = s.execute("shape.ellipse", &json!({"x": 10, "y": 10, "width": 50, "height": 50})).unwrap()["id"].as_u64().unwrap();
-    let order: Vec<u64> = s.doc().unwrap().doc.layers[0].children().unwrap().iter().map(|n| n.id.0).collect();
+    let order: Vec<u64> = drawing_layer(&s.doc().unwrap().doc).children().unwrap().iter().map(|n| n.id.0).collect();
     assert_eq!(order, vec![b, a]);
     s.execute("select.set", &json!({"ids": [a]})).unwrap();
     s.execute("view.drawMode", &json!({"mode": "inside"})).unwrap();
@@ -207,7 +213,7 @@ fn template_opens_as_untitled() {
     let st = s.doc().unwrap();
     assert!(st.path.is_none() && !st.doc.template);
     assert!(st.doc.title.starts_with("Untitled-"), "{}", st.doc.title);
-    assert_eq!(st.doc.layers[0].children().unwrap().len(), 1);
+    assert_eq!(drawing_layer(&st.doc).children().unwrap().len(), 1);
     let _ = std::fs::remove_dir_all(dir);
 }
 

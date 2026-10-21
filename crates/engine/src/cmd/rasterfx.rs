@@ -505,7 +505,7 @@ mod tests {
         s.execute("effect.apply", &json!({"effect": "blur.gaussian", "params": {"radius": 4}, "ids": [b]})).unwrap();
         let doc = s.doc().unwrap().doc.clone();
         let flat = super::flatten_raster_effects(&doc).unwrap();
-        let kids = flat.layers[0].children().unwrap();
+        let kids = flat.node(flat.default_layer().unwrap()).unwrap().children().unwrap();
         // Shadow: an image (300 ppi) under the vector rectangle, which keeps no raster effect.
         let NodeKind::Group { children, .. } = &kids[0].kind else { panic!("shadow becomes a group: {:?}", kids[0].kind_label()) };
         let NodeKind::Image(im) = &children[0].kind else { panic!() };

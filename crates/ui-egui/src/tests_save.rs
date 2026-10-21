@@ -62,17 +62,17 @@ fn revert_asks_then_reloads_in_the_same_tab_keeping_every_zoom() {
     assert!(menus::enabled(&app, "file.revert"));
     let r = app.run("file.revert", json!({})).unwrap();
     assert_eq!(r["pending"], dialogs::confirm::KIND);
-    assert_eq!(objects(&app), 3, "nothing happens before OK");
+    assert_eq!(objects(&app), 4, "nothing happens before OK");
     press_ok(&mut app);
     assert!(app.ui.dialog.is_none());
-    assert_eq!((objects(&app), app.session.active_index(), app.session.documents().len()), (2, Some(0), 2));
+    assert_eq!((objects(&app), app.session.active_index(), app.session.documents().len()), (3, Some(0), 2));
     assert!(!app.session.active().unwrap().is_dirty());
     assert_eq!((app.views[0].zoom, app.views[1].zoom), (2.0, 4.0));
     // Cancel leaves the changes.
     rect(&mut app);
     app.run("file.revert", json!({})).unwrap();
     app.ui.dialog = None;
-    assert_eq!(objects(&app), 3);
+    assert_eq!(objects(&app), 4);
     // An untitled document can't revert.
     app.session.set_active(1);
     rect(&mut app);

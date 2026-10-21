@@ -115,7 +115,7 @@ fn pdf_and_svg_write_the_effected_object_as_an_image() {
         let svg = s.execute("document.serialize", &json!({"format": "svg"})).unwrap()["text"].as_str().unwrap().to_string();
         assert!(svg.contains("<image") && !svg.contains("<filter"), "{id}: {svg}");
         let flat = crate::cmd::rasterfx::flatten_pixel_effects(&doc).unwrap();
-        assert!(matches!(flat.layers[0].children().unwrap()[0].kind, NodeKind::Image(_)), "{id}");
+        assert!(matches!(flat.node(flat.default_layer().unwrap()).unwrap().children().unwrap()[0].kind, NodeKind::Image(_)), "{id}");
     }
     let (mut s, g) = striped();
     s.execute("effect.apply", &json!({"effect": "blur.gaussian", "ids": [g]})).unwrap();

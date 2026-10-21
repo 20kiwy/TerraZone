@@ -142,7 +142,7 @@ fn an_art_brush_becomes_a_group_of_its_art() {
 fn a_targeted_layer_with_a_fill_expands_into_art_among_its_members() {
     let mut s = session();
     let a = square(&mut s);
-    let layer = s.doc().unwrap().doc.layers[0].id;
+    let layer = s.doc().unwrap().doc.default_layer().unwrap();
     run(&mut s, "layer.target", json!({"id": layer.0}));
     run(&mut s, "appearance.addStroke", json!({}));
     run(&mut s, "stroke.set", json!({"item": 0, "weight": 6}));
@@ -185,7 +185,7 @@ fn type_with_a_shadow_stays_type_and_type_with_its_own_stroke_is_outlined() {
 fn a_blurred_layer_keeps_its_image_as_its_only_member() {
     let mut s = session();
     square(&mut s);
-    let layer = s.doc().unwrap().doc.layers[0].id;
+    let layer = s.doc().unwrap().doc.default_layer().unwrap();
     run(&mut s, "layer.clippingMask.toggle", json!({"id": layer.0}));
     run(&mut s, "shape.rectangle", json!({"x": 0, "y": 0, "width": 200, "height": 200}));
     run(&mut s, "layer.target", json!({"id": layer.0}));

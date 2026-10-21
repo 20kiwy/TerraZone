@@ -105,6 +105,24 @@ pub fn specs() -> Vec<CommandSpec> {
             remove_tile_layers
         ),
         cmd!(
+            "map.setTilesVisible",
+            "Show Tiles Group",
+            [],
+            None,
+            "{on?: bool (default: flip)} the Tiles group's master eye in the Layers panel: the basemap's `visible` and every pinned tile layer's `visible` take `on` in one undo step → {visible}",
+            has_doc,
+            set_tiles_visible
+        ),
+        cmd!(
+            "map.moveTileLayer",
+            "Move Tile Layer",
+            [],
+            None,
+            "{id, target, above?: bool (default true)} move one pinned tile layer within the pin stack (drag a tile row onto another in the Layers panel): above or below `target` → {index}",
+            has_doc,
+            move_tile_layer
+        ),
+        cmd!(
             "map.sourceSession",
             "Tile Source Session",
             ["Map"],
@@ -152,6 +170,55 @@ fn show_tiles(s: &mut Session, p: &Value) -> Result<Value> {
         Ok(())
     })?;
     Ok(json!({ "visible": on }))
+}
+
+/// The Tiles group's master eye: the basemap and every pinned tile layer take `on` in one
+/// edit, so the whole tile stack reads visible or invisible at once (the group row's eye in
+/// the Layers panel).
+fn set_tiles_visible(s: &mut Session, p: &Value) -> Result<Value> {
+    let mut on = false;
+    s.edit("Show Tiles", |d, _| {
+        let m = map_of(d);
+        on = bool_or(p, "on", !(m.visible || m.tile_layers.iter().any(|t| t.visible)));
+        m.visible = on;
+        for t in &mut m.tile_layers {
+            t.visible = on;
+        }
+        Ok(())
+    })?;
+    Ok(json!({ "visible": on }))
+}
+
+/// Move one pinned tile layer above or below another (the Layers panel's tile-row drag): the
+/// stack draws first-to-last, so `above: false` puts the layer under its target.
+fn move_tile_layer(s: &mut Session, p: &Value) -> Result<Value> {
+    const C: &str = "map.moveTileLayer";
+    let id = str_param(p, "id").ok_or_else(|| bad(C, "give the tile layer's `id` (see map.tileLayers)"))?.to_string();
+    let target = str_param(p, "target").ok_or_else(|| bad(C, "give the `target` tile layer's id (see map.tileLayers)"))?.to_string();
+    let above = bool_or(p, "above", true);
+    if id == target {
+        return Err(bad(C, "a tile layer can't move onto itself"));
+    }
+    let mut index = None;
+    s.edit("Move Tile Layer", |d, _| {
+        let m = map_of(d);
+        let from =
+            m.tile_layers.iter().position(|t| t.id == id).ok_or_else(|| bad(C, format!("no tile layer called `{id}` (see map.tileLayers)")))?;
+        let to = m
+            .tile_layers
+            .iter()
+            .position(|t| t.id == target)
+            .ok_or_else(|| bad(C, format!("no tile layer called `{target}` (see map.tileLayers)")))?;
+        let layer = m.tile_layers.remove(from);
+        let mut at = if from < to { to - 1 } else { to };
+        if !above {
+            at += 1;
+        }
+        m.tile_layers.insert(at, layer);
+        index = Some(at);
+        Ok(())
+    })?;
+    Ok(json!({ "index": index }))
 }
 
 /// A source id from a name: letters, digits and dashes, unique against the sources already there.
@@ -848,24 +915,26 @@ mod tests {
         assert_eq!(s.doc().unwrap().history.undo.len(), undo + 1, "the whole dataset is one undo step");
         s.execute("edit.undo", &json!({})).unwrap();
         let d = &s.doc().unwrap().doc;
-        assert_eq!(d.layers.len(), 1, "back to the base Map layer alone");
+        assert_eq!(d.layers.len(), 2, "back to the base Map layer and the drawing layer alone");
         assert_eq!(d.layers[0].children().unwrap().len(), 0);
         assert_eq!(s.doc().unwrap().history.redo.len(), 1);
         s.execute("edit.redo", &json!({})).unwrap();
-        assert_eq!(s.doc().unwrap().doc.layers.len(), 2);
+        assert_eq!(s.doc().unwrap().doc.layers.len(), 3);
     }
 
     #[test]
     fn import_places_the_layer_above_the_current_layer() {
         let mut s = session();
-        // With the base layer current (the default), the data lands just above it.
+        // With the drawing layer current (the default), the data lands just above it —
+        // never inside the Map layer the tiles ride under.
         import(&mut s, json!([{ "d": "M 0 0 L 1 1" }])).unwrap();
         assert_eq!(s.doc().unwrap().doc.layers[0].name.as_deref(), Some("Map"));
-        assert_eq!(s.doc().unwrap().doc.layers[1].name.as_deref(), Some("Imported data"));
+        assert_eq!(s.doc().unwrap().doc.layers[1].name.as_deref(), Some("Layer 1"));
+        assert_eq!(s.doc().unwrap().doc.layers[2].name.as_deref(), Some("Imported data"));
         // A second import goes above the first (the current one), at the top level.
         s.execute("map.importVectorData", &json!({ "name": "Second", "paths": [{ "d": "M 0 0 L 1 1" }] })).unwrap();
         let names: Vec<_> = s.doc().unwrap().doc.layers.iter().filter_map(|l| l.name.clone()).collect();
-        assert_eq!(names, ["Map", "Imported data", "Second"]);
+        assert_eq!(names, ["Map", "Layer 1", "Imported data", "Second"]);
     }
 
     #[test]
@@ -877,7 +946,7 @@ mod tests {
         assert!(import(&mut s, json!([{ "d": "M 0 0" }])).is_err(), "a lone move draws nothing");
         assert!(import(&mut s, json!([{ "d": "M 0 0 L 1 1" }])).is_ok(), "the real thing works");
         // Every refused call left the document alone.
-        assert_eq!(s.doc().unwrap().doc.layers.len(), 2, "the base layer plus the one good import");
+        assert_eq!(s.doc().unwrap().doc.layers.len(), 3, "the base layers plus the one good import");
         assert!(s.execute("map.importVectorData", &json!({ "paths": [{ "d": "M 0 0 L 1 1" }] })).is_err(), "no name");
     }
 

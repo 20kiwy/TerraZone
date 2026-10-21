@@ -12,6 +12,12 @@ use crate::TerrazoneApp;
 use crate::canvas::Xf;
 use crate::place::{DropAt, DropTarget};
 
+/// The layer new art lands on ("Layer 1", the default drawing layer — the base Map layer is
+/// the tiles' home and takes no art).
+fn drawing_layer(d: &terrazon_doc::Document) -> &terrazon_doc::Node {
+    d.node(d.default_layer().unwrap()).unwrap()
+}
+
 /// A `w`×`h` red PNG declaring `ppi`.
 fn png(w: u32, h: u32, ppi: f64) -> Vec<u8> {
     let mut out = vec![];
@@ -280,7 +286,7 @@ fn one_file_places_centred_in_the_view_and_replace_swaps_the_selection() {
     crate::dialogs::confirm(&mut app).unwrap();
     let second = selected_image(&app);
     assert_eq!(second.name.as_deref(), Some("two.png"));
-    assert_eq!(app.session.active().unwrap().doc.layers[0].children().unwrap().len(), 1, "replaced");
+    assert_eq!(drawing_layer(&app.session.active().unwrap().doc).children().unwrap().len(), 1, "replaced");
     assert!(!app.ui.place_link, "Link is remembered");
 }
 
@@ -365,7 +371,7 @@ fn the_control_bars_mask_clips_the_image_and_selects_the_clipping_path() {
     crate::theme::install_fonts(&ctx);
     click_label(&mut app, &ctx, "Mask");
     let st = app.session.active().unwrap();
-    let group = &st.doc.layers[0].children().unwrap()[0];
+    let group = &drawing_layer(&st.doc).children().unwrap()[0];
     assert!(matches!(group.kind, NodeKind::Group { clip: true, .. }));
     let ids: Vec<u64> = group.children().unwrap().iter().map(|c| c.id.0).collect();
     assert_eq!((ids[1], st.selection.objects.iter().map(|i| i.0).collect::<Vec<_>>()), (img, vec![ids[0]]));

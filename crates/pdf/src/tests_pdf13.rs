@@ -58,7 +58,8 @@ fn pdf_1_3_files_say_so_and_have_no_transparency() {
     let e = export(&doc(0.5), &options(json!({"compatibility": "1.3"}))).unwrap_err();
     assert!(matches!(&e, PdfError::Unsupported(m) if m.contains("PDF 1.3 files have no transparency")), "{e}");
     let mut d = doc(1.0);
-    if let Some(n) = d.layers[0].children().and_then(|c| c.first()).map(|n| n.id) {
+    let drawing = d.default_layer().unwrap();
+    if let Some(n) = d.node(drawing).and_then(|l| l.children().and_then(|c| c.first()).map(|n| n.id)) {
         d.node_mut(n).unwrap().blend = BlendMode::Multiply;
     }
     assert!(matches!(export(&d, &options(json!({"compatibility": "1.3"}))), Err(PdfError::Unsupported(m)) if m.contains("PDF 1.3")));
