@@ -63,10 +63,11 @@ const WALK_LIFT_SPEED: f32 = 4.0;
 const WALK_WHEEL_LIFT: f32 = 0.05;
 /// Walk mode's drag-look speed (radians per pointer point — the reference's own factor).
 const WALK_LOOK_SPEED: f32 = 0.004;
-/// The endless ground grid's far clamp ring (metres): rays that miss the ground (at/above the
-/// horizon) march out along their ground heading to here — the ground slab's own half extent,
-/// so the grid never reaches past the world's ground.
-const GRID_FAR_RING: f64 = 60_000.0;
+/// The Web Mercator world's half extent (metres): the ground square the whole map covers
+/// (±20 037 508 m). The grid, the slab and the imagery's footprint clamp to it — the 3D
+/// ground IS the world's ground, so a zoomed-out camera sees the grid and the map run to the
+/// world's own edges instead of stopping at a square patch around the anchor.
+pub(crate) const WORLD_HALF_M: f64 = 20_037_508.342_789_244;
 /// Target screen pixels between the endless grid's minor lines.
 const GRID_TARGET_PX: f64 = 26.0;
 /// The endless grid's per-direction line budget: at grazing angles the extent grows faster
@@ -84,7 +85,8 @@ const IMAGERY_RING: i64 = 2;
 const IMAGERY_CAP: usize = 24;
 /// How long a failed imagery tile waits before asking again (as the 2D tile cache does).
 const IMAGERY_RETRY: Duration = Duration::from_secs(30);
-/// The ground slab's half extent when no DEM window is known (metres).
+/// The ground slab's half extent fallback (metres) — the 3×3 slab patch sizes itself from
+/// the frame's far reach; this floor keeps the patch sane before the first frame.
 const SLAB_HALF: f32 = 60_000.0;
 /// Decals (contours, the document's draped drawing) and imagery sit this far above the datum
 /// plane, so the painter's draw order (no z-buffer) keeps them on top of the slab under them.
@@ -203,6 +205,11 @@ pub struct Imagery {
     /// The tile ring the current asks cover (zoom, tile-x/y extents): re-asked when it
     /// changes.
     asked: Option<(u8, u32, u32, u32, u32)>,
+    /// The camera preview's own ring (the hovered camera's street-scale tiles, a small square
+    /// around its ground point at its own zoom): the PIP renders sharp where the main frame's
+    /// ring is coarse. Cleared when no camera hovers.
+    preview_ring: Vec<TileId>,
+    preview_asked: Option<(u8, u32, u32, u32, u32)>,
     /// The egui context tag the textures were uploaded to (a new context starts the ring over).
     tag: u64,
     /// The pinned tile layers' own textures, keyed by tile-layer id (each pinned layer draws
@@ -287,9 +294,11 @@ impl DemRuntime {
         self.contours.as_ref()
     }
 
-    /// The prim mesh of one placement, built once and cached by id.
+    /// The prim mesh of one placement, built once and cached by id + the build inputs (the
+    /// scale, and the cameras' aim — an edited placement rebuilds, not a stale cache).
     fn prim_of(&mut self, p: &AssetPlacement) -> Mesh3d {
-        self.prims.entry(p.id.clone()).or_insert_with(|| build_prim(p.kind, p.scale)).clone()
+        let key = format!("{}|{:.3}|{:.1}|{:.1}", p.id, p.scale, p.pitch_deg, p.fov_deg);
+        self.prims.entry(key).or_insert_with(|| build_prim(p.kind, p.scale)).clone()
     }
 
     /// The placement ghost's prim mesh, cached by kind.
@@ -303,16 +312,17 @@ impl DemRuntime {
         self.contours = None;
     }
 
-    /// A placement is gone: drop its cached prim mesh.
+    /// A placement is gone: drop its cached prim meshes (every build-input variant of it).
     pub fn forget_prim(&mut self, id: &str) {
-        self.prims.remove(id);
+        let prefix = format!("{id}|");
+        self.prims.retain(|key, _| !key.starts_with(&prefix));
     }
 }
 
 impl Imagery {
     fn new() -> Self {
         let (tx, rx) = std::sync::mpsc::channel();
-        Self { rx, tx, tiles: HashMap::new(), ring: vec![], asked: None, tag: 0, pinned: HashMap::new() }
+        Self { rx, tx, tiles: HashMap::new(), ring: vec![], asked: None, preview_ring: vec![], preview_asked: None, tag: 0, pinned: HashMap::new() }
     }
 }
 
@@ -333,6 +343,18 @@ fn build_prim(kind: AssetKind, scale: f32) -> Mesh3d {
         AssetKind::Tree => prim::tree(8.0 * scale),
         AssetKind::Stadium => prim::stadium(105.0 * scale, 68.0 * scale),
         AssetKind::Pin => prim::pin(6.0 * scale),
+        // A CCTV camera on its mast: the pole, the head box and the lens snout facing north
+        // (−z — `push_placed` turns it to the placement's rotation, the same clockwise pass
+        // the fleet rides). The view frustum it looks down is a separate mesh — it depends on
+        // the placement's own pitch/fov (`camera_frustum_prim`), so it caches per placement.
+        AssetKind::Camera => {
+            let h = 6.0 * scale;
+            let mut m = Mesh3d::new(terrazon_scene3d::mesh::MeshLayer::Standing);
+            merge_mesh(&mut m, &terrazon_scene3d::mesh::box_between([-0.09, 0.0, -0.09], [0.09, h, 0.09], [0.38, 0.40, 0.43]));
+            merge_mesh(&mut m, &terrazon_scene3d::mesh::box_between([-0.28, h - 0.55, -0.42], [0.28, h, 0.10], [0.27, 0.29, 0.32]));
+            merge_mesh(&mut m, &terrazon_scene3d::mesh::box_between([-0.12, h - 0.45, -0.58], [0.12, h - 0.18, -0.40], [0.14, 0.15, 0.17]));
+            m
+        }
     }
 }
 
@@ -341,6 +363,98 @@ fn build_prim(kind: AssetKind, scale: f32) -> Mesh3d {
 fn scene_mercator(app: &TerrazoneApp) -> Mercator {
     let (lon, lat) = app.canvas.dem.as_ref().map_or(view_centre_lonlat(app), |r| r.anchor);
     Mercator::new(lat, lon)
+}
+
+/// The world position of one placement's ground point (the doc point through the scene
+/// Mercator, on the datum).
+fn placement_world(app: &TerrazoneApp, p: &AssetPlacement) -> [f32; 3] {
+    let m = scene_mercator(app);
+    let (lon, lat) = doc_to_lonlat(p.x, p.y);
+    let (x, yn) = m.project(lon, lat);
+    [x as f32, 0.0, -(yn as f32)]
+}
+
+/// The look rig of one camera placement: the mast-top eye standing on the datum (the flat
+/// ground the placements read), looking along the placement's rotation (degrees clockwise
+/// from north — the ground heading the 2D wedge draws) pitched below the horizon, through
+/// the placement's own field of view. `aspect` widens the vertical fov out of the stored
+/// horizontal one the way a render of that shape needs. This is the EffectCraft camera
+/// object, one per placement: the preview renders the scene through it.
+fn camera_rig(app: &TerrazoneApp, p: &AssetPlacement, aspect: f32) -> Option<CameraRig> {
+    if !p.kind.is_camera() {
+        return None;
+    }
+    let at = placement_world(app, p);
+    let base = app.canvas.dem.as_ref().map_or(0.0, |r| r.base);
+    // TerraZone's frame: x east, z south. Rotation clockwise from north: the ground heading
+    // is (sin θ, −cos θ); the walk rig's yaw measures from +z (south), so yaw = θ + π.
+    let th = p.rotation_deg.max(0.0).to_radians();
+    let yaw = th + std::f32::consts::PI;
+    let pitch = p.pitch_deg.clamp(-85.0, 85.0).to_radians();
+    // The stored fov is horizontal: the vertical fov comes from the render's own aspect.
+    let half_h = (p.fov_deg.clamp(5.0, 150.0) * 0.5).to_radians();
+    let fov_y = 2.0 * (half_h.tan() / aspect.max(0.2)).atan();
+    Some(CameraRig::Walk(WalkCam { pos: [at[0], base + p.eye_height_m(), at[2]], yaw, pitch, fov_y }))
+}
+
+/// The camera's view frustum as a decal mesh (apex at the mast-top eye, opening down to the
+/// ground footprint the 2D wedge draws): four translucent side triangles over the ground
+/// quad, the cone the 3D view reads the camera's aim from. Cached per placement+aim.
+fn camera_frustum_prim(p: &AssetPlacement) -> Mesh3d {
+    let half = (p.fov_deg.clamp(5.0, 150.0) * 0.5).to_radians();
+    let pitch = p.pitch_deg.clamp(-85.0, 85.0).to_radians();
+    let eye_h = p.eye_height_m();
+    // The cone's edges sit at the centre ray's down-angle ± the half-fov: the steeper edge
+    // lands NEAR, the shallower edge FAR; a ray at/above the horizon clamps to the far bound.
+    let reach = |down: f32| if down <= 0.02 { CAM_FRUSTUM_FAR } else { (eye_h / down.tan()).clamp(0.5, CAM_FRUSTUM_FAR) };
+    let down_c = -pitch; // radians below the horizon (positive = looking down)
+    let near = reach(down_c + half);
+    let far = reach(down_c - half).max(near + 0.5);
+    let spread = half.tan();
+    let th = p.rotation_deg.max(0.0).to_radians();
+    // The ground heading (sin θ, −cos θ) and its right hand (cos θ, sin θ) — east at 90°.
+    let (h_x, h_z) = (th.sin(), -th.cos());
+    let (r_x, r_z) = (th.cos(), th.sin());
+    let ground = |ahead: f32, side: f32| [h_x * ahead + r_x * side, 0.0, h_z * ahead + r_z * side];
+    let apex = [0.0, eye_h, 0.0];
+    let (na, nb) = (ground(near, -near * spread), ground(near, near * spread));
+    let (fa, fb) = (ground(far, -far * spread), ground(far, far * spread));
+    let mut m = Mesh3d::new(terrazon_scene3d::mesh::MeshLayer::Decal);
+    m.z_bias = 0.06;
+    let color = [0.83, 0.54, 0.16];
+    for tri in [[apex, na, nb], [apex, nb, fb], [apex, fb, fa], [apex, fa, na]] {
+        let a = m.vertex(tri[0], color);
+        let b = m.vertex(tri[1], color);
+        let c = m.vertex(tri[2], color);
+        m.tri(a, b, c);
+    }
+    // The ground footprint quad (the wedge's fill) under the sides.
+    let a = m.vertex(na, color);
+    let b = m.vertex(nb, color);
+    let c = m.vertex(fb, color);
+    let d = m.vertex(fa, color);
+    m.tri(a, b, c);
+    m.tri(a, c, d);
+    m
+}
+
+/// The frustum's far clamp (metres): past this the cone is a smear on the ground.
+const CAM_FRUSTUM_FAR: f32 = 120.0;
+
+/// The camera placement the pointer hovers (its ground point projected within ~28 px of the
+/// pointer): the preview renders the scene through it.
+fn hover_camera(app: &TerrazoneApp, xform: &Xform, hover: Option<Pos2>) -> Option<AssetPlacement> {
+    let h = hover?;
+    let placements = app.session.active().map(|st| st.doc.placements.placements.clone()).unwrap_or_default();
+    let mut best: Option<(f32, AssetPlacement)> = None;
+    for p in placements.iter().filter(|p| p.kind.is_camera()) {
+        let Some(s) = xform.proj(placement_world(app, p)) else { continue };
+        let d = s.distance(h);
+        if d <= 28.0 && best.as_ref().is_none_or(|(bd, _)| d < *bd) {
+            best = Some((d, p.clone()));
+        }
+    }
+    best.map(|(_, p)| p)
 }
 
 /// The kind the Assets tool would place, when it is the tool holding the canvas (its option
@@ -807,7 +921,22 @@ pub fn show_3d(app: &mut TerrazoneApp, ui: &mut egui::Ui, rect: Rect) {
     // The frame's projection, built before the DEM/imagery step so the imagery ring covers
     // the ground this exact camera sees (a tilted view reaches toward the horizon). The
     // render path rebuilds it after the step (a re-anchor moves the camera target there).
-    dem_step(app, ui.ctx(), Some(&Xform::for_cam(rect, &rig_of(app))));
+    // The drape's ground scale rides along: metres per screen px at the focus (the 2D rule's
+    // input), plus the hovered camera's own street-scale ring for the preview.
+    {
+        let rig0 = rig_of(app);
+        let xf0 = Xform::for_cam(rect, &rig0);
+        let mpp0 = metres_per_px(app, rect);
+        let preview = hover_camera(app, &xf0, hover).map(|cam| {
+            let (lon, lat) = doc_to_lonlat(cam.x, cam.y);
+            let aspect = 320.0 / 200.0;
+            let half_h = (cam.fov_deg.clamp(5.0, 150.0) * 0.5).to_radians();
+            let fov_y = 2.0 * (half_h.tan() / aspect).atan();
+            let pmpp = 2.0 * f64::from(cam.eye_height_m()) * f64::from((fov_y * 0.5).tan()) / 200.0;
+            (lon, lat, pmpp)
+        });
+        dem_step(app, ui.ctx(), Some(&xf0), mpp0, preview);
+    }
 
     let painter = ui.painter_at(rect);
     painter.rect_filled(rect, 0.0, SKY);
@@ -825,18 +954,37 @@ pub fn show_3d(app: &mut TerrazoneApp, ui: &mut egui::Ui, rect: Rect) {
     // The pointer's ground pick feeds the status bar's coordinate readout (the same doc-point
     // hover the 2D canvas sets).
     app.hover_doc = hover.and_then(|h| ground_to_doc(app, rect, h));
+    // The camera placement under the pointer (if any): its view frustum runs brighter and the
+    // preview at the canvas's bottom-right renders the scene through it.
+    let hover_cam = hover_camera(app, &xform, hover);
 
     // The ground slab first (under everything): the flat ground the imagery drapes onto.
-    draw_slab(&painter, &xform, SLAB_HALF, [0.55, 0.53, 0.48]);
+    let focus = match rig {
+        CameraRig::Orbit(c) => [c.target[0], c.target[2]],
+        CameraRig::Walk(w) => [w.pos[0], w.pos[2]],
+    };
+    let slab_half = (match rig {
+        CameraRig::Orbit(c) => c.dist * 4.0,
+        CameraRig::Walk(w) => w.pos[1] * 40.0,
+    })
+    .clamp(2_000.0, WORLD_HALF_M as f32);
+    draw_slab(&painter, &xform, focus, slab_half, [0.55, 0.53, 0.48]);
+
+    // The map's ground grid — the position aid — draws UNDER the imagery now (the same order
+    // the 2D canvas reads): the tile map paints OVER the grid, so a draped map never shows
+    // grid lines on top of it. The Grid layer's eye (`doc.map.grid_visible`, the Layers
+    // panel's bottom row) turns the grid on; hiding the tile stack (the Tiles group's eye)
+    // reveals it across the full world. A paper document keeps its grid too — there is no
+    // imagery to cover it.
+    let grid_on = app.session.active().is_none_or(|st| st.doc.map.grid_visible);
+    if grid_on {
+        draw_ground_grid(&painter, &xform, rect, &rig);
+    }
 
     // The imagery drape (the 2D basemap under the 3D scene), flat on the datum: the ground
-    // reads exactly like the 2D map, in perspective.
+    // reads exactly like the 2D map, in perspective — over the grid, under everything else.
     draw_imagery(app, &painter, &xform);
     draw_loading_hint(app, &painter, &t, rect);
-
-    // The ground grid (the position aid): the EffectCraft viewer's endless grid — it fills
-    // the viewport at every camera, under the contours and the art.
-    draw_ground_grid(&painter, &xform, rect, &rig);
 
     let mut buckets: [Vec<Tri>; 3] = [Vec::new(), Vec::new(), Vec::new()];
     let mut drawn = 0usize;
@@ -870,12 +1018,22 @@ pub fn show_3d(app: &mut TerrazoneApp, ui: &mut egui::Ui, rect: Rect) {
                 Some(rt) => rt.prim_of(p),
                 None => build_prim(p.kind, p.scale),
             };
-            let (lon, lat) = doc_to_lonlat(p.x, p.y);
-            let (x, yn) = m.project(lon, lat);
-            let at = [x as f32, 0.0, -(yn as f32)];
+            let at = placement_world(app, p);
             push_placed(&mut buckets, &mut drawn, &mesh, p, at, &xform);
             let pbase = app.canvas.dem.as_ref().map_or(0.0, |r| r.base);
             push_blob_shadow(&mut buckets[1], &mut drawn, &xform, [at[0], pbase, at[2]], p.size_m(), &m);
+            // A camera stands its view frustum too — the translucent cone from the mast-top
+            // eye down to the ground footprint, the aim the 2D map draws as its wedge. The
+            // hovered camera's cone runs brighter (it is the one the preview renders through).
+            if p.kind.is_camera() {
+                let hovered = hover_cam.as_ref().is_some_and(|hc| hc.id == p.id);
+                let key = format!("camfrustum/{}/{}", p.id, p.rotation_deg as i32);
+                let frustum = match app.canvas.dem.as_mut() {
+                    Some(rt) => rt.prims.entry(key).or_insert_with(|| camera_frustum_prim(p)).clone(),
+                    None => camera_frustum_prim(p),
+                };
+                push_mesh(&mut buckets, &mut drawn, &frustum, [at[0], pbase, at[2]], 0.0, if hovered { 0.62 } else { 0.32 }, &xform);
+            }
         }
     }
 
@@ -943,6 +1101,10 @@ pub fn show_3d(app: &mut TerrazoneApp, ui: &mut egui::Ui, rect: Rect) {
     }
 
     draw_readout(app, &painter, rect, hover);
+    // The camera preview: the hovered camera's own scene, bottom-right, over everything.
+    if let Some(cam) = hover_cam.as_ref() {
+        draw_camera_pip(app, ui, rect, cam, grid_on);
+    }
     draw_canvas_switch(app, ui, rect);
 }
 
@@ -1019,24 +1181,39 @@ fn flush_bucket(bucket: &[Tri], painter: &egui::Painter) {
     }
 }
 
-/// The flat ground slab at the datum (drawn first, under everything).
-fn draw_slab(painter: &egui::Painter, xform: &Xform, half: f32, color: [f32; 3]) {
+/// The flat ground slab at the datum (drawn first, under everything): a 3×3 patch of quads
+/// centred on the camera's focus, half the frame's far reach — every cell projects
+/// independently, so the ground never vanishes because one far corner left the frustum (the
+/// old single world-sized quad did exactly that the moment the camera tilted). The imagery
+/// drapes over it; where no tile is ready yet, this is the ground that shows.
+fn draw_slab(painter: &egui::Painter, xform: &Xform, focus: [f32; 2], half: f32, color: [f32; 3]) {
+    let col = Xform::shade(color, Vec3::Y);
     let mut mesh = egui::Mesh::default();
-    let corners = [(-half, -half), (half, -half), (half, half), (-half, half)];
-    for (x, z) in corners {
-        if let Some(p) = xform.proj([x, 0.0, z]) {
-            mesh.colored_vertex(p, Xform::shade(color, Vec3::Y));
+    let mut grid: [[Option<Pos2>; 3]; 3] = Default::default();
+    for (ix, x) in [focus[0] - half, focus[0], focus[0] + half].into_iter().enumerate() {
+        for (iz, z) in [focus[1] - half, focus[1], focus[1] + half].into_iter().enumerate() {
+            grid[ix][iz] = xform.proj([x, 0.0, z]);
         }
     }
-    if mesh.vertices.len() == 4 {
-        mesh.add_triangle(0, 1, 2);
-        mesh.add_triangle(0, 2, 3);
+    for ix in 0..2 {
+        for iz in 0..2 {
+            let (Some(a), Some(b), Some(c), Some(d)) = (grid[ix][iz], grid[ix + 1][iz], grid[ix + 1][iz + 1], grid[ix][iz + 1]) else { continue };
+            let base = mesh.vertices.len() as u32;
+            for p in [a, b, c, d] {
+                mesh.colored_vertex(p, col);
+            }
+            mesh.add_triangle(base, base + 1, base + 2);
+            mesh.add_triangle(base, base + 2, base + 3);
+        }
+    }
+    if !mesh.is_empty() {
         painter.add(Shape::mesh(std::sync::Arc::new(mesh)));
     }
 }
 
-/// The DEM and imagery lifecycle, ticked once per 3D frame.
-fn dem_step(app: &mut TerrazoneApp, ctx: &egui::Context, xform: Option<&Xform>) {
+/// The DEM and imagery lifecycle, ticked once per 3D frame. `mpp` is the camera's ground
+/// metres per screen px at the focus (the drape's zoom input, the 2D rule's scale).
+fn dem_step(app: &mut TerrazoneApp, ctx: &egui::Context, xform: Option<&Xform>, mpp: f64, preview: Option<(f64, f64, f64)>) {
     let mut centre = view_centre_lonlat(app);
     let fetcher = app.services.dem.clone();
     if app.canvas.dem.is_none() {
@@ -1112,12 +1289,10 @@ fn dem_step(app: &mut TerrazoneApp, ctx: &egui::Context, xform: Option<&Xform>) 
         app.status("3D anchors the map view centre — open water here; zoom the 2D map to an area to bring it into 3D".to_string());
     }
     // 2. Imagery: the basemap tiles the 3D ground covers, on the imagery runtime's own channel.
-    //    The drape's zoom follows the camera: far it stays at the setting, close it refines, so
-    //    dollying in brings sharper ground instead of stretching the same pixels.
-    let base_zoom = app.ui.terrain3d.imagery_zoom;
-    // The drape's distance input: the orbit arm's, or in walk mode the rig's own height off
-    // the ground (a walked camera at street height reads street-level tiles).
-    let cam_dist = if app.ui.cam_mode == CamMode::Walk { app.ui.walk3d.pos[1] * 2.5 } else { app.ui.cam3d.dist };
+    //    The drape's zoom follows the camera's ground scale (the 2D map's own rule — mpp →
+    //    level, to z22 where the source serves it), so dollying in brings sharper ground and
+    //    dollying out coarsens it, exactly like the flat canvas.
+    let source_zoom_cap = app.ui.terrain3d.imagery_zoom;
     let (source, pinned) = app
         .session
         .active()
@@ -1128,8 +1303,9 @@ fn dem_step(app: &mut TerrazoneApp, ctx: &egui::Context, xform: Option<&Xform>) 
         })
         .unwrap_or((None, Vec::new()));
     let imagery_fetcher = app.services.tile_fetch.clone();
-    let frame = ImageryFrame { source: source.as_ref(), base_zoom, cam_dist, xform };
-    let imagery_busy = app.canvas.dem.as_mut().is_some_and(|rt| imagery_step(rt, frame, imagery_fetcher.as_deref(), ctx, &pinned));
+    let frame = ImageryFrame { source: source.as_ref(), mpp, xform };
+    let imagery_busy =
+        app.canvas.dem.as_mut().is_some_and(|rt| imagery_step(rt, frame, imagery_fetcher.as_deref(), ctx, &pinned, source_zoom_cap, preview));
 
     if dem_busy > 0 || imagery_busy {
         ctx.request_repaint_after(Duration::from_millis(120));
@@ -1142,6 +1318,12 @@ fn reanchor(app: &mut TerrazoneApp, fetcher: Option<&dyn terrazon_scene3d::DemFe
     let centre = view_centre_lonlat(app);
     let Some(rt) = app.canvas.dem.as_mut() else { return };
     let old = Mercator::new(rt.anchor.1, rt.anchor.0);
+    // How far the scene travels: a pan re-anchors around the camera (the view must not jump);
+    // a far jump — the user panned the 2D map while the 3D runtime sat idle, then came back —
+    // should land where the 2D map now looks, so the target snaps onto the new anchor's own
+    // ground instead of carrying the old view kilometres across the world.
+    let jump = ground_distance(rt.anchor.0, rt.anchor.1, centre.0, centre.1);
+    let far_jump = jump > DEM_MOVE_M * 10.0;
     // Where the old camera target sat on the ground, in the new frame.
     let target = app.ui.cam3d.target;
     let (tlon, tlat) = old.unproject(f64::from(target[0]), f64::from(-target[2]));
@@ -1153,54 +1335,63 @@ fn reanchor(app: &mut TerrazoneApp, fetcher: Option<&dyn terrazon_scene3d::DemFe
     rt.water_hinted = false;
     rt.loader = fetcher.map(|f| DemLoader::new(f, centre.0, centre.1, DEM_ZOOM));
     let new = Mercator::new(centre.1, centre.0);
-    let [nx, nz] = {
-        let (x, yn) = new.project(tlon, tlat);
-        [x as f32, -(yn as f32)]
+    app.ui.cam3d.target = if far_jump {
+        [0.0, target[1], 0.0]
+    } else {
+        let [nx, nz] = {
+            let (x, yn) = new.project(tlon, tlat);
+            [x as f32, -(yn as f32)]
+        };
+        [nx, target[1], nz]
     };
-    app.ui.cam3d.target = [nx, target[1], nz];
+    if far_jump
+        && let Some(walk) = match app.ui.cam_mode {
+            CamMode::Walk => Some(&mut app.ui.walk3d),
+            CamMode::Orbit => None,
+        }
+    {
+        // A walked camera rides to the new anchor too (its position IS the view).
+        walk.pos = [0.0, walk.pos[1], 0.0];
+    }
     if let Some(rt) = app.canvas.dem.as_mut() {
         rt.imagery.asked = None;
     }
 }
 
-/// The drape's zoom for the camera's distance: the panel's setting at neighbourhood range, one
-/// step finer inside ~600 m, two inside ~150 m (a street-level camera reads street-level
-/// tiles); backed off coarser when far, so a high orbit doesn't fetch pixels it can't show.
-/// Clamped into the source's own zoom range.
-pub(crate) fn drape_zoom(base: u8, dist: f32, source: &terrazon_map::TileSource) -> u8 {
-    let step = if dist > 8_000.0 {
-        -2
-    } else if dist > 2_500.0 {
-        -1
-    } else if dist > 600.0 {
-        0
-    } else if dist > 150.0 {
-        1
-    } else {
-        2
-    };
-    let z = i32::from(base) + step;
-    z.clamp(i32::from(source.min_zoom), i32::from(source.max_zoom)) as u8
+/// The drape's zoom for the camera's ground scale — the 2D map's own rule read through the
+/// camera: the Web-Mercator level whose tiles are ~256 screen px at the focus's metres-per-px
+/// ([`zoom_level_of`]), so the drape refines and coarsens exactly like the 2D canvas does as
+/// the camera dollies — down to the map's last level z22 for the sources that serve it.
+/// Clamped into the source's own zoom range and the terrain panel's max setting.
+pub(crate) fn drape_zoom_view(mpp: f64, lat: f64, source: &terrazon_map::TileSource, max_zoom: u8) -> u8 {
+    let z = zoom_level_of(mpp, lat).round() as i32;
+    z.clamp(i32::from(source.min_zoom), i32::from(source.max_zoom).min(i32::from(max_zoom)).min(i32::from(terrazon_map::MAX_ZOOM))) as u8
 }
 
-/// The ring's radius and cap for a drape zoom `step` from the base: finer tiles cover less
-/// ground, so a closer ring asks wider (still centre-out, still capped).
-pub(crate) fn ring_shape(step: i32) -> (i64, usize) {
-    match step {
-        1 => (3, 36),
-        2 => (4, 49),
-        _ => (IMAGERY_RING, IMAGERY_CAP),
-    }
-}
-
-/// What one imagery step reads from the frame: the drape's zoom inputs and the frame's own
-/// projection — the ring covers the projected ground when a frame is present, and falls
-/// back to the square ring around the anchor without one.
+/// What one imagery step reads from the frame: the drape's ground scale (metres per screen px
+/// at the focus) and the frame's own projection — the ring covers the projected ground when a
+/// frame is present, and falls back to the square ring around the anchor without one.
 struct ImageryFrame<'a> {
     source: Option<&'a terrazon_map::TileSource>,
-    base_zoom: u8,
-    cam_dist: f32,
+    mpp: f64,
     xform: Option<&'a Xform>,
+}
+
+/// Ask for one imagery tile if it isn't in the runtime yet (and isn't cooling down from a
+/// recent failure) — the one ask the main ring, the preview ring and the preview's ancestor
+/// fallbacks all go through.
+fn ensure_imagery_tile(rt: &mut DemRuntime, fetcher: &dyn TileFetcher, source: &terrazon_map::TileSource, t: TileId) {
+    let key = tile_key(t);
+    if let Some(ImageryTile { state: ImageryState::Failed(at) }) = rt.imagery.tiles.get(&key)
+        && Instant::now() < *at
+    {
+        return;
+    }
+    if !rt.imagery.tiles.contains_key(&key) {
+        rt.imagery.tiles.insert(key.clone(), ImageryTile { state: ImageryState::Pending });
+        let url = terrazon_map::build_tile_url(source, u32::from(t.z), t.x, t.y);
+        fetcher.fetch(format!("{}/{}/{}/{}", source.id, t.z, t.x, t.y), url, rt.imagery.tx.clone());
+    }
 }
 
 /// Ask for and collect the imagery tiles around the scene centre. Returns whether any ask is
@@ -1211,6 +1402,8 @@ fn imagery_step(
     fetcher: Option<&dyn TileFetcher>,
     ctx: &egui::Context,
     pinned: &[terrazon_map::TileLayer],
+    max_zoom: u8,
+    preview: Option<(f64, f64, f64)>,
 ) -> bool {
     // Textures belong to the context they were uploaded to; a new one starts the ring over.
     let tag = crate::graphics::context_tag(ctx);
@@ -1237,27 +1430,32 @@ fn imagery_step(
             fetcher.fetch(format!("pinned/{}/{}", tl.id, tile_key(tile)), url, rt.imagery.tx.clone());
         }
     }
-    let z = drape_zoom(frame.base_zoom, frame.cam_dist, source);
+    let z = drape_zoom_view(frame.mpp, rt.anchor.1, source, max_zoom);
     let (cx, cy) = terrazon_scene3d::mercator::lonlat_to_tile(rt.anchor.0, rt.anchor.1, u32::from(z));
     // The ring the camera actually covers: from the frame's projection, the screen's corners
     // and edges unproject onto the datum — a tilted view reaches far toward the horizon, and
     // the ring covers that whole reach (the old fixed square showed a bare far field and
     // stretched its few tiles over it). Without a frame (no 3D canvas yet) the square ring
     // around the anchor stands in.
-    let ring = imagery_ring_footprint(rt, frame.xform, z).unwrap_or_else(|| {
-        let step = i32::from(z) - i32::from(frame.base_zoom);
-        let (radius, cap) = ring_shape(step);
-        imagery_ring(z, cx, cy, radius, cap)
-    });
+    let ring = imagery_ring_footprint(rt, frame.xform, z).unwrap_or_else(|| imagery_ring(z, cx, cy, IMAGERY_RING, IMAGERY_CAP));
     // The ask's fingerprint: zoom, centre tile and the ring's extents (a tilt or pan that
     // changes the footprint re-asks even when the centre tile stays).
     let (min_x, max_x, min_y, max_y) =
         ring.iter().fold((u32::MAX, 0u32, u32::MAX, 0u32), |(x0, x1, y0, y1), t| (x0.min(t.x), x1.max(t.x), y0.min(t.y), y1.max(t.y)));
     if rt.imagery.asked != Some((z, min_x, max_x, min_y, max_y)) {
         // A new ring: keep the ring's tiles and their ancestors (they dress the ring while it
-        // loads), forget the rest, ask the ring (centre out, capped).
+        // loads), the camera preview's own tiles too, forget the rest, ask the ring (centre
+        // out, capped).
         let mut keep = std::collections::HashSet::new();
         for t in &ring {
+            keep.insert(tile_key(*t));
+            for dz in 1..=2 {
+                if let Some((anc, _, _)) = crate::tiles::ancestor_uv(*t, dz) {
+                    keep.insert(tile_key(anc));
+                }
+            }
+        }
+        for t in &rt.imagery.preview_ring {
             keep.insert(tile_key(*t));
             for dz in 1..=2 {
                 if let Some((anc, _, _)) = crate::tiles::ancestor_uv(*t, dz) {
@@ -1269,17 +1467,41 @@ fn imagery_step(
         rt.imagery.ring = ring.clone();
         rt.imagery.asked = Some((z, min_x, max_x, min_y, max_y));
         for t in &ring {
-            let key = tile_key(*t);
-            if let Some(ImageryTile { state: ImageryState::Failed(at) }) = rt.imagery.tiles.get(&key)
-                && Instant::now() < *at
-            {
-                continue;
+            ensure_imagery_tile(rt, fetcher, source, *t);
+        }
+    }
+    // The camera preview's own ring: the hovered camera renders at street scale through its
+    // own rig — a small square of tiles around its ground point at the PIP's own zoom, so the
+    // preview reads sharp where the main frame's ring is coarse. No hover: cleared, and the
+    // next main re-ask forgets the preview's tiles.
+    match preview {
+        Some((plon, plat, pmpp)) => {
+            // The preview's ground footprint spans the aim's reach (~70 m deep): the zoom
+            // caps at z20 so a ring this size actually COVERS it (finer tiles would need
+            // thousands), while the tiles still land near the PIP's own pixels-per-metre.
+            let pz = drape_zoom_view(pmpp, plat, source, max_zoom).min(20);
+            let (pcx, pcy) = terrazon_scene3d::mercator::lonlat_to_tile(plon, plat, u32::from(pz));
+            let pring = imagery_ring(pz, pcx, pcy, 4, 100);
+            let (min_x, max_x, min_y, max_y) =
+                pring.iter().fold((u32::MAX, 0u32, u32::MAX, 0u32), |(x0, x1, y0, y1), t| (x0.min(t.x), x1.max(t.x), y0.min(t.y), y1.max(t.y)));
+            if rt.imagery.preview_asked != Some((pz, min_x, max_x, min_y, max_y)) {
+                rt.imagery.preview_ring = pring.clone();
+                rt.imagery.preview_asked = Some((pz, min_x, max_x, min_y, max_y));
+                for t in &pring {
+                    ensure_imagery_tile(rt, fetcher, source, *t);
+                    // The draw's fallback chain: a tile that never lands (a zoom the source
+                    // doesn't serve here) stretches its ready ancestor — ask those too.
+                    for dz in 1..=3 {
+                        if let Some((anc, _, _)) = crate::tiles::ancestor_uv(*t, dz) {
+                            ensure_imagery_tile(rt, fetcher, source, anc);
+                        }
+                    }
+                }
             }
-            if !rt.imagery.tiles.contains_key(&key) {
-                rt.imagery.tiles.insert(key.clone(), ImageryTile { state: ImageryState::Pending });
-                let url = terrazon_map::build_tile_url(source, u32::from(t.z), t.x, t.y);
-                fetcher.fetch(format!("{}/{}/{}/{}", source.id, t.z, t.x, t.y), url, rt.imagery.tx.clone());
-            }
+        }
+        None => {
+            rt.imagery.preview_ring.clear();
+            rt.imagery.preview_asked = None;
         }
     }
     // The answers: decode (neutral style — the 3D drape shows the map as it is), upload, keep.
@@ -1332,6 +1554,7 @@ fn imagery_step(
     }
     rt.imagery.tiles.values().any(|t| matches!(t.state, ImageryState::Pending))
         || rt.imagery.pinned.values().any(|t| matches!(t.state, ImageryState::Pending))
+        || rt.imagery.preview_ring.iter().any(|t| matches!(rt.imagery.tiles.get(&tile_key(*t)).map(|t| &t.state), Some(ImageryState::Pending)))
 }
 
 /// The tile ring around `(cx, cy)` at zoom `z`, nearest first, capped.
@@ -1350,18 +1573,21 @@ fn imagery_ring(z: u8, cx: u32, cy: u32, radius: i64, cap: usize) -> Vec<TileId>
     ring.into_iter().map(|(_, t)| t).collect()
 }
 
-/// How far from the anchor a footprint sample may land (metres): past this the imagery is
-/// a smear anyway, and a near-horizon ray would otherwise run to the map's edge.
-const FOOTPRINT_REACH_M: f32 = 30_000.0;
 /// The footprint ring's cap (the widest tilted view needs more tiles than the square's 24,
 /// still a fraction of what a full screen-quadtree would ask).
 const FOOTPRINT_CAP: usize = 96;
+/// The ring build's own window (tiles each side of the centre): the footprint's ground box
+/// can wrap the whole world when a sample grazes the horizon, and building every tile id of
+/// a world-wide box would allocate millions — the ring is centre-out anyway, so a window
+/// this wide always holds more tiles than the cap picks.
+const RING_WINDOW: i64 = 24;
 
 /// The imagery ring from the frame's own ground footprint: the screen's corners and edge
-/// midpoints unproject onto the datum (`Xform::ground_pick`), the reach clamps around the
-/// anchor, and the tiles covering that ground box — one ring finer-padded — answer nearest
-/// first, capped. `None` when the frame gives no ground (all sky, or no frame at all): the
-/// caller falls back to the square ring.
+/// midpoints unproject onto the datum (`Xform::ground_pick`), each sample clamped into the
+/// WEB MERCATOR WORLD SQUARE (the map's own ground — a zoomed-out or grazing camera asks the
+/// world's edges, not a smear that stops at an arbitrary reach), and the tiles covering that
+/// ground box — one tile padded — answer nearest first, capped. `None` when the frame gives
+/// no ground (all sky, or no frame at all): the caller falls back to the square ring.
 fn imagery_ring_footprint(rt: &DemRuntime, xform: Option<&Xform>, z: u8) -> Option<Vec<TileId>> {
     let xf = xform?;
     let m = Mercator::new(rt.anchor.1, rt.anchor.0);
@@ -1377,14 +1603,19 @@ fn imagery_ring_footprint(rt: &DemRuntime, xform: Option<&Xform>, z: u8) -> Opti
         Pos2::new(r.left(), r.center().y),
         r.center(),
     ];
-    // Ground the samples, reach-clamped around the anchor (the world frame's origin).
+    // Ground the samples, world-clamped (the box never leaves the map's own ground).
     let ground: Vec<(f64, f64)> = samples
         .iter()
         .filter_map(|s| {
             xf.ground_pick(*s).map(|g| {
-                let len = (g[0] * g[0] + g[2] * g[2]).sqrt();
-                let clamped = if len > FOOTPRINT_REACH_M { [g[0] / len * FOOTPRINT_REACH_M, g[2] / len * FOOTPRINT_REACH_M] } else { [g[0], g[2]] };
-                m.unproject(f64::from(clamped[0]), f64::from(-clamped[1]))
+                let len = f64::from((g[0] * g[0] + g[2] * g[2]).sqrt());
+                let clamped: [f64; 2] = if len > WORLD_HALF_M {
+                    let k = WORLD_HALF_M / len;
+                    [f64::from(g[0]) * k, f64::from(g[2]) * k]
+                } else {
+                    [f64::from(g[0]), f64::from(g[2])]
+                };
+                m.unproject(clamped[0], -clamped[1])
             })
         })
         .collect();
@@ -1399,11 +1630,14 @@ fn imagery_ring_footprint(rt: &DemRuntime, xform: Option<&Xform>, z: u8) -> Opti
     let n = 1u64 << z;
     let (tx_west, ty_north) = terrazon_scene3d::mercator::lonlat_to_tile(min_lon, max_lat.min(85.0), u32::from(z));
     let (tx_east, ty_south) = terrazon_scene3d::mercator::lonlat_to_tile(max_lon, min_lat.max(-85.0), u32::from(z));
-    let tx0 = tx_west.min(tx_east).saturating_sub(1);
-    let tx1 = tx_west.max(tx_east).saturating_add(1);
-    let ty0 = ty_north.min(ty_south).saturating_sub(1);
-    let ty1 = ty_north.max(ty_south).saturating_add(1);
     let (cx, cy) = terrazon_scene3d::mercator::lonlat_to_tile(rt.anchor.0, rt.anchor.1, u32::from(z));
+    // The build window: the box can wrap the world at grazing angles; the ring is centre-out,
+    // so anything past the window would never survive the cap. Clamped in tile space.
+    let win = RING_WINDOW;
+    let tx0 = ((tx_west.min(tx_east) as i64).clamp(cx as i64 - win, cx as i64 + win) - 1).max(0) as u32;
+    let tx1 = ((tx_west.max(tx_east) as i64).clamp(cx as i64 - win, cx as i64 + win) + 1).min(n as i64 - 1) as u32;
+    let ty0 = ((ty_north.min(ty_south) as i64).clamp(cy as i64 - win, cy as i64 + win) - 1).max(0) as u32;
+    let ty1 = ((ty_north.max(ty_south) as i64).clamp(cy as i64 - win, cy as i64 + win) + 1).min(n as i64 - 1) as u32;
     let last_row = n as u32 - 1;
     let mut ring: Vec<(i64, TileId)> = Vec::new();
     for ty in ty0..=ty1.min(last_row) {
@@ -1430,24 +1664,34 @@ fn tile_key(t: TileId) -> String {
 /// stretches its nearest ready ancestor's texture over its own quad (the 2D cache's parent
 /// fallback).
 fn draw_imagery(app: &mut TerrazoneApp, painter: &egui::Painter, xform: &Xform) {
+    let ring = app.canvas.dem.as_ref().map(|rt| rt.imagery.ring.clone()).unwrap_or_default();
+    draw_imagery_ring(app, painter, xform, &ring, true);
+}
+
+/// The imagery textures on the ground for one ring: every ready tile draped FLAT on the datum
+/// (the elevation mesh is gone — the ground reads like the 2D map); a tile still loading
+/// stretches its nearest ready ancestor's texture over its own quad (the 2D cache's parent
+/// fallback). The main frame dresses the drape's ring; the camera preview dresses its own
+/// ([`DemRuntime::imagery`]'s `preview_ring`) — same tiles, same fallback.
+fn draw_imagery_ring(app: &mut TerrazoneApp, painter: &egui::Painter, xform: &Xform, ring: &[TileId], with_pinned: bool) {
     let Some(rt) = app.canvas.dem.as_ref() else { return };
-    if rt.imagery.ring.is_empty() {
+    if ring.is_empty() {
         return;
     }
     let m = scene_mercator(app);
-    for t in rt.imagery.ring.clone() {
-        let state = rt.imagery.tiles.get(&tile_key(t)).map(|t| &t.state);
+    for t in ring {
+        let state = rt.imagery.tiles.get(&tile_key(*t)).map(|t| &t.state);
         match state {
             Some(ImageryState::Ready(tex)) => {
-                draw_imagery_tile(painter, xform, &m, t, tex.id(), (pos2(0.0, 0.0), pos2(1.0, 1.0)), 1.0);
+                draw_imagery_tile(painter, xform, &m, *t, tex.id(), (pos2(0.0, 0.0), pos2(1.0, 1.0)), 1.0);
             }
             _ => {
                 // The tile isn't in (yet): its nearest ready ancestor stretches over the quad.
                 for dz in 1..=3 {
-                    let Some((anc, uv0, uv1)) = crate::tiles::ancestor_uv(t, dz) else { break };
+                    let Some((anc, uv0, uv1)) = crate::tiles::ancestor_uv(*t, dz) else { break };
                     let anc_state = rt.imagery.tiles.get(&tile_key(anc)).map(|t| &t.state);
                     if let Some(ImageryState::Ready(tex)) = anc_state {
-                        draw_imagery_tile(painter, xform, &m, t, tex.id(), (uv0, uv1), 1.0);
+                        draw_imagery_tile(painter, xform, &m, *t, tex.id(), (uv0, uv1), 1.0);
                         break;
                     }
                 }
@@ -1455,7 +1699,11 @@ fn draw_imagery(app: &mut TerrazoneApp, painter: &egui::Painter, xform: &Xform) 
         }
     }
     // The pinned tile layers, basemap over: each draws its one tile at its stored zoom, at its
-    // own opacity, in tile_layers order — the same stack the 2D canvas paints.
+    // own opacity, in tile_layers order — the same stack the 2D canvas paints. They ride the
+    // MAIN ring's pass only (the preview shows the plain ground).
+    if !with_pinned {
+        return;
+    }
     let pins = app.session.active().map(|st| st.doc.map.tile_layers.clone()).unwrap_or_default();
     if !pins.is_empty() {
         let rt = app.canvas.dem.as_ref();
@@ -1475,16 +1723,19 @@ fn draw_imagery(app: &mut TerrazoneApp, painter: &egui::Painter, xform: &Xform) 
     }
 }
 
-/// One tile as a draped mesh: `n×n` sub-quads on the flat ground a hair above the slab,
+/// One tile as a draped mesh: `nx×nz` sub-quads on the flat ground a hair above the slab,
 /// textured with the tile's image (v down = south, like the tile's rows). `uv0`..`uv1`
 /// pick a sub-rect of the texture (an ancestor stretched over a still-loading child).
 ///
-/// `n` adapts to the camera's tilt: egui interpolates texture coordinates affinely in
-/// screen space, so a coarse mesh shears when the tile spans a wide depth range (the
-/// "distorted basemap" a tilted camera showed). Each tile reads its corner depths and
-/// subdivides until every sub-quad's depth ratio is small — top-down keeps the cheap 8×8,
-/// a grazing view refines toward 28×28 — so the draped imagery reads exactly like the 2D
-/// map at any pitch, only the camera having changed.
+/// The grid subdivides PER AXIS now, and the axes are independent: egui interpolates
+/// texture coordinates affinely in screen space, so a coarse mesh shears when a sub-quad
+/// spans a wide depth range — and under a tilted camera the depth varies along the VIEW's
+/// ground direction, not along the tile's own x/z equally. Each axis reads its own depth
+/// ratio (the two mid-edges across it) and its own screen span, and refines until every
+/// sub-quad's depth ratio is small and its screen cells stay small — top-down keeps the
+/// cheap 8×8, a grazing view refines the compressed axis hard (up to 40) while the lateral
+/// axis stays cheap. A sub-quad wholly off the viewport is skipped. The draped imagery
+/// reads exactly like the 2D map at any pitch, only the camera having changed.
 fn draw_imagery_tile(painter: &egui::Painter, xform: &Xform, m: &Mercator, t: TileId, tex: egui::TextureId, uv: (Pos2, Pos2), alpha: f32) -> bool {
     let (tx0, ty0, tx1, ty1) = t.rect_pt();
     let (uv0, uv1) = uv;
@@ -1494,37 +1745,64 @@ fn draw_imagery_tile(painter: &egui::Painter, xform: &Xform, m: &Mercator, t: Ti
         let (x, yn) = m.project(lon, lat);
         xform.proj_w([x as f32, SKIN_LIFT, -(yn as f32)])
     };
-    // The corners name the depth range (and the on-screen span) this tile covers. A corner
-    // off-camera (behind the eye) leaves the range unknown — the ladder then stays coarse
-    // and the sub-quad loop below still draws every visible cell of the tile.
+    // The four corners name the depth range (and the on-screen span) this tile covers. A
+    // corner off-camera (behind the eye) leaves the range unknown — the ladder then stays
+    // coarse and the sub-quad loop below still draws every visible cell of the tile.
     let cs = [corner(0.0, 0.0), corner(1.0, 0.0), corner(1.0, 1.0), corner(0.0, 1.0)];
-    let depths: Vec<f32> = cs.iter().filter_map(|c| c.as_ref().map(|(_, w)| *w)).collect();
     let screen_span = {
         let pts: Vec<Pos2> = cs.iter().filter_map(|c| c.as_ref().map(|(p, _)| *p)).collect();
         let (min_x, max_x) = pts.iter().fold((f32::MAX, f32::MIN), |(lo, hi), p| (lo.min(p.x), hi.max(p.x)));
         let (min_y, max_y) = pts.iter().fold((f32::MAX, f32::MIN), |(lo, hi), p| (lo.min(p.y), hi.max(p.y)));
         (max_x - min_x).max(max_y - min_y)
     };
-    // The sub-division ladder: depth ratio 1 (top-down) stays at 8; each extra ×1.15 of
-    // depth range across the tile adds a rung, capped at 28 — and a tile too small on
-    // screen never pays for refinement it can't show.
-    let (w_min, w_max) = depths.iter().fold((f32::MAX, f32::MIN), |(lo, hi), w| (lo.min(*w), hi.max(*w)));
-    let ratio = (w_max / w_min.max(NEAR_W)).max(1.0);
-    let depth_rungs = (ratio.ln() / 1.15f32.ln()).ceil().max(0.0) as usize;
-    let n = if screen_span < 220.0 || depths.len() < 4 { 8 } else { (8 + depth_rungs).clamp(8, 28) };
+    // Per-axis subdivision: the depth ratio across the axis (its two mid-edges), the axis's
+    // screen span, the tighter of the two ladders wins; capped and floored.
+    const DEPTH_RUNG: f32 = 1.10; // per-sub-quad depth ratio the affine warp barely reads
+    const CELL_PX: f32 = 16.0; // sub-quad screen cells stay under this
+    const MAX_RUNGS: usize = 40;
+    let axis_rungs = |ratio: f32, span_px: f32| -> usize {
+        let depth = (ratio.max(1.0).ln() / DEPTH_RUNG.ln()).ceil() as usize;
+        let px = (span_px / CELL_PX).ceil() as usize;
+        (depth.max(px)).clamp(8, MAX_RUNGS)
+    };
+    let (nx, nz) = if screen_span < 220.0 || cs.iter().any(|c| c.is_none()) {
+        (8usize, 8usize)
+    } else {
+        let w00 = cs[0].as_ref().map_or(1.0, |(_, w)| *w);
+        let w10 = cs[1].as_ref().map_or(1.0, |(_, w)| *w);
+        let w11 = cs[2].as_ref().map_or(1.0, |(_, w)| *w);
+        let w01 = cs[3].as_ref().map_or(1.0, |(_, w)| *w);
+        // The x axis spans corners (0,0)→(1,0) and (0,1)→(1,1): its depth ratio compares the
+        // x=0 edge against the x=1 edge; the z axis the z=0 edge against the z=1 edge.
+        let ratio_x = w00.max(w01) / w10.min(w11).max(NEAR_W);
+        let ratio_z = w00.max(w10) / w01.min(w11).max(NEAR_W);
+        let (rx, rz) = (ratio_x.max(1.0 / ratio_x), ratio_z.max(1.0 / ratio_z));
+        let span_x = cs[0].as_ref().zip(cs[1].as_ref()).map_or(0.0, |((a, _), (b, _))| a.distance(*b))
+            + cs[3].as_ref().zip(cs[2].as_ref()).map_or(0.0, |((a, _), (b, _))| a.distance(*b));
+        let span_z = cs[0].as_ref().zip(cs[3].as_ref()).map_or(0.0, |((a, _), (b, _))| a.distance(*b))
+            + cs[1].as_ref().zip(cs[2].as_ref()).map_or(0.0, |((a, _), (b, _))| a.distance(*b));
+        (axis_rungs(rx, span_x * 0.5), axis_rungs(rz, span_z * 0.5))
+    };
     let at = |i: usize, j: usize| -> Option<(Pos2, Pos2)> {
-        let (fx, fy) = (i as f64 / n as f64, j as f64 / n as f64);
+        let (fx, fy) = (i as f64 / nx as f64, j as f64 / nz as f64);
         let (lon, lat) = doc_to_lonlat(tx0 + (tx1 - tx0) * fx, ty0 + (ty1 - ty0) * fy);
         let (x, yn) = m.project(lon, lat);
         let p = xform.proj([x as f32, SKIN_LIFT, -(yn as f32)])?;
         Some((p, pos2(uv0.x + du * fx as f32, uv0.y + dv * fy as f32)))
     };
     let mut mesh = egui::Mesh::with_texture(tex);
-    for j in 0..n {
-        for i in 0..n {
+    for j in 0..nz {
+        for i in 0..nx {
             let (Some((a, ua)), Some((b, ub)), Some((c, uc)), Some((d, ud))) = (at(i, j), at(i + 1, j), at(i + 1, j + 1), at(i, j + 1)) else {
                 continue;
             };
+            // A sub-quad wholly off the viewport paints nothing: skip it (the higher
+            // refinements would otherwise pay for pixels nobody sees).
+            let (lo_x, hi_x) = (a.x.min(b.x).min(c.x).min(d.x), a.x.max(b.x).max(c.x).max(d.x));
+            let (lo_y, hi_y) = (a.y.min(b.y).min(c.y).min(d.y), a.y.max(b.y).max(c.y).max(d.y));
+            if hi_x < xform.rect.left() || lo_x > xform.rect.right() || hi_y < xform.rect.top() || lo_y > xform.rect.bottom() {
+                continue;
+            }
             let base_i = mesh.vertices.len() as u32;
             let tint = if alpha < 0.999 { Color32::WHITE.gamma_multiply(alpha) } else { Color32::WHITE };
             for (pos, uv) in [(a, ua), (b, ub), (c, uc), (d, ud)] {
@@ -1638,9 +1916,10 @@ fn nice_step(s: f64) -> f64 {
 
 /// The ground rectangle (min_x, max_x, min_z, max_z) the endless grid must cover for one
 /// camera over one viewport: the screen's corners (and centre) un-projected onto the ground
-/// plane, horizon-missed rays marched out to the far clamp ring. Pure, so the endlessness is
-/// testable without a painter.
-fn grid_extent(rig: &CameraRig, rect: Rect, y: f32) -> (f64, f64, f64, f64) {
+/// plane, horizon-missed rays marched out to the frame's far plane, every hit clamped into
+/// the Web Mercator world square — the grid covers the whole world and nothing past it.
+/// Pure, so the endlessness is testable without a painter.
+pub(crate) fn grid_extent(rig: &CameraRig, rect: Rect, y: f32) -> (f64, f64, f64, f64) {
     let corners = [
         pos2(rect.left(), rect.top()),
         pos2(rect.right(), rect.top()),
@@ -1653,21 +1932,33 @@ fn grid_extent(rig: &CameraRig, rect: Rect, y: f32) -> (f64, f64, f64, f64) {
         CameraRig::Walk(c) => [f64::from(c.pos[0]), f64::from(c.pos[2])],
     };
     let aspect = (rect.width() / rect.height().max(1.0)).max(0.01);
+    // The march clamp: the rig's own far plane — the reach the frame actually renders. A ray
+    // that meets the ground past it draws nothing, so the extent never needs to cover it; a
+    // HIGH camera's far plane reaches kilometres out, which is exactly what a zoomed-out
+    // grid must cover (the old fixed 60 km ring is what drew the grid as one square patch
+    // under a far camera).
+    let far_m = match rig {
+        CameraRig::Orbit(c) => c.far_plane.max(c.dist * 8.0 + 400.0),
+        CameraRig::Walk(_) => 120_000.0,
+    } as f64;
     let mut min_x = f64::MAX;
     let mut max_x = f64::MIN;
     let mut min_z = f64::MAX;
     let mut max_z = f64::MIN;
     let mut hits = 0usize;
+    // The world clamp (metres): every extent hit lands inside the Mercator world square — a
+    // zoomed-out camera sees the grid run to the world's edges, not past them.
+    let clamp_w = |v: f64| v.clamp(-WORLD_HALF_M, WORLD_HALF_M);
     for c in corners {
         let ndc = [((c.x - rect.left()) / rect.width()) * 2.0 - 1.0, -(((c.y - rect.top()) / rect.height()) * 2.0 - 1.0)];
         let ray = rig.ray_from_ndc(ndc, aspect);
-        // On-plane hits clamp to the far ring so the extent stays finite but still covers
-        // everything on screen; rays at/above the horizon march out along their ground
-        // heading so the top of the screen is covered too.
+        // On-plane hits clamp to the far plane (the rendered reach) so the extent stays
+        // finite but still covers everything on screen; rays at/above the horizon march out
+        // along their ground heading the same way.
         let hit = match ray_plane_y(&ray, y).map(|p| (p, (p - ray.origin).length())) {
             Some((_p, t)) => {
-                let t = t.min(GRID_FAR_RING as f32);
-                Some([f64::from(ray.origin.x + ray.dir.x * t), f64::from(ray.origin.z + ray.dir.z * t)])
+                let t = t.min(far_m as f32);
+                Some([clamp_w(f64::from(ray.origin.x + ray.dir.x * t)), clamp_w(f64::from(ray.origin.z + ray.dir.z * t))])
             }
             None => {
                 let (dx, dz) = (f64::from(ray.dir.x), f64::from(ray.dir.z));
@@ -1675,7 +1966,7 @@ fn grid_extent(rig: &CameraRig, rect: Rect, y: f32) -> (f64, f64, f64, f64) {
                 if len < 1e-9 {
                     None
                 } else {
-                    Some([f64::from(ray.origin.x) + dx / len * GRID_FAR_RING, f64::from(ray.origin.z) + dz / len * GRID_FAR_RING])
+                    Some([clamp_w(f64::from(ray.origin.x) + dx / len * far_m), clamp_w(f64::from(ray.origin.z) + dz / len * far_m)])
                 }
             }
         };
@@ -1693,11 +1984,16 @@ fn grid_extent(rig: &CameraRig, rect: Rect, y: f32) -> (f64, f64, f64, f64) {
         (min_x, max_x) = (focus_ground[0] - far, focus_ground[0] + far);
         (min_z, max_z) = (focus_ground[1] - far, focus_ground[1] + far);
     }
-    // The far clamp ring keeps the span sane; guard against float blowups at extreme grazing.
-    let span = (max_x - min_x).max(max_z - min_z).max(1.0);
-    if span > GRID_FAR_RING * 4.0 {
-        (min_x, max_x) = (focus_ground[0] - GRID_FAR_RING * 2.0, focus_ground[0] + GRID_FAR_RING * 2.0);
-        (min_z, max_z) = (focus_ground[1] - GRID_FAR_RING * 2.0, focus_ground[1] + GRID_FAR_RING * 2.0);
+    // The whole extent lives inside the world square (the degenerate fallback clamped too).
+    min_x = min_x.max(-WORLD_HALF_M);
+    max_x = max_x.min(WORLD_HALF_M);
+    min_z = min_z.max(-WORLD_HALF_M);
+    max_z = max_z.min(WORLD_HALF_M);
+    if min_x > max_x || min_z > max_z {
+        // The focus itself sat past the world square: clamp the box onto the edge.
+        let (fx, fz) = (focus_ground[0].clamp(-WORLD_HALF_M, WORLD_HALF_M), focus_ground[1].clamp(-WORLD_HALF_M, WORLD_HALF_M));
+        (min_x, max_x) = (fx - 1.0, fx + 1.0);
+        (min_z, max_z) = (fz - 1.0, fz + 1.0);
     }
     (min_x, max_x, min_z, max_z)
 }
@@ -1939,7 +2235,9 @@ fn draw_hover_cursor(painter: &egui::Painter, xform: &Xform, hit: Vec3, dist: f3
 }
 
 /// The pointer readout (top-left): the picked ground point's lon/lat (+ elevation where the DEM
-/// covers it) over the terrain status line.
+/// covers it), its X/Y/Z on the env grid (world metres — where a point would land), the view's
+/// own Web-Mercator zoom level (the same levels the 2D map reads, to z22), then the terrain
+/// status line.
 fn draw_readout(app: &TerrazoneApp, painter: &egui::Painter, rect: Rect, hover: Option<Pos2>) {
     let pad = 8.0;
     let font = FontId::proportional(10.0);
@@ -1956,10 +2254,104 @@ fn draw_readout(app: &TerrazoneApp, painter: &egui::Painter, rect: Rect, hover: 
             line1.push_str(&format!(" · {} m", e.round() as i64));
         }
         lines.push(line1);
+        // The env-grid position of the pick: X east, Y up (the datum plane), Z south — the
+        // numbers a point placed here keeps.
+        lines.push(format!("X {:+.1} · Y {:+.1} · Z {:+.1} m", hit.x, hit.y, hit.z));
+        // The view's own zoom level, the 2D map's rule read through the camera: the level the
+        // 2D canvas would show at this ground scale (the drape's tiles follow it).
+        let level = view_zoom_level(app, rect);
+        lines.push(format!("z{:.1}", level));
     }
     lines.push(terrain_status(app));
     let galley = painter.layout_no_wrap(lines.join("\n"), font, Color32::WHITE);
     let pos = pos2(rect.left() + pad, rect.top() + pad);
+    painter.rect_filled(Rect::from_min_size(pos - vec2(3.0, 2.0), galley.size() + vec2(6.0, 4.0)), 3.0, Color32::from_black_alpha(150));
+    painter.galley(pos, galley, Color32::WHITE);
+}
+
+/// The 3D view's Web-Mercator zoom level — the 2D map's own rule read through the camera:
+/// metres per screen px at the orbit target (or the walk rig's height), turned into the
+/// level the 2D canvas would show at that ground scale. Clamped to the map's [`terrazon_map::MAX_ZOOM`].
+pub(crate) fn view_zoom_level(app: &TerrazoneApp, rect: Rect) -> f64 {
+    let mpp = metres_per_px(app, rect);
+    let lat = view_centre_lonlat(app).1;
+    zoom_level_of(mpp, lat)
+}
+
+/// The zoom level for a ground metres-per-screen-px at a latitude: the 2D rule
+/// (`z = REF_ZOOM + log2(scale)`) with the scale solved from the Mercator's ground metres
+/// per document point — `scale = m_per_pt·cos φ / mpp`, one rule, both canvases.
+pub(crate) fn zoom_level_of(mpp: f64, lat: f64) -> f64 {
+    let m_per_pt = 360.0 / terrazon_map::WORLD_PT * 111_320.0 * lat.to_radians().cos().max(0.05);
+    let scale = m_per_pt / mpp.max(1e-9);
+    (terrazon_map::REF_ZOOM as f64 + scale.log2()).clamp(0.0, f64::from(terrazon_map::MAX_ZOOM))
+}
+
+/// Ground metres per screen px at the camera's focus (the orbit target, or the walk rig's
+/// height-driven stand-in — the drape's own distance input).
+fn metres_per_px(app: &TerrazoneApp, rect: Rect) -> f64 {
+    let rig = rig_of(app);
+    let dist = match rig {
+        CameraRig::Orbit(c) => f64::from(c.dist),
+        CameraRig::Walk(w) => f64::from(w.pos[1] * 2.5),
+    };
+    let fov = match rig {
+        CameraRig::Orbit(c) => c.fov_y,
+        CameraRig::Walk(w) => w.fov_y,
+    };
+    2.0 * dist * f64::from(fov.tan().max(0.01)) / f64::from(rect.height().max(1.0))
+}
+
+/// The camera preview (the render view the EffectCraft tool drives): the hovered camera's
+/// own scene, rendered through its rig into a picture-in-picture at the canvas's bottom-right
+/// — the same passes the main frame runs (slab, grid, imagery, the doc's draped art, the
+/// fleet), one smaller projection standing where the camera stands, looking where it looks.
+/// The frame, the label (the id and its aim) and the ground ring ride around it; hover
+/// another camera to look through that one.
+fn draw_camera_pip(app: &mut TerrazoneApp, ui: &mut egui::Ui, full: Rect, cam: &AssetPlacement, grid_on: bool) {
+    let (w, h) = (320.0f32, 200.0f32);
+    let margin = 12.0;
+    let rect = Rect::from_min_size(pos2(full.right() - w - margin, full.bottom() - h - margin), vec2(w, h));
+    if !full.contains(rect.min) || !full.contains(rect.max) {
+        return;
+    }
+    let aspect = rect.width() / rect.height().max(1.0);
+    let Some(rig) = camera_rig(app, cam, aspect) else { return };
+    let painter = ui.painter_at(rect);
+    painter.rect_filled(rect, 0.0, SKY);
+
+    // The camera's own frame: the same ground passes, one smaller projection.
+    let xform = Xform::for_cam(rect, &rig);
+    let focus = match rig {
+        CameraRig::Walk(w2) => [w2.pos[0], w2.pos[2]],
+        _ => [0.0, 0.0],
+    };
+    let slab_half = match rig {
+        CameraRig::Walk(w2) => (w2.pos[1] * 40.0).clamp(2_000.0, WORLD_HALF_M as f32),
+        _ => SLAB_HALF,
+    };
+    draw_slab(&painter, &xform, focus, slab_half, [0.55, 0.53, 0.48]);
+    if grid_on {
+        draw_ground_grid(&painter, &xform, rect, &rig);
+    }
+    // The preview dresses its own street-scale ring (the main frame's ring is coarse at the
+    // aerial distances the main camera sits at).
+    let preview_ring = app.canvas.dem.as_ref().map(|rt| rt.imagery.preview_ring.clone()).unwrap_or_default();
+    draw_imagery_ring(app, &painter, &xform, &preview_ring, false);
+    draw_doc_art(app, &painter, &xform);
+    let mut buckets: [Vec<Tri>; 3] = [Vec::new(), Vec::new(), Vec::new()];
+    let mut drawn = 0usize;
+    draw_fleet(app, &mut buckets, &mut drawn, &xform);
+    flush_bucket(&buckets[1], &painter);
+    flush_bucket(&buckets[2], &painter);
+
+    // The frame and the label: what this is, which camera, its aim.
+    let stroke = egui::Stroke::new(2.0, Color32::from_black_alpha(160));
+    painter.rect_stroke(rect.shrink(1.0), 2.0, stroke, egui::StrokeKind::Middle);
+    let label = format!("{} {} · {}° / {}°", tl!("Camera preview"), cam.id, cam.fov_deg.round() as i32, -cam.pitch_deg.round() as i32);
+    let font = FontId::proportional(10.0);
+    let galley = painter.layout_no_wrap(label, font, Color32::WHITE);
+    let pos = pos2(rect.left() + 8.0, rect.top() + 6.0);
     painter.rect_filled(Rect::from_min_size(pos - vec2(3.0, 2.0), galley.size() + vec2(6.0, 4.0)), 3.0, Color32::from_black_alpha(150));
     painter.galley(pos, galley, Color32::WHITE);
 }
@@ -2793,8 +3185,8 @@ mod tests {
         let (min_x, max_x, min_z, max_z) = grid_extent(&walk, rect, 0.0);
         assert!(min_z < -40_000.0, "looking north (−z) the extent reaches kilometres ahead: {min_z}");
         assert!((max_z - min_z) > 40_000.0 && (max_x - min_x) > 10_000.0, "the coverage is vast, not a patch: x {min_x}..{max_x} z {min_z}..{max_z}");
-        // The extent stays finite (the far ring clamps it) so the line budget holds.
-        assert!(max_x.abs() <= GRID_FAR_RING * 4.0 && max_z.abs() <= GRID_FAR_RING * 4.0);
+        // The extent stays finite (the far plane clamps it) so the line budget holds.
+        assert!(max_x.abs() <= 130_000.0 && max_z.abs() <= 130_000.0, "the walk rig's far plane bounds the march: x {max_x} z {max_z}");
         // And a normal pitched-down orbit covers its own view.
         let orbit = CameraRig::Orbit(OrbitCamera { target: [0.0, 0.0, 0.0], dist: 900.0, yaw: 0.6, pitch: 0.62, ..Default::default() });
         let (o0, o1, o2, o3) = grid_extent(&orbit, rect, 0.0);

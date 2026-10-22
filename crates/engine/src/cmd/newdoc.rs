@@ -414,6 +414,10 @@ pub const CATEGORIES: &[Category] = &[
             ("Many Points", 4096.0, 4096.0, PT),
             ("Zoom Level Interpolation", 4096.0, 4096.0, PT),
             ("Render to File", 4096.0, 4096.0, PT),
+            // The CCTV sample: satellite Dar es Salaam with ten aimed cameras along its roads
+            // (Ubungo to the harbour) — enter the 3D environment and hover one to look through
+            // it (the placements.sample CCTV set; see `preset_extras`).
+            ("CCTV Roads (Dar es Salaam)", 4096.0, 4096.0, PT),
         ],
     ),
     // The classic document sizes (the categories the map templates joined): print sizes follow
@@ -463,9 +467,43 @@ pub fn preset_extras(name: &str) -> Option<serde_json::Value> {
         "Many Points" => json!({ "map": "esri-dark", "sample": "galileo-world-cities" }),
         "Zoom Level Interpolation" => json!({ "map": "opentopomap" }),
         "Render to File" => json!({ "map": "osm" }),
+        "CCTV Roads (Dar es Salaam)" => json!({ "map": "google-satellite", "placements": "dar-cctv" }),
         _ => return None,
     };
     Some(v)
+}
+
+/// The built-in camera samples: `(lon, lat, rotation°, pitch°, fov°, scale)` per camera —
+/// CCTV cameras aimed along real Dar es Salaam roads (the roads the SGR corridor, the demo
+/// fleet and the Waze view already ride). The 3D environment stands each one as a mast, its
+/// frustum cone showing the aim, and previews the scene through it on hover.
+pub fn camera_sample(name: &str) -> &'static [(f64, f64, f32, f32, f32, f32)] {
+    const DAR: &[(f64, f64, f32, f32, f32, f32)] = &[
+        // Ubungo interchange — the Bagamoyo × Morogoro junction, aimed east down Morogoro Rd.
+        (39.2078, -6.7679, 90.0, -32.0, 70.0, 1.3),
+        // Morogoro Road at Manzese, aimed east.
+        (39.2206, -6.7725, 90.0, -35.0, 60.0, 1.0),
+        // Sam Nujoma Road at Sinza, aimed south down the strip.
+        (39.2262, -6.7787, 180.0, -35.0, 60.0, 1.0),
+        // Mwenge, Bagamoyo Road, aimed south-east toward the junction.
+        (39.2430, -6.7550, 135.0, -30.0, 75.0, 1.3),
+        // Nelson Mandela Road at Ukonga, aimed west.
+        (39.2510, -6.8230, 270.0, -35.0, 60.0, 1.0),
+        // TAZARA flyover, Kawawa Road, aimed north over the rail crossing.
+        (39.2730, -6.8165, 0.0, -40.0, 65.0, 1.3),
+        // Nyerere Road at Kariakoo, aimed east.
+        (39.2790, -6.8135, 90.0, -35.0, 60.0, 1.0),
+        // Barack Obama Drive, city centre, aimed south toward the harbour.
+        (39.2890, -6.8175, 180.0, -30.0, 70.0, 1.0),
+        // Sokoine Drive, the harbour front, aimed south-west along the water.
+        (39.2935, -6.8160, 225.0, -28.0, 80.0, 1.0),
+        // New Bagamoyo Road at Mbezi Beach, aimed east.
+        (39.2150, -6.7480, 90.0, -35.0, 60.0, 1.0),
+    ];
+    match name {
+        "dar-cctv" => DAR,
+        _ => &[],
+    }
 }
 
 /// The category tabs in order: Recent, Saved, then the built-in categories.
@@ -545,19 +583,36 @@ pub(crate) fn file_new(s: &mut Session, p: &Value) -> Result<Value> {
     };
     // The map: every TerraZone document is one. `map` starts from a tile source by id (the
     // built-ins: "osm", "esri-light", "esri-dark", "esri-satellite", "opentopomap"; an unknown
-    // id leaves the default), `mapVisible` turns the tile basemap off.
-    if let Some(id) = str_param(p, "map").map(str::trim).filter(|id| !id.is_empty()) {
+    // id leaves the default), `mapVisible` turns the tile basemap off. A Map template's own
+    // extras (`preset_extras`: the basemap and its samples) ride in explicitly when the New
+    // Document dialog drives this — a protocol call that just names the preset gets them here.
+    let extras = preset_extras(str_param(p, "preset").unwrap_or("")).unwrap_or(json!({}));
+    let param = |k: &str| p.get(k).filter(|v| !v.is_null()).or_else(|| extras.get(k));
+    if let Some(id) = param("map").and_then(Value::as_str).map(str::trim).filter(|id| !id.is_empty()) {
         d.map.set_active(id);
     }
-    d.map.visible = bool_or(p, "mapVisible", d.map.visible);
+    d.map.visible = param("mapVisible").and_then(Value::as_bool).unwrap_or(d.map.visible);
     // A Map template's sample (the galileo examples' data): the features land on the world square
     // as one named group, drawn by the same tools as any art.
-    if let Some(sample) = str_param(p, "sample").map(str::trim).filter(|t| !t.is_empty())
+    if let Some(sample) = param("sample").and_then(Value::as_str).map(str::trim).filter(|t| !t.is_empty())
         && let Some(text) = super::fileio::sample_geojson(sample)
         && let Ok(group) = super::fileio::geojson::sample_group(text.as_bytes(), str_param(p, "preset").unwrap_or("Sample"))
     {
         let layer = d.layers[0].id;
         let _ = d.insert(Some(layer), usize::MAX, group);
+    }
+    // A camera sample (`placements`): the preset's aimed CCTV cameras — placed assets, one
+    // per road point, each standing its mast in the 3D environment and previewing through
+    // the Layers panel's own eyes like any placement.
+    if let Some(set) = param("placements").and_then(Value::as_str).map(str::trim).filter(|t| !t.is_empty()) {
+        for (lon, lat, rotation, pitch, fov, scale) in camera_sample(set) {
+            let (x, y) = terrazon_map::lonlat_to_doc(*lon, *lat);
+            let id = d.placements.place_with(terrazon_assets::AssetKind::Camera, x, y, *rotation, *scale);
+            if let Some(pl) = d.placements.placements.iter_mut().rev().find(|pl| pl.id == id) {
+                pl.pitch_deg = *pitch;
+                pl.fov_deg = *fov;
+            }
+        }
     }
     d.metadata.created = clock_date(s, "created", date_param(p, "created", C)?);
     let i = s.add_document(d, None);

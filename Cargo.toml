@@ -255,7 +255,37 @@ default-members = ["crates/*", "apps/terrazon", "apps/terrazon-cli", "xtask"]
 # Fleet panel lays the view's roads out as the layers-panel tree — type groups open into
 # named segments, the picked segment opens into its properties (type, direction, length,
 # speeds, level, toll, closures), and the map rides the pick a white halo.
-version = "0.28.0"
+# 0.29.0 — the full-world Grid round and the camera objects. The ground grid was a square
+# patch: its extent marched horizon rays out to a fixed 60 km ring, so a zoomed-out camera
+# saw the grid stop mid-air ("show grid full … not loading full world just one square") — the
+# extent now marches to the frame's own far plane and clamps into the Web Mercator world
+# square (±20 037.5 km), and the slab behind it became a 3×3 patch sized off the far reach
+# so the ground never vanishes under a tilted lens. The grid also drew OVER the draped
+# imagery; now the map paints over the grid on BOTH canvases ("the map to be on top of grid
+# so to no show grid on top of tile map") — the 2D graticule draws under the tiles, the 3D
+# grid under the drape — and the pair is one layer: the Layers panel's new bottom "Grid" row
+# (map.setGridVisible) eyes the map's ground grid on and off in 2D and 3D; hide the Tiles
+# group and the grid shows across the full world. The 3D zoom learned the 2D map's own rule:
+# the drape reads the camera's metres-per-screen-px through the same z = REF + log2(scale)
+# ladder the flat canvas uses — one rule, both canvases ("with zoom level working for both
+# 2d and 3d well same like how 2d works") — down to z22 (the readout shows the level; the
+# Google sources serve it). And the tilted-camera tile shear got a real fix: the drape
+# subdivides PER AXIS now — each axis reads its own depth ratio and screen span, refining
+# the compressed axis hard (to 40) while the lateral axis stays cheap, sub-quads off the
+# viewport skip — so an angled camera's imagery reads like the 2D map, not a smear ("when i
+# keep camera at an angle the image tile is distorted"). The readout wears the cursor's
+# X/Y/Z on the env grid (world metres — where a point would land) and the view's own
+# Web-Mercator zoom level. And the 3D environment grew the camera object: the Assets
+# catalogue's new "Camera" — a CCTV camera on a 6 m mast, placed on the 2D or 3D map like
+# any asset, carrying its own aim (rotation = the look heading, pitch below the horizon,
+# horizontal fov; placements.update re-aims). Both canvases draw its view cone (the 2D wedge
+# on the map, the 3D frustum from the mast-top eye down to its ground footprint); hover a
+# camera in 3D and the scene renders through its rig into a picture-in-picture at the
+# canvas's bottom-right — the render preview, the EffectCraft tool's camera scene. The New
+# Document presets carry "CCTV Roads (Dar es Salaam)": satellite Dar with ten aimed cameras
+# along its roads (Ubungo to the harbour front), so the 3D view shows the camera positions
+# on the streets. The effect tool rides along under clone/artcraft-egui as the reference.
+version = "0.29.0"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 rust-version = "1.95"

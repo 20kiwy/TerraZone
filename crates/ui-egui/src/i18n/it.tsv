@@ -3965,3 +3965,6 @@ axis	Vertical	Verticale
 	Segment {id}	Tratto {id}
 	Clear pick	Rimuovi selezione
 	The roads follow the map view — a pan into a new area loads that area's roads.	Le strade seguono la vista della mappa — spostandosi in una nuova area si caricano le strade di quell'area.
+	Camera preview	Anteprima camera
+	Show Grid Layer	Mostra livello griglia
+	Update Asset	Aggiorna oggetto

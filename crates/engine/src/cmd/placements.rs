@@ -18,7 +18,7 @@ pub fn specs() -> Vec<CommandSpec> {
             "Place Asset",
             ["Map"],
             None,
-            "{kind: tree|house|building|stadium|pin, x, y, rotation?, scale?} place one asset at a document point (the catalogue footprint × scale metres, rotated from north) → {id, kind}",
+            "{kind: tree|house|building|stadium|pin|camera, x, y, rotation?, scale?, pitch?, fov?} place one asset at a document point (the catalogue footprint × scale metres, rotated from north; a camera carries its aim: pitch below the horizon, horizontal fov, degrees) → {id, kind}",
             has_doc,
             place
         ),
@@ -38,16 +38,25 @@ pub fn specs() -> Vec<CommandSpec> {
             "Placed Assets",
             ["Map"],
             None,
-            "{} the document's placements → {placements: [{id, kind, x, y, rotation, scale}]}",
+            "{} the document's placements → {placements: [{id, kind, x, y, rotation, scale, pitch, fov}]}",
             has_doc,
             list
+        ),
+        cmd!(
+            "placements.update",
+            "Update Asset",
+            ["Map"],
+            None,
+            "{id, rotation?, scale?, pitch?, fov?} update one placement's aim and size: the rotation (degrees clockwise from north), the scale (the catalogue footprint ×), and for cameras the look pitch (degrees below the horizon) and horizontal fov (degrees) → {updated}",
+            has_doc,
+            update
         ),
     ]
 }
 
 fn kind_param(cmd: &str, p: &Value) -> Result<AssetKind> {
-    let raw = str_param(p, "kind").ok_or_else(|| bad(cmd, "give the asset kind: tree, house, building, stadium or pin"))?;
-    AssetKind::parse(raw).ok_or_else(|| bad(cmd, format!("unknown asset kind {raw:?} — tree, house, building, stadium or pin")))
+    let raw = str_param(p, "kind").ok_or_else(|| bad(cmd, "give the asset kind: tree, house, building, stadium, pin or camera"))?;
+    AssetKind::parse(raw).ok_or_else(|| bad(cmd, format!("unknown asset kind {raw:?} — tree, house, building, stadium, pin or camera")))
 }
 
 fn rotation_of(p: &Value) -> f32 {
@@ -58,6 +67,16 @@ fn scale_of(p: &Value) -> f32 {
     p.get("scale").and_then(Value::as_f64).map(|s| s as f32).unwrap_or(1.0).clamp(0.05, 50.0)
 }
 
+/// The camera's look pitch (degrees, negative down — clamped to a sane ±85°).
+fn pitch_of(p: &Value) -> Option<f32> {
+    p.get("pitch").and_then(Value::as_f64).map(|r| (r as f32).clamp(-85.0, 85.0))
+}
+
+/// The camera's horizontal field of view (degrees, 5–150).
+fn fov_of(p: &Value) -> Option<f32> {
+    p.get("fov").and_then(Value::as_f64).map(|r| (r as f32).clamp(5.0, 150.0))
+}
+
 fn place(s: &mut Session, p: &Value) -> Result<Value> {
     const C: &str = "placements.place";
     let kind = kind_param(C, p)?;
@@ -65,9 +84,18 @@ fn place(s: &mut Session, p: &Value) -> Result<Value> {
         return Err(bad(C, "give the document point: x and y"));
     };
     let (rotation, scale) = (rotation_of(p), scale_of(p));
+    let (pitch, fov) = (pitch_of(p), fov_of(p));
     let mut out = (String::new(), kind.label().to_string());
     s.edit("Place Asset", |d, _| {
         let id = d.placements.place_with(kind, x, y, rotation, scale);
+        if let Some(pl) = d.placements.placements.iter_mut().rev().find(|pl| pl.id == id) {
+            if let Some(pitch) = pitch {
+                pl.pitch_deg = pitch;
+            }
+            if let Some(fov) = fov {
+                pl.fov_deg = fov;
+            }
+        }
         out = (id, kind.label().to_string());
         Ok(())
     })?;
@@ -129,7 +157,41 @@ fn list(s: &mut Session, _p: &Value) -> Result<Value> {
             .placements
             .placements
             .iter()
-            .map(|pl| json!({ "id": pl.id, "kind": pl.kind.label(), "x": pl.x, "y": pl.y, "rotation": pl.rotation_deg, "scale": pl.scale }))
+            .map(|pl| json!({ "id": pl.id, "kind": pl.kind.label(), "x": pl.x, "y": pl.y, "rotation": pl.rotation_deg, "scale": pl.scale, "pitch": pl.pitch_deg, "fov": pl.fov_deg }))
             .collect::<Vec<_>>(),
     }))
+}
+
+/// Update one placement's aim and size: rotation, scale, and the camera's pitch/fov. Only the
+/// given fields move; an unknown id is an error.
+fn update(s: &mut Session, p: &Value) -> Result<Value> {
+    const C: &str = "placements.update";
+    let id = str_param(p, "id").ok_or_else(|| bad(C, "give the placement id"))?.to_string();
+    let rotation = p.get("rotation").and_then(Value::as_f64).map(|r| r as f32);
+    let scale = p.get("scale").and_then(Value::as_f64).map(|s| (s as f32).clamp(0.05, 50.0));
+    let (pitch, fov) = (pitch_of(p), fov_of(p));
+    let mut updated = false;
+    s.edit("Update Asset", |d, _| {
+        let pl = d
+            .placements
+            .placements
+            .iter_mut()
+            .find(|pl| pl.id == id)
+            .ok_or_else(|| bad(C, format!("no placement called `{id}` (see placements.list)")))?;
+        if let Some(r) = rotation {
+            pl.rotation_deg = r;
+        }
+        if let Some(sc) = scale {
+            pl.scale = sc;
+        }
+        if let Some(pi) = pitch {
+            pl.pitch_deg = pi;
+        }
+        if let Some(fo) = fov {
+            pl.fov_deg = fo;
+        }
+        updated = true;
+        Ok(())
+    })?;
+    Ok(json!({ "updated": updated }))
 }

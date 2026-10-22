@@ -19,3 +19,6 @@
 [submodule "clone/Egregoria"]
 	path = clone/Egregoria
 	url = https://github.com/Uriopass/Egregoria.git
+[submodule "clone/artcraft-egui"]
+	path = clone/artcraft-egui
+	url = https://github.com/20kiwy/artcraft-egui.git

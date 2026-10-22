@@ -9,8 +9,10 @@
 
 use serde::{Deserialize, Serialize};
 
-/// What can be placed. The catalogue is small and honest: five silhouettes that cover the
-/// props a site plan needs, each with a real-world footprint.
+/// What can be placed. The catalogue is small and honest: six silhouettes that cover the
+/// props a site plan needs, each with a real-world footprint — and the camera, the object
+/// the 3D environment previews through (a CCTV-style camera on a mast, aimed by its own
+/// yaw/pitch/fov).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum AssetKind {
@@ -20,10 +22,11 @@ pub enum AssetKind {
     Tree,
     Stadium,
     Pin,
+    Camera,
 }
 
 impl AssetKind {
-    pub const ALL: [AssetKind; 5] = [AssetKind::House, AssetKind::Building, AssetKind::Tree, AssetKind::Stadium, AssetKind::Pin];
+    pub const ALL: [AssetKind; 6] = [AssetKind::House, AssetKind::Building, AssetKind::Tree, AssetKind::Stadium, AssetKind::Pin, AssetKind::Camera];
 
     /// The name the tool and the readouts show.
     pub fn label(self) -> &'static str {
@@ -33,6 +36,7 @@ impl AssetKind {
             AssetKind::Tree => "Tree",
             AssetKind::Stadium => "Stadium",
             AssetKind::Pin => "Pin",
+            AssetKind::Camera => "Camera",
         }
     }
 
@@ -51,7 +55,30 @@ impl AssetKind {
             AssetKind::Tree => [4.0, 4.0],
             AssetKind::Stadium => [140.0, 110.0],
             AssetKind::Pin => [1.0, 1.0],
+            AssetKind::Camera => [3.0, 3.0],
         }
+    }
+
+    /// The camera kinds' aim defaults (a placement stores its own; `new` starts here): the
+    /// look pitch below the horizon and the horizontal field of view, both degrees. The
+    /// street-camera pair the CCTV samples ride.
+    pub fn default_pitch_deg(self) -> f32 {
+        match self {
+            AssetKind::Camera => -35.0,
+            _ => 0.0,
+        }
+    }
+
+    pub fn default_fov_deg(self) -> f32 {
+        match self {
+            AssetKind::Camera => 60.0,
+            _ => 0.0,
+        }
+    }
+
+    /// Is this kind a camera the 3D environment previews through?
+    pub fn is_camera(self) -> bool {
+        matches!(self, AssetKind::Camera)
     }
 }
 
@@ -78,11 +105,14 @@ pub const CATALOG: &[AssetSpec] = &[
     AssetSpec { kind: AssetKind::Building, label: "Building", icon: "building-2", blurb: "A block building, 16×12 m" },
     AssetSpec { kind: AssetKind::Stadium, label: "Stadium", icon: "landmark", blurb: "A stadium bowl, 140×110 m" },
     AssetSpec { kind: AssetKind::Pin, label: "Pin", icon: "map-pin", blurb: "A map pin, 6 m tall" },
+    AssetSpec { kind: AssetKind::Camera, label: "Camera", icon: "cctv", blurb: "A CCTV camera on a 6 m mast — the 3D view previews through it" },
 ];
 
 /// One placed asset: the kind, where it stands (document points — the same space every tool
 /// draws in, so a placement lands where the map is looking on both canvases), its rotation,
-/// its scale (1 = the catalogue footprint) and its id ("a1", "a2", …).
+/// its scale (1 = the catalogue footprint) and its id ("a1", "a2", …). A camera adds its
+/// aim: the look pitch below the horizon and the horizontal field of view, both degrees —
+/// the preview rig and both canvases' view cone read them.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct AssetPlacement {
     pub id: String,
@@ -94,6 +124,12 @@ pub struct AssetPlacement {
     pub rotation_deg: f32,
     #[serde(default = "one")]
     pub scale: f32,
+    /// The camera's look pitch below the horizon (degrees, negative down).
+    #[serde(default)]
+    pub pitch_deg: f32,
+    /// The camera's horizontal field of view (degrees).
+    #[serde(default)]
+    pub fov_deg: f32,
 }
 
 fn one() -> f32 {
@@ -102,7 +138,13 @@ fn one() -> f32 {
 
 impl AssetPlacement {
     pub fn new(id: String, kind: AssetKind, x: f64, y: f64) -> Self {
-        Self { id, kind, x, y, rotation_deg: 0.0, scale: 1.0 }
+        Self { id, kind, x, y, rotation_deg: 0.0, scale: 1.0, pitch_deg: kind.default_pitch_deg(), fov_deg: kind.default_fov_deg() }
+    }
+
+    /// The camera's mast-top eye height (metres): the 6 m mast times the placement's scale —
+    /// the preview rig stands here and the 3D mast reaches here.
+    pub fn eye_height_m(&self) -> f32 {
+        6.0 * self.scale.max(0.05)
     }
 
     /// The world footprint at this placement's scale, `[width, depth]` in metres.
@@ -175,6 +217,11 @@ pub fn glyph(kind: AssetKind) -> Vec<GlyphPart> {
         AssetKind::Building => vec![GlyphPart { pts: BLOCK, color: [0x9a, 0x9c, 0xa1] }, GlyphPart { pts: BLOCK_TOP, color: [0xb8, 0xba, 0xbf] }],
         AssetKind::Stadium => vec![GlyphPart { pts: BOWL, color: [0xb6, 0xb2, 0xa8] }, GlyphPart { pts: PITCH, color: [0x4e, 0x8a, 0x4e] }],
         AssetKind::Pin => vec![GlyphPart { pts: PIN, color: [0xd6, 0x45, 0x45] }],
+        AssetKind::Camera => vec![
+            GlyphPart { pts: CAMERA_MAST, color: [0x6b, 0x6e, 0x73] },
+            GlyphPart { pts: CAMERA_BODY, color: [0x4a, 0x4d, 0x52] },
+            GlyphPart { pts: CAMERA_LENS, color: [0x2a, 0x2d, 0x31] },
+        ],
     }
 }
 
@@ -188,6 +235,13 @@ const BLOCK_TOP: &[(f32, f32)] = &[(-0.42, 0.9), (0.42, 0.9), (0.42, 1.0), (-0.4
 const BOWL: &[(f32, f32)] = &[(-0.62, -0.5), (0.62, -0.5), (0.68, 0.0), (0.62, 0.5), (-0.62, 0.5), (-0.68, 0.0)];
 const PITCH: &[(f32, f32)] = &[(-0.42, -0.32), (0.42, -0.32), (0.42, 0.32), (-0.42, 0.32)];
 const PIN: &[(f32, f32)] = &[(0.0, 1.0), (0.28, 0.55), (0.28, 0.2), (0.0, 0.0), (-0.28, 0.2), (-0.28, 0.55)];
+/// The camera glyph rides high (a mast-top body): the body box with a centred lens — the
+/// 2D glyph carries no facing of its own; the view wedge (ui-egui/src/assets.rs) draws the
+/// aim, the same wedge the 3D environment stands as its frustum.
+const CAMERA_BODY: &[(f32, f32)] = &[(-0.34, 0.62), (0.34, 0.62), (0.34, 0.94), (-0.34, 0.94)];
+const CAMERA_LENS: &[(f32, f32)] = &[(-0.16, 0.70), (0.16, 0.70), (0.16, 0.86), (-0.16, 0.86)];
+/// The mast: drawn as the body's stalk so the glyph reads as a camera on a pole.
+const CAMERA_MAST: &[(f32, f32)] = &[(-0.06, 0.0), (0.06, 0.0), (0.06, 0.62), (-0.06, 0.62)];
 
 #[cfg(test)]
 mod tests {

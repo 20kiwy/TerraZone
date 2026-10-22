@@ -3949,3 +3949,6 @@ theme	Appearance	外観
 	Segment {id}	セグメント {id}
 	Clear pick	選択を解除
 	The roads follow the map view — a pan into a new area loads that area's roads.	道路はマップビューに追従します — 新しい領域に移動するとその領域の道路を読み込みます。
+	Camera preview	カメラプレビュー
+	Show Grid Layer	グリッドレイヤーを表示
+	Update Asset	アセットを更新

@@ -316,6 +316,12 @@ fn rows_of_doc(ui: &Ui, st: &terrazon_engine::DocState, opts: &PanelOptions, que
 /// keeps the old appendix at the bottom, under its own Tiles group row.
 fn list_disp(doc: &Document, open: &OpenRows, opts: &PanelOptions, query: &str, tiles_open: bool) -> Vec<DispRow> {
     let mut out: Vec<DispRow> = list_rows(doc, open, opts, query).into_iter().map(DispRow::Node).collect();
+    // The Grid layer's row, ALWAYS the bottom of the list: the map's ground grid draws UNDER
+    // the tile map (both canvases), so its row sits under the Map layer — its eye turns the
+    // grid on, and hiding the tile stack reveals it across the full world.
+    if query.is_empty() || "grid".contains(query) {
+        out.push(DispRow::Grid { visible: doc.map.grid_visible });
+    }
     let tiles: Vec<terrazon_map::TileLayer> =
         doc.map.tile_layers.iter().filter(|tl| query.is_empty() || tl.name.to_lowercase().contains(query)).cloned().collect();
     let sources: Vec<terrazon_map::TileSource> =
@@ -364,7 +370,15 @@ enum DispRow {
     Node(Row),
     Tile(terrazon_map::TileLayer, usize),
     Source(terrazon_map::TileSource, usize),
-    TileGroup { visible: bool, count: usize, open: bool },
+    TileGroup {
+        visible: bool,
+        count: usize,
+        open: bool,
+    },
+    /// The Grid layer's row (the bottom of the stack): the map's ground grid, its own eye.
+    Grid {
+        visible: bool,
+    },
 }
 
 /// Everything one frame of the panel reads.
@@ -468,6 +482,7 @@ pub fn show(app: &mut TerrazoneApp, ui: &mut Ui) {
                     DispRow::Tile(tl, depth) => tile_row(ui, &view, tl, *depth, &mut out),
                     DispRow::Source(src, depth) => source_row(ui, &view, src, *depth, &mut out),
                     DispRow::TileGroup { visible, count, open } => tiles_group_row(ui, &view, *visible, *count, *open, &mut out),
+                    DispRow::Grid { visible } => grid_layer_row(ui, &view, *visible, &mut out),
                 }
             }
         })
@@ -1224,6 +1239,48 @@ fn tiles_group_row(ui: &mut Ui, view: &View, visible: bool, count: usize, open: 
         format!("({count})"),
         egui::FontId::proportional(11.0),
         t.text_dim,
+    );
+}
+
+/// The Grid layer's row (the panel's bottom row): the same eye column as a node row, then
+/// the grid icon and the name. The eye is `map.setGridVisible` — the map's ground grid (the
+/// 2D graticule, the 3D environment's endless grid) draws when it is on. The grid sits UNDER
+/// the tile map, so with the tiles hidden (the Tiles group's eye) it shows across the full
+/// world — that is the row's whole point.
+fn grid_layer_row(ui: &mut Ui, view: &View, visible: bool, out: &mut Out) {
+    let t = &view.t;
+    let h = view.h;
+    let (r, resp) = ui.allocate_exact_size(vec2(ui.available_width(), h), egui::Sense::click());
+    if resp.hovered() {
+        ui.painter().rect_filled(r, 0.0, t.hover.gamma_multiply(0.6));
+    }
+    ui.painter().line_segment([r.left_bottom(), r.right_bottom()], Stroke::new(1.0, t.input_border));
+    let eye = egui::Rect::from_min_size(r.min, vec2(COLUMN, h));
+    ui.painter().line_segment([eye.right_top(), eye.right_bottom()], Stroke::new(1.0, t.input_border));
+    let er = ui.interact(eye, ui.id().with("grid-layer-eye"), Sense::click());
+    if visible {
+        icons::paint(ui, "eye", egui::Rect::from_center_size(eye.center(), vec2(14.0, 14.0)), t.icon);
+    } else {
+        icons::paint(ui, "eye-off", egui::Rect::from_center_size(eye.center(), vec2(14.0, 14.0)), t.text_disabled);
+    }
+    if er.clicked() || resp.clicked() {
+        out.actions.push(("map.setGridVisible".into(), json!({ "on": !visible })));
+    }
+    er.on_hover_text(if visible { tl!("Hide Grid") } else { tl!("Show Grid") });
+    let mut x = r.left() + COLUMN + 2.0;
+    icons::paint(
+        ui,
+        "grid-3x3",
+        egui::Rect::from_center_size(egui::pos2(x + 7.0, r.center().y), vec2(13.0, 13.0)),
+        if visible { t.text_dim } else { t.text_disabled },
+    );
+    x += 18.0;
+    ui.painter().text(
+        egui::pos2(x, r.center().y),
+        egui::Align2::LEFT_CENTER,
+        tl!("Grid"),
+        egui::FontId::proportional(13.0),
+        if visible { t.text } else { t.text_dim },
     );
 }
 

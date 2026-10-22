@@ -3963,3 +3963,6 @@ axis	Vertical	Вертикально
 	Segment {id}	Участок {id}
 	Clear pick	Снять выбор
 	The roads follow the map view — a pan into a new area loads that area's roads.	Дороги следуют за обзором карты — при перемещении в новую область загружаются её дороги.
+	Camera preview	Предпросмотр камеры
+	Show Grid Layer	Показать слой сетки
+	Update Asset	Обновить объект

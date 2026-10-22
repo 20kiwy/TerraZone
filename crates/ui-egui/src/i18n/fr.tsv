@@ -3976,3 +3976,6 @@ axis	Vertical	Vertical
 	Segment {id}	Tronçon {id}
 	Clear pick	Effacer la sélection
 	The roads follow the map view — a pan into a new area loads that area's roads.	Les routes suivent la vue de la carte — un déplacement vers une nouvelle zone charge les routes de cette zone.
+	Camera preview	Aperçu de la caméra
+	Show Grid Layer	Afficher le calque de grille
+	Update Asset	Mettre à jour l'objet

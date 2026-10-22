@@ -251,25 +251,11 @@ pub fn show(app: &mut TerrazoneApp, ui: &mut Ui) {
 
     // Pasteboard, artboard shadows and paper (Document Setup: the transparency grid's look, the
     // simulated paper colour; a white Background Contents hides the grid). The map's tiles draw
-    // here, under everything: a map document's ground is the world, not paper.
+    // here, under everything: a map document's ground is the world, not paper. The paper draws
+    // FIRST (a map document with its tiles hidden keeps its paper under the grid), then the
+    // Grid layer, then the tiles over the grid — the ground, the grid, the map.
     painter.rect_filled(rect, 0.0, t.pasteboard);
     let map_on = doc.map.visible && !app.ui.view.outline;
-    if map_on {
-        crate::tiles::draw(app, ui, rect, &xf);
-        // A map document's grid is the graticule — meridians and parallels (the equator among
-        // them) in the steps the rulers show — over the tiles and under the art. It is part of
-        // the map's look, always on (View › Show Grid is the paper point grid, which a map's
-        // ground isn't).
-        graticule(&painter, rect, &xf, &t);
-    }
-    // The document's placed assets: a vector glyph per placement (the tree, the house…), scaled
-    // by its real-world footprint — under the fleet markers and the art.
-    crate::assets::draw(app, &painter, rect, &xf);
-    // The fleet's live markers over the basemap (and over a hidden basemap too — the Fleet
-    // group's own eyes say what shows), under the art.
-    if crate::fleet::has_visible(app) {
-        crate::fleet::draw(app, &painter, rect, &xf);
-    }
     if app.ui.view.artboards && !app.ui.view.outline && !map_on {
         let setup = &doc.setup;
         let grid = (transparency_grid && setup.background == terrazon_doc::Background::Transparent).then(|| checker_texture(ui.ctx(), setup));
@@ -291,6 +277,25 @@ pub fn show(app: &mut TerrazoneApp, ui: &mut Ui) {
         for ab in &doc.artboards {
             painter.add(Shape::convex_polygon(xf.quad(ab.rect), Color32::WHITE, Stroke::NONE));
         }
+    }
+    // The map's ground grid — the graticule — is the Grid LAYER: its own eye
+    // (`doc.map.grid_visible`, the Layers panel's bottom row) turns it on, and it draws UNDER
+    // the tile map (the tiles paint over it), the same order the 3D environment reads. Hiding
+    // the tile stack (the Tiles group's eye) reveals the grid across the full world — the
+    // grid no longer rides the tiles' own switch.
+    if doc.map.grid_visible && !app.ui.view.outline {
+        graticule(&painter, rect, &xf, &t);
+    }
+    if map_on {
+        crate::tiles::draw(app, ui, rect, &xf);
+    }
+    // The document's placed assets: a vector glyph per placement (the tree, the house…), scaled
+    // by its real-world footprint — under the fleet markers and the art.
+    crate::assets::draw(app, &painter, rect, &xf);
+    // The fleet's live markers over the basemap (and over a hidden basemap too — the Fleet
+    // group's own eyes say what shows), under the art.
+    if crate::fleet::has_visible(app) {
+        crate::fleet::draw(app, &painter, rect, &xf);
     }
     // The grid behind the art (Guides & Grid › Grids In Back), else over it below — paper
     // documents only: a map document draws the graticule instead (above).
@@ -2943,8 +2948,10 @@ mod tests {
     fn a_huge_selection_shows_its_bounds_instead_of_every_outline() {
         let mut app = TerrazoneApp::new(Session::new(), Default::default());
         // The overlay counts its own shapes: the basemap's tiles and graticule stay off (the map
-        // is every document's ground, and its lines would join the count).
+        // is every document's ground, and its lines would join the count) — the tiles through
+        // `mapVisible`, the Grid layer through its own eye.
         app.session.execute("file.new", &json!({"width": 400, "height": 300, "mapVisible": false})).unwrap();
+        app.session.execute("map.setGridVisible", &json!({"on": false})).unwrap();
         let points = |n: usize| (0..n).map(|i| format!("L{} {}", 20.0 + 360.0 * i as f64 / n as f64, 100 + (i % 2) * 50)).collect::<String>();
         let ctx = egui::Context::default();
         let mut drawn = |n: usize| {

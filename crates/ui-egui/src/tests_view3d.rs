@@ -143,8 +143,8 @@ fn the_galileo_view_commands_are_gone_the_environment_is_the_one_3d() {
 }
 
 #[test]
-fn the_drape_zoom_refines_with_the_camera_and_clamps_to_the_source() {
-    use crate::view3d::drape_zoom;
+fn the_drape_zoom_follows_the_2d_rule_and_clamps_to_the_source() {
+    use crate::view3d::{drape_zoom_view, zoom_level_of};
     let osm = terrazon_map::TileSource {
         id: "osm".into(),
         name: "OSM".into(),
@@ -153,25 +153,35 @@ fn the_drape_zoom_refines_with_the_camera_and_clamps_to_the_source() {
         max_zoom: 19,
         ..Default::default()
     };
-    // The panel's setting at neighbourhood range…
-    assert_eq!(drape_zoom(16, 2_500.0, &osm), 16);
-    // …one step finer inside 600 m, two inside 150 m…
-    assert_eq!(drape_zoom(16, 500.0, &osm), 17);
-    assert_eq!(drape_zoom(16, 100.0, &osm), 18);
-    // …coarser when far, and never past the source's own range either way.
-    assert_eq!(drape_zoom(16, 20_000.0, &osm), 14);
-    assert_eq!(drape_zoom(16, 100.0, &terrazon_map::TileSource { max_zoom: 17, ..osm.clone() }), 17, "the ceiling clamps");
-    assert_eq!(drape_zoom(1, 20_000.0, &terrazon_map::TileSource { min_zoom: 2, max_zoom: 19, ..osm.clone() }), 2, "the floor clamps");
+    // The 2D rule's own metres-per-px ladder: at zoom z the ground scale is 156544·cos φ / 2^z.
+    let mpp_of = |z: i32| 156_544.0 / (1u64 << z) as f64;
+    // Street scales refine like the flat canvas: the level whose tiles read ~256 px.
+    assert_eq!(zoom_level_of(mpp_of(16), 0.0).round() as i32, 16);
+    assert_eq!(zoom_level_of(mpp_of(19), 0.0).round() as i32, 19);
+    assert_eq!(zoom_level_of(mpp_of(22), 0.0).round() as i32, 22, "the rule reaches the map's last level z22");
+    // The drape clamps into the source's own range and the terrain panel's cap.
+    let mpp = mpp_of(20);
+    assert_eq!(drape_zoom_view(mpp, 0.0, &osm, 22), 19, "the source's own ceiling clamps");
+    assert_eq!(drape_zoom_view(mpp, 0.0, &terrazon_map::TileSource { max_zoom: 22, ..osm.clone() }, 19), 19, "the panel's cap clamps");
+    assert_eq!(drape_zoom_view(mpp_of(1), 0.0, &terrazon_map::TileSource { min_zoom: 2, max_zoom: 19, ..osm.clone() }, 22), 2, "the floor clamps");
+    // Latitude reads through the Mercator stretch: the same ground scale at 60° north sits
+    // one level coarser than at the equator.
+    let z_eq = zoom_level_of(mpp_of(16), 0.0);
+    let z_60 = zoom_level_of(mpp_of(16), 60.0);
+    assert!((z_eq - z_60 - 1.0).abs() < 0.1, "cos 60° costs one level: {z_eq} vs {z_60}");
 }
 
 #[test]
-fn the_imagery_ring_widens_as_the_drape_refines() {
-    use crate::view3d::ring_shape;
-    assert_eq!(ring_shape(0), (2, 24), "the base ring stays as ever");
-    let (r1, c1) = ring_shape(1);
-    let (r2, c2) = ring_shape(2);
-    assert!(r1 > 2 && c1 > 24, "one step finer asks wider: {r1}×{c1}");
-    assert!(r2 > r1 && c2 > c1, "two steps wider still: {r2}×{c2}");
+fn the_world_clamps_the_footprint_and_the_grid() {
+    // The grid's extent and the imagery's footprint both live inside the Mercator world
+    // square — a far camera covers the world's ground, not a square patch around the anchor.
+    use crate::view3d::grid_extent;
+    let cam = terrazon_scene3d::OrbitCamera { target: [0.0, 0.0, 0.0], dist: 190_000.0, pitch: 1.2, ..Default::default() };
+    let rect = egui::Rect::from_min_size(egui::pos2(0.0, 0.0), egui::vec2(1200.0, 800.0));
+    let (min_x, max_x, min_z, max_z) = grid_extent(&terrazon_scene3d::CameraRig::Orbit(cam), rect, 0.02);
+    let half = crate::view3d::WORLD_HALF_M;
+    assert!(min_x >= -half && max_x <= half && min_z >= -half && max_z <= half, "the extent stays in the world square");
+    assert!(max_x - min_x > 100_000.0, "a far camera's grid reaches kilometres out, not one 60 km square: {min_x}..{max_x}");
 }
 
 #[test]

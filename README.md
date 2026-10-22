@@ -98,6 +98,30 @@ rail, waiting departures fanned at their origins:
   Major Highway · 41), a picked segment with its properties (name, class, direction, length)
   and its siblings, the map riding the pick. |
 
+| ![Grid layer](docs/images/TerraZone-0.29.0-grid-layer.png) |
+|---|
+| 0.29.0 — the Grid layer: the world square under its own full-world graticule (the Layers
+  panel's bottom row, `map.setGridVisible`), the tile stack hidden so the grid reads across
+  the whole world. The grid draws UNDER the map on both canvases — the tiles paint over it. |
+
+| ![CCTV 2D](docs/images/TerraZone-0.29.0-cctv-2d.png) |
+|---|
+| 0.29.0 — the camera object on the 2D map: the Assets catalogue's "Camera" placed on
+  Morogoro Road (the CCTV Roads preset), its amber view wedge drawing the aim (rotation,
+  pitch, fov) the 3D environment previews through. |
+
+| ![CCTV 3D](docs/images/TerraZone-0.29.0-cctv-3d.png) |
+|---|
+| 0.29.0 — the same camera in the 3D environment: the draped basemap over the env grid, the
+  mast standing its view frustum, and the readout wearing the cursor's X/Y/Z on the grid and
+  the view's own Web-Mercator zoom level (the 2D map's rule read through the camera, to z22). |
+
+| ![Camera preview](docs/images/TerraZone-0.29.0-camera-preview.png) |
+|---|
+| 0.29.0 — the render preview: hover a camera in 3D and the scene renders through its own
+  rig into a picture-in-picture (the label carries the id, fov and pitch) — the EffectCraft
+  tool's camera scene, at street scale on its own tile ring. |
+
 | ![Network z8](docs/images/TerraZone-0.22.0-network-z8.png) |
 |---|
 | Fleet artifacts drawing while the basemap tiles load at z8. |

@@ -1142,7 +1142,7 @@ pub fn run_ui_command(app: &mut TerrazoneApp, id: &str, p: &Value) -> Option<Res
                     scene.contour_interval = (x as f32).clamp(0.0, 500.0);
                 }
                 if let Some(x) = p.get("imageryZoom").and_then(Value::as_u64) {
-                    scene.imagery_zoom = (x as u8).clamp(10, 19);
+                    scene.imagery_zoom = (x as u8).clamp(10, 22);
                 }
             }
             // The camera (the Camera 3D panel and the verification driver set these).

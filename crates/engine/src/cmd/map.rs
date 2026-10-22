@@ -123,6 +123,15 @@ pub fn specs() -> Vec<CommandSpec> {
             move_tile_layer
         ),
         cmd!(
+            "map.setGridVisible",
+            "Show Grid Layer",
+            [],
+            None,
+            "{on?: bool (default: flip)} the Grid layer's eye (the Layers panel's bottom row): the map's ground grid — the 2D graticule, the 3D environment's endless grid — draws when it is on; the grid sits UNDER the tile map, so hiding the tiles reveals it across the full world → {visible}",
+            has_doc,
+            set_grid_visible
+        ),
+        cmd!(
             "map.sourceSession",
             "Tile Source Session",
             ["Map"],
@@ -184,6 +193,19 @@ fn set_tiles_visible(s: &mut Session, p: &Value) -> Result<Value> {
         for t in &mut m.tile_layers {
             t.visible = on;
         }
+        Ok(())
+    })?;
+    Ok(json!({ "visible": on }))
+}
+
+/// The Grid layer's eye: the map's ground grid (the 2D graticule, the 3D environment's endless
+/// grid) takes `on` — the Layers panel's bottom row's eye.
+fn set_grid_visible(s: &mut Session, p: &Value) -> Result<Value> {
+    let mut on = false;
+    s.edit("Show Grid Layer", |d, _| {
+        let m = map_of(d);
+        on = bool_or(p, "on", !m.grid_visible);
+        m.grid_visible = on;
         Ok(())
     })?;
     Ok(json!({ "visible": on }))

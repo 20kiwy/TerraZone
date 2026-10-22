@@ -47,6 +47,12 @@ pub fn draw(app: &TerrazoneApp, painter: &egui::Painter, rect: Rect, xf: &crate:
             continue;
         }
         let scale_px = size_px;
+        // A camera draws its view wedge UNDER the glyph: the ground footprint of the cone it
+        // looks down (the horizontal fov, opening along the look rotation), filled translucent
+        // — the same wedge the 3D environment stands as its frustum.
+        if p.kind.is_camera() {
+            shapes.extend(camera_wedge(p, centre, doc_per_metre() * xf.zoom));
+        }
         // Rotation is degrees clockwise from north: the glyph is unit-space y-up, the screen
         // y-down, so north is −y and clockwise turns east first.
         let rad = (p.rotation_deg as f64).to_radians();
@@ -75,3 +81,48 @@ pub fn draw(app: &TerrazoneApp, painter: &egui::Painter, rect: Rect, xf: &crate:
     }
     painter.extend(shapes);
 }
+
+/// A camera placement's view wedge on the 2D map: the ground footprint of the cone the camera
+/// looks down from its mast-top eye — the near and far edges at the fov's own reaches, the
+/// sides opening at `tan(fov/2)` (a flat-ground frustum footprint, the same wedge the 3D
+/// environment stands). `m_px` is screen px per ground metre at this zoom; the wedge follows
+/// the aim honestly (looking down lands close, looking near the horizon runs far) and clamps
+/// so a near-horizon aim doesn't draw a wedge kilometres long.
+fn camera_wedge(p: &terrazon_assets::AssetPlacement, centre: egui::Pos2, m_px: f64) -> Vec<Shape> {
+    if m_px <= 0.0 {
+        return vec![];
+    }
+    let half = f64::from(p.fov_deg.max(4.0) * 0.5).to_radians();
+    let pitch = f64::from(p.pitch_deg.clamp(-85.0, 85.0)).to_radians();
+    let eye = f64::from(p.eye_height_m());
+    // The ground reach of a ray pitched `down` below the horizon: eye / tan(down); a horizon
+    // ray (tan ≤ ~0) clamps to the wedge's far bound. The cone's edges sit at the centre
+    // ray's down-angle ± the half-fov: the steeper edge lands NEAR, the shallower edge FAR —
+    // a ray at or above the horizon clamps (the footprint runs to the wedge's far bound).
+    let reach = |down: f64| if down <= 0.02 { WEDGE_FAR_M } else { (eye / down.tan()).clamp(0.5, WEDGE_FAR_M) };
+    let down_c = -pitch; // radians below the horizon (positive = looking down)
+    let near = reach(down_c + half);
+    let far = reach(down_c - half).max(near + 0.5);
+    let spread = half.tan();
+    let dir = f64::from(p.rotation_deg.max(0.0)).to_radians();
+    let ground = |ahead_m: f64, side_m: f64| -> egui::Pos2 {
+        // Ground space: ahead along the look, side across it — metres to screen px. The
+        // rotation is degrees clockwise from north: the heading's screen direction is
+        // (sin θ, −cos θ), its right hand (cos θ, sin θ) — east at 90°, matching the 3D
+        // environment's aim (the placements' clockwise-from-above convention).
+        let (sin, cos) = dir.sin_cos();
+        let sx = (ahead_m * sin + side_m * cos) * m_px;
+        let sy = (-ahead_m * cos + side_m * sin) * m_px;
+        egui::pos2((centre.x as f64 + sx) as f32, (centre.y as f64 + sy) as f32)
+    };
+    let a = ground(near, -near * spread);
+    let b = ground(far, -far * spread);
+    let c = ground(far, far * spread);
+    let d = ground(near, near * spread);
+    let fill = Color32::from_rgba_unmultiplied(0xd4, 0x8a, 0x2a, 46);
+    let stroke = egui::Stroke::new(1.0, Color32::from_rgba_unmultiplied(0xd4, 0x8a, 0x2a, 150));
+    vec![Shape::Path(egui::epaint::PathShape { points: vec![a, b, c, d], closed: true, fill, stroke: stroke.into() })]
+}
+
+/// The wedge's far clamp (metres): past this the cone is a smear on the map.
+const WEDGE_FAR_M: f64 = 120.0;

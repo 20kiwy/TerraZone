@@ -269,6 +269,12 @@ Generated-in-code art is original and has no file to list. This covers the defau
 | `assets/icons/plane.svg` | Lucide Icons and Contributors | https://lucide.dev (lucide-static v1.49.0; header kept in file) | ISC (`assets/icons/LICENSE-lucide.txt`) |  |
 | `assets/icons/radar.svg` | Lucide Icons and Contributors | https://lucide.dev (lucide-static v1.49.0; header kept in file) | ISC (`assets/icons/LICENSE-lucide.txt`) |  |
 | `assets/icons/plus.svg` | Lucide Icons and Contributors | https://lucide.dev (lucide-static v1.49.0; header kept in file) | ISC; derived from Feather, also MIT (`assets/icons/LICENSE-lucide.txt`) |  |
+| `assets/icons/cctv.svg` | Lucide Icons and Contributors | https://lucide.dev (lucide-static v0.525.0; header kept in file) | ISC (`assets/icons/LICENSE-lucide.txt`) |  |
+| `assets/icons/video.svg` | Lucide Icons and Contributors | https://lucide.dev (lucide-static v0.525.0; header kept in file) | ISC (`assets/icons/LICENSE-lucide.txt`) |  |
+| `docs/images/TerraZone-0.29.0-cctv-2d.png` | TerraZone contributors | Screenshot of TerraZone itself (the CCTV Roads preset: the camera glyph and its amber view wedge on Google satellite, Waze roads over) | MIT OR Apache-2.0 |  |
+| `docs/images/TerraZone-0.29.0-camera-preview.png` | TerraZone contributors | Screenshot of TerraZone itself (the 3D environment rendering the hovered CCTV camera's own view into the picture-in-picture preview) | MIT OR Apache-2.0 |  |
+| `docs/images/TerraZone-0.29.0-cctv-3d.png` | TerraZone contributors | Screenshot of TerraZone itself (the 3D environment at the Sinza camera: the draped basemap, the env grid under the map, the X/Y/Z + zoom readout and the view frustum) | MIT OR Apache-2.0 |  |
+| `docs/images/TerraZone-0.29.0-grid-layer.png` | TerraZone contributors | Screenshot of TerraZone itself (the Grid layer: the full-world graticule with the tile stack hidden — the world square under its own coordinate grid) | MIT OR Apache-2.0 |  |
 | `assets/icons/printer.svg` | Lucide Icons and Contributors | https://lucide.dev (lucide-static v1.49.0; header kept in file) | ISC (`assets/icons/LICENSE-lucide.txt`) |  |
 | `assets/icons/redo-2.svg` | Lucide Icons and Contributors | https://lucide.dev (lucide-static v1.49.0; header kept in file) | ISC (`assets/icons/LICENSE-lucide.txt`) |  |
 | `assets/icons/rotate-3d.svg` | Lucide Icons and Contributors | https://lucide.dev (lucide-static v1.49.0; header kept in file) | ISC (`assets/icons/LICENSE-lucide.txt`) |  |

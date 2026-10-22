@@ -425,11 +425,24 @@ pub struct MapSettings {
     pub opacity: f64,
     /// Tiles pinned as sub-layers of the base layer, in panel order.
     pub tile_layers: Vec<TileLayer>,
+    /// The Grid layer's eye: the map's own ground grid (the 2D graticule, the 3D environment's
+    /// endless ground grid) draws when it is on. The grid sits UNDER the map — the tiles paint
+    /// over it — so the Layers panel lists it as the bottom row, and hiding the tile stack
+    /// reveals the grid across the full world.
+    pub grid_visible: bool,
 }
 
 impl Default for MapSettings {
     fn default() -> Self {
-        Self { visible: true, active: "osm".into(), sources: builtin_sources(), style: TileStyle::default(), opacity: 1.0, tile_layers: Vec::new() }
+        Self {
+            visible: true,
+            active: "osm".into(),
+            sources: builtin_sources(),
+            style: TileStyle::default(),
+            opacity: 1.0,
+            tile_layers: Vec::new(),
+            grid_visible: true,
+        }
     }
 }
 
@@ -534,9 +547,9 @@ pub fn builtin_sources() -> Vec<TileSource> {
             &["a", "b", "c"],
         ),
         // Google's XYZ endpoints (the same tiles the web map serves; community-documented).
-        TileSource::new("google-satellite", "Google Satellite", "https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}", "Imagery © Google", 20, &[]),
-        TileSource::new("google-hybrid", "Google Hybrid", "https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}", "Imagery © Google", 20, &[]),
-        TileSource::new("google-streets", "Google Streets", "https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}", "© Google", 20, &[]),
+        TileSource::new("google-satellite", "Google Satellite", "https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}", "Imagery © Google", 22, &[]),
+        TileSource::new("google-hybrid", "Google Hybrid", "https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}", "Imagery © Google", 22, &[]),
+        TileSource::new("google-streets", "Google Streets", "https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}", "© Google", 22, &[]),
         TileSource::new("google-terrain", "Google Terrain", "https://mt1.google.com/vt/lyrs=p&x={x}&y={y}&z={z}", "© Google", 20, &[]),
         // Mapbox Styles API raster tiles (the styles render server-side) — `{key}` is the token.
         TileSource::with_key(

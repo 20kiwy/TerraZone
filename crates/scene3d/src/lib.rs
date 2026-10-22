@@ -53,6 +53,6 @@ pub struct TerrainSettings {
 
 impl Default for TerrainSettings {
     fn default() -> Self {
-        Self { contour_interval: 10.0, imagery_zoom: 16 }
+        Self { contour_interval: 10.0, imagery_zoom: 22 }
     }
 }

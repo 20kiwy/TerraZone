@@ -3416,3 +3416,6 @@ axis	Vertical	垂直
 	Segment {id}	路段 {id}
 	Clear pick	取消選擇
 	The roads follow the map view — a pan into a new area loads that area's roads.	道路會跟隨地圖檢視 — 平移到新區域時會載入該區域的道路。
+	Camera preview	攝影機預覽
+	Show Grid Layer	顯示網格圖層
+	Update Asset	更新資產

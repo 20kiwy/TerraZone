@@ -57,7 +57,7 @@ pub fn show(app: &mut TerrazoneApp, ui: &mut Ui) {
     let mut interval = app.ui.terrain3d.contour_interval;
     let mut changed = ui.add(egui::Slider::new(&mut interval, 0.0..=100.0).text(tl!("Contours (m)"))).changed();
     let mut zoom = i64::from(app.ui.terrain3d.imagery_zoom);
-    changed |= ui.add(egui::Slider::new(&mut zoom, 10..=19).text(tl!("Imagery zoom"))).changed();
+    changed |= ui.add(egui::Slider::new(&mut zoom, 10..=22).text(tl!("Imagery zoom"))).changed();
 
     if changed {
         let _ = app.run("scene3d.set", json!({ "contourInterval": interval, "imageryZoom": zoom }));
