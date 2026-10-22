@@ -285,7 +285,7 @@ default-members = ["crates/*", "apps/terrazon", "apps/terrazon-cli", "xtask"]
 # Document presets carry "CCTV Roads (Dar es Salaam)": satellite Dar with ten aimed cameras
 # along its roads (Ubungo to the harbour front), so the 3D view shows the camera positions
 # on the streets. The effect tool rides along under clone/artcraft-egui as the reference.
-version = "0.29.0"
+version = "0.30.0"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 rust-version = "1.95"

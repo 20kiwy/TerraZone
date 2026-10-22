@@ -4565,7 +4565,7 @@ dependencies = [
 
 [[package]]
 name = "terrazon"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "arboard",
  "block2 0.6.2",
@@ -4599,7 +4599,7 @@ dependencies = [
 
 [[package]]
 name = "terrazon-affinity"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "crc32fast",
  "flate2",
@@ -4610,7 +4610,7 @@ dependencies = [
 
 [[package]]
 name = "terrazon-assets"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -4619,7 +4619,7 @@ dependencies = [
 
 [[package]]
 name = "terrazon-brush"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "kurbo 0.13.1",
  "serde",
@@ -4631,7 +4631,7 @@ dependencies = [
 
 [[package]]
 name = "terrazon-cad"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "image",
  "kurbo 0.13.1",
@@ -4647,7 +4647,7 @@ dependencies = [
 
 [[package]]
 name = "terrazon-cli"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "log",
  "objc2-core-foundation",
@@ -4668,7 +4668,7 @@ dependencies = [
 
 [[package]]
 name = "terrazon-color"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "kurbo 0.13.1",
  "moxcms",
@@ -4680,7 +4680,7 @@ dependencies = [
 
 [[package]]
 name = "terrazon-doc"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "image",
  "jpeg-encoder",
@@ -4700,7 +4700,7 @@ dependencies = [
 
 [[package]]
 name = "terrazon-effects"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "kurbo 0.13.1",
  "serde_json",
@@ -4714,7 +4714,7 @@ dependencies = [
 
 [[package]]
 name = "terrazon-engine"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "crc32fast",
  "flate2",
@@ -4752,7 +4752,7 @@ dependencies = [
 
 [[package]]
 name = "terrazon-eps"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "flate2",
  "image",
@@ -4771,7 +4771,7 @@ dependencies = [
 
 [[package]]
 name = "terrazon-fleet"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "base64 0.22.1",
  "h3o",
@@ -4782,7 +4782,7 @@ dependencies = [
 
 [[package]]
 name = "terrazon-format"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "flate2",
  "proptest",
@@ -4797,7 +4797,7 @@ dependencies = [
 
 [[package]]
 name = "terrazon-geom"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "kurbo 0.13.1",
  "proptest",
@@ -4809,7 +4809,7 @@ dependencies = [
 
 [[package]]
 name = "terrazon-map"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "flate2",
  "serde",
@@ -4818,7 +4818,7 @@ dependencies = [
 
 [[package]]
 name = "terrazon-mcp"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "image",
  "log",
@@ -4837,7 +4837,7 @@ dependencies = [
 
 [[package]]
 name = "terrazon-metafile"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "image",
  "kurbo 0.13.1",
@@ -4851,7 +4851,7 @@ dependencies = [
 
 [[package]]
 name = "terrazon-pathops"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "kurbo 0.13.1",
  "linesweeper",
@@ -4863,7 +4863,7 @@ dependencies = [
 
 [[package]]
 name = "terrazon-pdf"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "aes",
  "flate2",
@@ -4892,7 +4892,7 @@ dependencies = [
 
 [[package]]
 name = "terrazon-plugins"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -4906,7 +4906,7 @@ dependencies = [
 
 [[package]]
 name = "terrazon-render"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "flate2",
  "gif",
@@ -4931,7 +4931,7 @@ dependencies = [
 
 [[package]]
 name = "terrazon-scene3d"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "glam",
  "image",
@@ -4942,7 +4942,7 @@ dependencies = [
 
 [[package]]
 name = "terrazon-svg"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "flate2",
  "image",
@@ -4966,7 +4966,7 @@ dependencies = [
 
 [[package]]
 name = "terrazon-testkit"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "image",
  "kurbo 0.13.1",
@@ -4983,7 +4983,7 @@ dependencies = [
 
 [[package]]
 name = "terrazon-text"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "harfrust 0.13.3",
  "kurbo 0.13.1",
@@ -5001,7 +5001,7 @@ dependencies = [
 
 [[package]]
 name = "terrazon-tools"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "image",
  "kurbo 0.13.1",
@@ -5018,7 +5018,7 @@ dependencies = [
 
 [[package]]
 name = "terrazon-trace"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "image",
  "kurbo 0.13.1",
@@ -5031,7 +5031,7 @@ dependencies = [
 
 [[package]]
 name = "terrazon-ui-egui"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "base64 0.22.1",
  "egui",
@@ -5067,7 +5067,7 @@ dependencies = [
 
 [[package]]
 name = "terrazon-web"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "eframe",
  "egui",
@@ -6651,7 +6651,7 @@ checksum = "9440ea3e5aeabb0ac63af70daf835274065238cdd0cec83418f417eae38bacee"
 
 [[package]]
 name = "xtask"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "serde_json",
 ]
