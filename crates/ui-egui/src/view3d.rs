@@ -1106,6 +1106,14 @@ pub fn show_3d(app: &mut TerrazoneApp, ui: &mut egui::Ui, rect: Rect) {
     }
 
     draw_readout(app, &painter, rect, hover);
+    // The debug overlays, over everything but the canvas switch: the imagery ring's own
+    // boundaries and zoom labels, the placements' own labels.
+    if app.ui.tiles_debug {
+        draw_tile_debug(app, &painter, &xform);
+    }
+    if app.ui.objects_debug {
+        draw_object_debug(app, &painter, &xform);
+    }
     // The camera preview: the hovered camera's own scene, bottom-right, over everything.
     if let Some(cam) = hover_cam.as_ref() {
         draw_camera_pip(app, ui, rect, cam, grid_on);
@@ -2323,10 +2331,138 @@ fn draw_readout(app: &TerrazoneApp, painter: &egui::Painter, rect: Rect, hover: 
         lines.push(format!("z{:.1}", level));
     }
     lines.push(terrain_status(app));
+    // The debug overlays' stats ride the readout: the imagery ring's own numbers (the
+    // per-distance LOD made legible — a tilted camera reads a ZOOM RANGE, not one level)
+    // and the placements' count.
+    if app.ui.tiles_debug {
+        lines.push(tile_ring_stats(app));
+    }
+    if app.ui.objects_debug {
+        lines.push(object_stats(app));
+    }
     let galley = painter.layout_no_wrap(lines.join("\n"), font, Color32::WHITE);
     let pos = pos2(rect.left() + pad, rect.top() + pad);
     painter.rect_filled(Rect::from_min_size(pos - vec2(3.0, 2.0), galley.size() + vec2(6.0, 4.0)), 3.0, Color32::from_black_alpha(150));
     painter.galley(pos, galley, Color32::WHITE);
+}
+
+/// The imagery ring's stats line: how many tiles the frame's footprint asked, the zoom range
+/// they span (a tilted camera's LOD mix — near ground fine, far field coarse — reads here as
+/// a RANGE, never one level) and how many are still on their way.
+fn tile_ring_stats(app: &TerrazoneApp) -> String {
+    let Some(rt) = app.canvas.dem.as_ref() else { return crate::i18n::fmt(tl!("Tiles {n} · z{a}–z{b}"), &[("n", "0"), ("a", "0"), ("b", "0")]) };
+    let n = rt.imagery.ring.len();
+    let (zmin, zmax) = rt.imagery.ring.iter().fold((u8::MAX, 0u8), |(a, b), (t, _)| (a.min(t.z), b.max(t.z)));
+    let pending = rt
+        .imagery
+        .ring
+        .iter()
+        .filter(|(t, _)| matches!(rt.imagery.tiles.get(&tile_key(*t)).map(|s| &s.state), Some(ImageryState::Pending)))
+        .count();
+    if pending > 0 {
+        crate::i18n::fmt(
+            tl!("Tiles {n} · z{a}–z{b} · {c} loading"),
+            &[("n", &n.to_string()), ("a", &zmin.to_string()), ("b", &zmax.to_string()), ("c", &pending.to_string())],
+        )
+    } else {
+        crate::i18n::fmt(tl!("Tiles {n} · z{a}–z{b}"), &[("n", &n.to_string()), ("a", &zmin.to_string()), ("b", &zmax.to_string())])
+    }
+}
+
+/// The placements' stats line: how many objects stand in the scene and how many of them are
+/// cameras (the ones with an aim and a preview).
+fn object_stats(app: &TerrazoneApp) -> String {
+    let (n, cams) = app
+        .session
+        .active()
+        .map(|st| {
+            let n = st.doc.placements.placements.len();
+            let cams = st.doc.placements.placements.iter().filter(|p| p.kind.is_camera()).count();
+            (n, cams)
+        })
+        .unwrap_or((0, 0));
+    crate::i18n::fmt(tl!("Objects {n} · cameras {c}"), &[("n", &n.to_string()), ("c", &cams.to_string())])
+}
+
+/// The debug overlay's colour for a tile's zoom: one hue per band, coarse far ground green
+/// through to the finest near ground violet, so a tilted view's LOD mix reads at a glance.
+fn zoom_band_color(z: u8) -> Color32 {
+    match z {
+        0..=13 => Color32::from_rgb(0x74, 0xc0, 0x6e),
+        14..=16 => Color32::from_rgb(0xd9, 0xc1, 0x48),
+        17..=18 => Color32::from_rgb(0xe8, 0x8b, 0x3a),
+        19..=20 => Color32::from_rgb(0xe0, 0x54, 0x4c),
+        _ => Color32::from_rgb(0xb0, 0x6e, 0xdc),
+    }
+}
+
+/// The tile debug overlay: every ring tile's boundary drawn on the ground, coloured by its
+/// zoom band ([`zoom_band_color`]; a tile still loading draws dim), its `z` labelled at the
+/// centre when the tile is big enough on screen — the drape's per-distance LOD made visible.
+fn draw_tile_debug(app: &TerrazoneApp, painter: &egui::Painter, xform: &Xform) {
+    let Some(rt) = app.canvas.dem.as_ref() else { return };
+    let ring = rt.imagery.ring.clone();
+    if ring.is_empty() {
+        return;
+    }
+    let m = scene_mercator(app);
+    let font = FontId::proportional(9.0);
+    for (t, _) in &ring {
+        let pending = matches!(rt.imagery.tiles.get(&tile_key(*t)).map(|s| &s.state), Some(ImageryState::Pending));
+        let col = if pending { Color32::from_white_alpha(70) } else { zoom_band_color(t.z) };
+        let stroke = Stroke::new(1.0, col);
+        // The tile's corners on the ground (doc pts → lon/lat → world → screen).
+        let (tx0, ty0, tx1, ty1) = t.rect_pt();
+        let corner = |x: f64, y: f64| -> Option<Pos2> {
+            let (lon, lat) = doc_to_lonlat(x, y);
+            let (wx, wy) = m.project(lon, lat);
+            xform.proj([wx as f32, SKIN_LIFT, -(wy as f32)])
+        };
+        let cs = [corner(tx0, ty0), corner(tx1, ty0), corner(tx1, ty1), corner(tx0, ty1)];
+        for i in 0..4 {
+            if let (Some(a), Some(b)) = (cs[i], cs[(i + 1) % 4]) {
+                painter.add(Shape::line_segment([a, b], stroke));
+            }
+        }
+        // The zoom label at the tile's centre, when the tile is big enough on screen to
+        // carry one (far tiles would smear into label soup).
+        let Some(centre) = corner((tx0 + tx1) / 2.0, (ty0 + ty1) / 2.0) else { continue };
+        let span = cs.iter().flatten().map(|p| p.distance(centre)).fold(0.0f32, f32::max);
+        if span < 26.0 {
+            continue;
+        }
+        let text = format!("z{}", t.z);
+        let galley = painter.layout_no_wrap(text, font.clone(), col);
+        let pos = centre - galley.size() * 0.5;
+        painter.rect_filled(Rect::from_min_size(pos - vec2(2.0, 1.0), galley.size() + vec2(4.0, 2.0)), 2.0, Color32::from_black_alpha(130));
+        painter.galley(pos, galley, col);
+    }
+}
+
+/// The object debug overlay: every placed asset wears `#id kind` over its ground point (a
+/// camera adds its aim — rotation, pitch, fov, the values `placements.update` re-aims with)
+/// above a small ground cross — the scene's standing objects made countable.
+fn draw_object_debug(app: &TerrazoneApp, painter: &egui::Painter, xform: &Xform) {
+    let Some(st) = app.session.active() else { return };
+    if st.doc.placements.placements.is_empty() {
+        return;
+    }
+    let font = FontId::proportional(9.0);
+    for p in &st.doc.placements.placements {
+        let at = placement_world(app, p);
+        let Some(sp) = xform.proj(at) else { continue };
+        let cross = Stroke::new(1.2, Color32::from_rgb(0x2e, 0xc2, 0x7e));
+        painter.add(Shape::line_segment([sp - vec2(5.0, 0.0), sp + vec2(5.0, 0.0)], cross));
+        painter.add(Shape::line_segment([sp - vec2(0.0, 5.0), sp + vec2(0.0, 5.0)], cross));
+        let mut text = format!("#{} {}", p.id, p.kind.label());
+        if p.kind.is_camera() {
+            text.push_str(&format!(" · rot {:.0}° pitch {:.0}° fov {:.0}°", p.rotation_deg, p.pitch_deg, p.fov_deg));
+        }
+        let galley = painter.layout_no_wrap(text, font.clone(), Color32::WHITE);
+        let pos = pos2(sp.x - galley.size().x * 0.5, sp.y - galley.size().y - 8.0);
+        painter.rect_filled(Rect::from_min_size(pos - vec2(2.0, 1.0), galley.size() + vec2(4.0, 2.0)), 2.0, Color32::from_black_alpha(140));
+        painter.galley(pos, galley, Color32::WHITE);
+    }
 }
 
 /// The 3D view's Web-Mercator zoom level — the 2D map's own rule read through the camera:

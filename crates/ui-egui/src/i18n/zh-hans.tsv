@@ -3635,3 +3635,8 @@ axis	Both	两者
 	Camera preview	相机预览
 	Show Grid Layer	显示网格图层
 	Update Asset	更新资产
+	Tile debug overlay	瓦片调试叠加层
+	Object debug overlay	对象调试叠加层
+	Tiles {n} · z{a}–z{b}	瓦片 {n} · z{a}–z{b}
+	Tiles {n} · z{a}–z{b} · {c} loading	瓦片 {n} · z{a}–z{b} · {c} 加载中
+	Objects {n} · cameras {c}	对象 {n} · 摄像头 {c}

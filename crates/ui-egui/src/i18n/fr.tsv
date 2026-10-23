@@ -3979,3 +3979,8 @@ axis	Vertical	Vertical
 	Camera preview	Aperçu de la caméra
 	Show Grid Layer	Afficher le calque de grille
 	Update Asset	Mettre à jour l'objet
+	Tile debug overlay	Débogage des tuiles
+	Object debug overlay	Débogage des objets
+	Tiles {n} · z{a}–z{b}	Tuiles {n} · z{a}–z{b}
+	Tiles {n} · z{a}–z{b} · {c} loading	Tuiles {n} · z{a}–z{b} · {c} en chargement
+	Objects {n} · cameras {c}	Objets {n} · caméras {c}

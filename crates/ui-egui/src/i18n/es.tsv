@@ -3968,3 +3968,8 @@ axis	Vertical	Vertical
 	Camera preview	Vista previa de cámara
 	Show Grid Layer	Mostrar capa de cuadrícula
 	Update Asset	Actualizar activo
+	Tile debug overlay	Depuración de teselas
+	Object debug overlay	Depuración de objetos
+	Tiles {n} · z{a}–z{b}	Teselas {n} · z{a}–z{b}
+	Tiles {n} · z{a}–z{b} · {c} loading	Teselas {n} · z{a}–z{b} · {c} cargando
+	Objects {n} · cameras {c}	Objetos {n} · cámaras {c}

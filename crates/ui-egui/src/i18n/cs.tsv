@@ -783,3 +783,8 @@
 	Camera preview	Náhled kamery
 	Show Grid Layer	Zobrazit vrstvu mřížky
 	Update Asset	Aktualizovat objekt
+	Tile debug overlay	Ladění dlaždic
+	Object debug overlay	Ladění objektů
+	Tiles {n} · z{a}–z{b}	Dlaždice {n} · z{a}–z{b}
+	Tiles {n} · z{a}–z{b} · {c} loading	Dlaždice {n} · z{a}–z{b} · {c} se načítá
+	Objects {n} · cameras {c}	Objekty {n} · kamer {c}

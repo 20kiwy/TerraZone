@@ -59,6 +59,17 @@ pub fn show(app: &mut TerrazoneApp, ui: &mut Ui) {
     let mut zoom = i64::from(app.ui.terrain3d.imagery_zoom);
     changed |= ui.add(egui::Slider::new(&mut zoom, 10..=22).text(tl!("Imagery zoom"))).changed();
 
+    // The debug overlays: the drape's tile ring (every tile's boundary, zoom band and the
+    // ring's stats) and the scene's standing objects (each placement's id, kind and aim).
+    let mut tiles_debug = app.ui.tiles_debug;
+    let mut objects_debug = app.ui.objects_debug;
+    if ui.checkbox(&mut tiles_debug, tl!("Tile debug overlay")).changed() {
+        let _ = app.run("scene3d.set", json!({ "tilesDebug": tiles_debug }));
+    }
+    if ui.checkbox(&mut objects_debug, tl!("Object debug overlay")).changed() {
+        let _ = app.run("scene3d.set", json!({ "objectsDebug": objects_debug }));
+    }
+
     if changed {
         let _ = app.run("scene3d.set", json!({ "contourInterval": interval, "imageryZoom": zoom }));
     }

@@ -33,3 +33,8 @@
 	Camera preview	Camera preview
 	Show Grid Layer	Show Grid Layer
 	Update Asset	Update Asset
+	Tile debug overlay	Tile debug overlay
+	Object debug overlay	Object debug overlay
+	Tiles {n} · z{a}–z{b}	Tiles {n} · z{a}–z{b}
+	Tiles {n} · z{a}–z{b} · {c} loading	Tiles {n} · z{a}–z{b} · {c} loading
+	Objects {n} · cameras {c}	Objects {n} · cameras {c}

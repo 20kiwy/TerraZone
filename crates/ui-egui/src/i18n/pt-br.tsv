@@ -2811,3 +2811,8 @@
 	Camera preview	Pré-visualização da câmera
 	Show Grid Layer	Mostrar camada de grade
 	Update Asset	Atualizar ativo
+	Tile debug overlay	Depuração de ladrilhos
+	Object debug overlay	Depuração de objetos
+	Tiles {n} · z{a}–z{b}	Ladrilhos {n} · z{a}–z{b}
+	Tiles {n} · z{a}–z{b} · {c} loading	Ladrilhos {n} · z{a}–z{b} · {c} carregando
+	Objects {n} · cameras {c}	Objetos {n} · câmeras {c}

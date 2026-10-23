@@ -3952,3 +3952,8 @@ theme	Appearance	外観
 	Camera preview	カメラプレビュー
 	Show Grid Layer	グリッドレイヤーを表示
 	Update Asset	アセットを更新
+	Tile debug overlay	タイルデバッグオーバーレイ
+	Object debug overlay	オブジェクトデバッグオーバーレイ
+	Tiles {n} · z{a}–z{b}	タイル {n} · z{a}–z{b}
+	Tiles {n} · z{a}–z{b} · {c} loading	タイル {n} · z{a}–z{b} · {c} 読み込み中
+	Objects {n} · cameras {c}	オブジェクト {n} · カメラ {c}

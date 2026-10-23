@@ -268,3 +268,22 @@ fn the_open_water_datum_clamps_to_the_sea_surface() {
     };
     assert_eq!(base, 35.0, "land keeps its own grade");
 }
+
+#[test]
+fn scene3d_set_toggles_the_debug_overlays() {
+    // The tile and object debug overlays ride `scene3d.set` (the 3D Terrain panel's
+    // checkboxes drive the same command) and read back in its reply, so agents and users
+    // alike can turn the scene's inputs visible.
+    let mut app = app_with_map();
+    let r = app.run("scene3d.set", json!({})).unwrap();
+    assert_eq!(r["tilesDebug"], json!(false), "off by default");
+    assert_eq!(r["objectsDebug"], json!(false));
+    let r = app.run("scene3d.set", json!({ "tilesDebug": true, "objectsDebug": true })).unwrap();
+    assert_eq!(r["tilesDebug"], json!(true));
+    assert_eq!(r["objectsDebug"], json!(true));
+    assert!(app.ui.tiles_debug && app.ui.objects_debug, "the flags land on the ui state the canvas reads");
+    let r = app.run("scene3d.set", json!({ "tilesDebug": false })).unwrap();
+    assert_eq!(r["tilesDebug"], json!(false), "one key at a time flips only its own");
+    assert_eq!(r["objectsDebug"], json!(true));
+    assert!(!app.ui.tiles_debug && app.ui.objects_debug);
+}

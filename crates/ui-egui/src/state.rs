@@ -548,6 +548,15 @@ pub struct UiState {
     /// drag looks, Q/E or the wheel lifts. Starts at the scene centre eye-high.
     #[serde(skip)]
     pub walk3d: terrazon_scene3d::WalkCam,
+    /// The 3D tile debug overlay: every drape ring tile draws its own boundary and zoom
+    /// label, and the readout wears the ring's stats — the imagery LOD made visible
+    /// (`scene3d.set {"tilesDebug": …}`, the 3D Terrain panel's checkbox).
+    #[serde(skip, default)]
+    pub tiles_debug: bool,
+    /// The 3D object debug overlay: every placed asset wears its id, kind and aim over its
+    /// ground point, and the readout counts them (`scene3d.set {"objectsDebug": …}`).
+    #[serde(skip, default)]
+    pub objects_debug: bool,
 }
 
 /// The desktop window's geometry, kept across launches.
@@ -718,6 +727,8 @@ impl Default for UiState {
             cam3d: Default::default(),
             cam_mode: Default::default(),
             walk3d: Default::default(),
+            tiles_debug: false,
+            objects_debug: false,
         }
     }
 }

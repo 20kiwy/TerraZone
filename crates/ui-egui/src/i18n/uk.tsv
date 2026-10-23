@@ -3951,3 +3951,8 @@ axis	Vertical	Вертикальна
 	Camera preview	Перегляд камери
 	Show Grid Layer	Показати шар сітки
 	Update Asset	Оновити об'єкт
+	Tile debug overlay	Налагодження тайлів
+	Object debug overlay	Налагодження об'єктів
+	Tiles {n} · z{a}–z{b}	Тайли {n} · z{a}–z{b}
+	Tiles {n} · z{a}–z{b} · {c} loading	Тайли {n} · z{a}–z{b} · {c} завантажується
+	Objects {n} · cameras {c}	Об'єкти {n} · камер {c}

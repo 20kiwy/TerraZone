@@ -253,7 +253,7 @@ pub const UI_COMMANDS: &[(&str, &str, &str, &str)] = &[
         "scene3d.set",
         "Scene 3D Settings",
         "",
-        "{contourInterval?, imageryZoom?} the 3D environment's terrain settings (the ground drapes flat; contours carry the relief)",
+        "{contourInterval?, imageryZoom?, camDist?, camYaw?, camPitch?, camMode?: \"orbit\"|\"walk\", walkX/Y/Z?, walkYaw?, walkPitch?, tilesDebug?, objectsDebug?} the 3D environment's terrain and camera settings (the ground drapes flat; contours carry the relief; the debug overlays make the tile ring's LOD and the placements' aims visible)",
     ),
     (
         "placements.place",
@@ -1184,6 +1184,15 @@ pub fn run_ui_command(app: &mut TerrazoneApp, id: &str, p: &Value) -> Option<Res
             if let Some(x) = p.get("walkZ").and_then(Value::as_f64) {
                 app.ui.walk3d.pos[2] = x as f32;
             }
+            // The debug overlays (the 3D Terrain panel's checkboxes drive these too): the
+            // tile ring's boundaries, zoom labels and stats, and the placements' own
+            // id/kind/aim labels — the scene's inputs made visible.
+            if let Some(v) = p.get("tilesDebug").and_then(Value::as_bool) {
+                app.ui.tiles_debug = v;
+            }
+            if let Some(v) = p.get("objectsDebug").and_then(Value::as_bool) {
+                app.ui.objects_debug = v;
+            }
             // Any setting change retraces the contours next frame.
             if let Some(rt) = app.canvas.dem.as_mut() {
                 rt.invalidate_mesh();
@@ -1192,6 +1201,8 @@ pub fn run_ui_command(app: &mut TerrazoneApp, id: &str, p: &Value) -> Option<Res
                 "contourInterval": app.ui.terrain3d.contour_interval,
                 "imageryZoom": app.ui.terrain3d.imagery_zoom,
                 "camMode": if app.ui.cam_mode == terrazon_scene3d::CamMode::Walk { "walk" } else { "orbit" },
+                "tilesDebug": app.ui.tiles_debug,
+                "objectsDebug": app.ui.objects_debug,
             }))
         }
         "window.control" => flag(&mut app.ui.control_bar),

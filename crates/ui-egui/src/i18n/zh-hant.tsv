@@ -3419,3 +3419,8 @@ axis	Vertical	垂直
 	Camera preview	攝影機預覽
 	Show Grid Layer	顯示網格圖層
 	Update Asset	更新資產
+	Tile debug overlay	圖磚除錯疊加層
+	Object debug overlay	物件除錯疊加層
+	Tiles {n} · z{a}–z{b}	圖磚 {n} · z{a}–z{b}
+	Tiles {n} · z{a}–z{b} · {c} loading	圖磚 {n} · z{a}–z{b} · {c} 載入中
+	Objects {n} · cameras {c}	物件 {n} · 攝影機 {c}

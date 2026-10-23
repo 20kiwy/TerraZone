@@ -3966,3 +3966,8 @@ axis	Vertical	Вертикально
 	Camera preview	Предпросмотр камеры
 	Show Grid Layer	Показать слой сетки
 	Update Asset	Обновить объект
+	Tile debug overlay	Отладка тайлов
+	Object debug overlay	Отладка объектов
+	Tiles {n} · z{a}–z{b}	Тайлы {n} · z{a}–z{b}
+	Tiles {n} · z{a}–z{b} · {c} loading	Тайлы {n} · z{a}–z{b} · {c} загружается
+	Objects {n} · cameras {c}	Объекты {n} · камер {c}
