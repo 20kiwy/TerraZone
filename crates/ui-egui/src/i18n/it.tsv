@@ -3821,7 +3821,7 @@ axis	Vertical	Verticale
 	no DEM fetcher	nessuno scaricatore DEM
 	Click to place · Esc to finish	Clic per posizionare · Esc per terminare
 	Placement finished	Posizionamento terminato
-	3D environment — drag to orbit · Shift-drag to pan · wheel to zoom · the Camera panel switches to Walk (WASD)	Ambiente 3D — trascina per orbitare · Maiusc+trascina per spostare · rotella per lo zoom · il pannello Camera passa a Camminata (WASD)
+	3D environment — drag to orbit · Shift-drag to pan · wheel to zoom · the Camera panel switches to Walk (arrow keys)	Ambiente 3D — trascina per orbitare · Maiusc+trascina per spostare · rotella per lo zoom · il pannello Camera passa a Camminata (frecce)
 @msg	3D anchors the map view centre — open water here; zoom the 2D map to an area to bring it into 3D	Il 3D si ancora al centro della vista mappa — qui acqua aperta; ingrandisci la mappa 2D su una zona per portarla in 3D
 	Triangle budget reached — showing the closest {n} tris	Limite di triangoli raggiunto — mostrati i {n} più vicini
 	Array Point	Punto matrice
@@ -3941,9 +3941,9 @@ axis	Vertical	Verticale
 	Eye height	Altezza dell'occhio
 	Look	Sguardo
 	Orbit camera — drag to orbit · Shift-drag to pan · wheel to zoom · double-click recentres	Camera orbitale — trascina per orbitare · Maiusc+trascina per spostare · rotella per lo zoom · doppio clic per ricentrare
-	W/A/S/D walks · Q/E sinks or lifts · Shift runs · the wheel lifts · drag with Space (or Alt) looks	W/A/S/D avanza · Q/E scende o sale · Maiusc corre · la rotella alza o abbassa · trascina con Spazio (o Alt) per guardare
+	Arrow keys walk · Q/E sinks or lifts · Shift runs · the wheel lifts · drag with Space (or Alt) looks	Le frecce avanzano · Q/E scende o sale · Maiusc corre · la rotella alza o abbassa · trascina con Spazio (o Alt) per guardare
 	Walk	Camminata
-	Walk mode — W/A/S/D to move · Space-drag to look · Q/E down/up · Shift runs · the wheel lifts	Modalità camminata — W/A/S/D per muoverti · Spazio+trascina per guardare · Q/E scende o sale · Maiusc corre · la rotella cambia l'altezza
+	Walk mode — Arrow keys to move · Space-drag to look · Q/E down/up · Shift runs · the wheel lifts	Modalità camminata — le frecce per muoverti · Spazio+trascina per guardare · Q/E scende o sale · Maiusc corre · la rotella cambia l'altezza
 	Corridor day	Giornata del corridoio
 	{up} toward Dodoma · {down} toward Dar es Salaam	{up} verso Dodoma · {down} verso Dar es Salaam
 	{time} · {name} — next	{time} · {name} — prossima

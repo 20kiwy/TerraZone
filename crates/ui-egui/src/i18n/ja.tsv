@@ -3805,7 +3805,7 @@ theme	Appearance	外観
 	no DEM fetcher	DEM フェッチャなし
 	Click to place · Esc to finish	クリックで配置 · Esc で終了
 	Placement finished	配置を終了しました
-	3D environment — drag to orbit · Shift-drag to pan · wheel to zoom · the Camera panel switches to Walk (WASD)	3D 環境 — ドラッグで回転 · Shift+ドラッグで移動 · ホイールでズーム · カメラパネルでウォーク（WASD）に切り替え
+	3D environment — drag to orbit · Shift-drag to pan · wheel to zoom · the Camera panel switches to Walk (arrow keys)	3D 環境 — ドラッグで回転 · Shift+ドラッグで移動 · ホイールでズーム · カメラパネルでウォーク（矢印キー）に切り替え
 @msg	3D anchors the map view centre — open water here; zoom the 2D map to an area to bring it into 3D	3D はマップビューの中心にアンカーします — ここは外洋です。2D マップを目的の地域にズームすると 3D に表示されます
 	Triangle budget reached — showing the closest {n} tris	三角形の上限に達しました — 近い {n} 個のみ表示
 	Array Point	配列ポイント
@@ -3925,9 +3925,9 @@ theme	Appearance	外観
 	Eye height	視点の高さ
 	Look	視線
 	Orbit camera — drag to orbit · Shift-drag to pan · wheel to zoom · double-click recentres	オービット カメラ — ドラッグで回転 · Shift+ドラッグで移動 · ホイールでズーム · ダブルクリックで中心を合わせ
-	W/A/S/D walks · Q/E sinks or lifts · Shift runs · the wheel lifts · drag with Space (or Alt) looks	W/A/S/D で移動 · Q/E で降下・上昇 · Shift で走る · ホイールで上げ下げ · Space ドラッグ（または Alt ドラッグ）で視線
+	Arrow keys walk · Q/E sinks or lifts · Shift runs · the wheel lifts · drag with Space (or Alt) looks	矢印キーで移動 · Q/E で降下・上昇 · Shift で走る · ホイールで上げ下げ · Space ドラッグ（または Alt ドラッグ）で視線
 	Walk	ウォーク
-	Walk mode — W/A/S/D to move · Space-drag to look · Q/E down/up · Shift runs · the wheel lifts	ウォーク モード — W/A/S/D で移動 · Space+ドラッグで視線 · Q/E で降下・上昇 · Shift で走る · ホイールで高度を上げ下げ
+	Walk mode — Arrow keys to move · Space-drag to look · Q/E down/up · Shift runs · the wheel lifts	ウォーク モード — 矢印キーで移動 · Space+ドラッグで視線 · Q/E で降下・上昇 · Shift で走る · ホイールで高度を上げ下げ
 	Corridor day	回廊の一日
 	{up} toward Dodoma · {down} toward Dar es Salaam	ドドマ方面 {up}本 · ダルエスサラーム方面 {down}本
 	{time} · {name} — next	{time} · {name} — 次はここ

@@ -2758,7 +2758,7 @@
 	Terrain loading	Carregando o terreno
 	no DEM fetcher	sem obtentor de MDE
 @msg	Placement finished	Posicionamento finalizado
-	3D environment — drag to orbit · Shift-drag to pan · wheel to zoom · the Camera panel switches to Walk (WASD)	Ambiente 3D — arraste para orbitar · Shift+arraste para deslocar · roda para dar zoom · o painel Câmera muda para Caminhar (WASD)
+	3D environment — drag to orbit · Shift-drag to pan · wheel to zoom · the Camera panel switches to Walk (arrow keys)	Ambiente 3D — arraste para orbitar · Shift+arraste para deslocar · roda para dar zoom · o painel Câmera muda para Caminhar (setas)
 	Triangle budget reached — showing the closest {n} tris	Limite de triângulos atingido — mostrando os {n} mais próximos
 	Array Point	Ponto em matriz
 	Array Point Tool	Ferramenta Ponto em matriz
@@ -2805,9 +2805,9 @@
 	Eye height	Altura do olho
 	Look	Olhar
 	Orbit camera — drag to orbit · Shift-drag to pan · wheel to zoom · double-click recentres	Câmera orbital — arraste para orbitar · Shift+arraste para deslocar · roda para dar zoom · clique duplo recentraliza
-	W/A/S/D walks · Q/E sinks or lifts · Shift runs · the wheel lifts · drag with Space (or Alt) looks	W/A/S/D anda · Q/E desce ou sobe · Shift corre · a roda sobe ou desce · arraste com Espaço (ou Alt) para olhar
+	Arrow keys walk · Q/E sinks or lifts · Shift runs · the wheel lifts · drag with Space (or Alt) looks	As setas andam · Q/E desce ou sobe · Shift corre · a roda sobe ou desce · arraste com Espaço (ou Alt) para olhar
 	Walk	Caminhar
-	Walk mode — W/A/S/D to move · Space-drag to look · Q/E down/up · Shift runs · the wheel lifts	Modo caminhar — W/A/S/D para mover · Espaço+arraste para olhar · Q/E desce ou sobe · Shift corre · a roda muda a altura
+	Walk mode — Arrow keys to move · Space-drag to look · Q/E down/up · Shift runs · the wheel lifts	Modo caminhar — as setas para mover · Espaço+arraste para olhar · Q/E desce ou sobe · Shift corre · a roda muda a altura
 	Camera preview	Pré-visualização da câmera
 	Show Grid Layer	Mostrar camada de grade
 	Update Asset	Atualizar ativo

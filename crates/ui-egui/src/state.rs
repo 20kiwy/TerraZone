@@ -544,8 +544,9 @@ pub struct UiState {
     /// below) so switching modes hands the view over instead of resetting it.
     #[serde(skip)]
     pub cam_mode: terrazon_scene3d::CamMode,
-    /// The walk rig ([`terrazon_scene3d::WalkCam`], the EffectCraft camera): WASD moves it,
-    /// drag looks, Q/E or the wheel lifts. Starts at the scene centre eye-high.
+    /// The walk rig ([`terrazon_scene3d::WalkCam`], the EffectCraft camera): the arrow keys move
+    /// it (the letters stay with the tools), drag looks, Q/E or the wheel lifts. Starts at the
+    /// scene centre eye-high.
     #[serde(skip)]
     pub walk3d: terrazon_scene3d::WalkCam,
     /// The 3D tile debug overlay: every drape ring tile draws its own boundary and zoom

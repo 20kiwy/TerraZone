@@ -3832,7 +3832,7 @@ axis	Vertical	Vertical
 	no DEM fetcher	pas de récupérateur MNT
 	Click to place · Esc to finish	Cliquez pour placer · Échap pour terminer
 	Placement finished	Placement terminé
-	3D environment — drag to orbit · Shift-drag to pan · wheel to zoom · the Camera panel switches to Walk (WASD)	Environnement 3D — glisser pour orbiter · Maj+glisser pour déplacer · molette pour zoomer · le panneau Caméra passe en Marche (WASD)
+	3D environment — drag to orbit · Shift-drag to pan · wheel to zoom · the Camera panel switches to Walk (arrow keys)	Environnement 3D — glisser pour orbiter · Maj+glisser pour déplacer · molette pour zoomer · le panneau Caméra passe en Marche (flèches)
 @msg	3D anchors the map view centre — open water here; zoom the 2D map to an area to bring it into 3D	La 3D s'ancre au centre de la vue de la carte — eau libre ici ; zoomez la carte 2D sur une zone pour l'amener en 3D
 	Triangle budget reached — showing the closest {n} tris	Limite de triangles atteinte — affichage des {n} plus proches
 	Array Point	Point matriciel
@@ -3952,9 +3952,9 @@ axis	Vertical	Vertical
 	Eye height	Hauteur de l'œil
 	Look	Regard
 	Orbit camera — drag to orbit · Shift-drag to pan · wheel to zoom · double-click recentres	Caméra orbitale — glisser pour orbiter · Maj+glisser pour déplacer · molette pour zoomer · double-clic pour recentrer
-	W/A/S/D walks · Q/E sinks or lifts · Shift runs · the wheel lifts · drag with Space (or Alt) looks	W/A/S/D avance · Q/E descend ou monte · Maj court · la molette monte ou descend · glisser avec Espace (ou Alt) pour regarder
+	Arrow keys walk · Q/E sinks or lifts · Shift runs · the wheel lifts · drag with Space (or Alt) looks	Les flèches avancent · Q/E descend ou monte · Maj court · la molette monte ou descend · glisser avec Espace (ou Alt) pour regarder
 	Walk	Marche
-	Walk mode — W/A/S/D to move · Space-drag to look · Q/E down/up · Shift runs · the wheel lifts	Mode marche — W/A/S/D pour se déplacer · Espace+glisser pour regarder · Q/E descend ou monte · Maj court · la molette change l'altitude
+	Walk mode — Arrow keys to move · Space-drag to look · Q/E down/up · Shift runs · the wheel lifts	Mode marche — les flèches pour se déplacer · Espace+glisser pour regarder · Q/E descend ou monte · Maj court · la molette change l'altitude
 	Corridor day	Journée du corridor
 	{up} toward Dodoma · {down} toward Dar es Salaam	{up} vers Dodoma · {down} vers Dar es Salaam
 	{time} · {name} — next	{time} · {name} — prochaine

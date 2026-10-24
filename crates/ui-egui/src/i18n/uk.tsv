@@ -3804,7 +3804,7 @@ axis	Vertical	Вертикальна
 	no DEM fetcher	немає завантажувача ЦМР
 	Click to place · Esc to finish	Клацніть для розміщення · Esc — завершити
 	Placement finished	Розміщення завершено
-	3D environment — drag to orbit · Shift-drag to pan · wheel to zoom · the Camera panel switches to Walk (WASD)	3D-середовище — перетягування для орбіти · Shift+перетягування для панорами · коліщатко для масштабу · панель «Камера» перемикає режим прогулянки (WASD)
+	3D environment — drag to orbit · Shift-drag to pan · wheel to zoom · the Camera panel switches to Walk (arrow keys)	3D-середовище — перетягування для орбіти · Shift+перетягування для панорами · коліщатко для масштабу · панель «Камера» перемикає режим прогулянки (стрілки)
 @msg	3D anchors the map view centre — open water here; zoom the 2D map to an area to bring it into 3D	3D прив'язується до центру огляду мапи — тут відкрита вода; наблизьте 2D-мапу до потрібного місця, щоб побачити його в 3D
 	Triangle budget reached — showing the closest {n} tris	Досягнуто ліміт трикутників — показано найближчі {n}
 	Array Point	Масив точок
@@ -3924,9 +3924,9 @@ axis	Vertical	Вертикальна
 	Eye height	Висота ока
 	Look	Погляд
 	Orbit camera — drag to orbit · Shift-drag to pan · wheel to zoom · double-click recentres	Орбітальна камера — перетягування для орбіти · Shift+перетягування для панорами · коліщатко для масштабу · подвійний клац повертає центр
-	W/A/S/D walks · Q/E sinks or lifts · Shift runs · the wheel lifts · drag with Space (or Alt) looks	W/A/S/D — рух · Q/E — вниз або вгору · Shift — біг · коліщатко піднімає чи опускає · перетягування з Space (або Alt) змінює погляд
+	Arrow keys walk · Q/E sinks or lifts · Shift runs · the wheel lifts · drag with Space (or Alt) looks	Стрілки — рух · Q/E — вниз або вгору · Shift — біг · коліщатко піднімає чи опускає · перетягування з Space (або Alt) змінює погляд
 	Walk	Прогулянка
-	Walk mode — W/A/S/D to move · Space-drag to look · Q/E down/up · Shift runs · the wheel lifts	Режим прогулянки — W/A/S/D для руху · Space+перетягування змінює погляд · Q/E — вниз або вгору · Shift — біг · коліщатко змінює висоту
+	Walk mode — Arrow keys to move · Space-drag to look · Q/E down/up · Shift runs · the wheel lifts	Режим прогулянки — стрілки для руху · Space+перетягування змінює погляд · Q/E — вниз або вгору · Shift — біг · коліщатко змінює висоту
 	Corridor day	День коридору
 	{up} toward Dodoma · {down} toward Dar es Salaam	{up} до Додоми · {down} до Дар-ес-Салама
 	{time} · {name} — next	{time} · {name} — наступна

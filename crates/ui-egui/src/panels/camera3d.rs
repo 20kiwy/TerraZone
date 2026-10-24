@@ -109,7 +109,7 @@ fn walk_controls(app: &mut TerrazoneApp, ui: &mut Ui, _t: &Tokens) {
         }
     }
     ui.add_space(6.0);
-    widgets::dim_label(ui, tl!("W/A/S/D walks · Q/E sinks or lifts · Shift runs · the wheel lifts · drag with Space (or Alt) looks"));
+    widgets::dim_label(ui, tl!("Arrow keys walk · Q/E sinks or lifts · Shift runs · the wheel lifts · drag with Space (or Alt) looks"));
 }
 
 fn preset_button(ui: &mut Ui, label: &str) -> bool {

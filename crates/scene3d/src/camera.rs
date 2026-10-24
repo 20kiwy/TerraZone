@@ -7,7 +7,7 @@ use glam::{Mat4, Vec3};
 
 /// The 3D environment's camera mode — the EffectCraft viewer's pair: [`CamMode::Orbit`] swings
 /// the orbit arm around its target, [`CamMode::Walk`] stands the camera on the ground and
-/// drives it (WASD + drag look, Q/E down/up).
+/// drives it (arrow keys + drag look, Q/E down/up).
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum CamMode {
     /// The orbit arm ([`OrbitCamera`]) — the environment's original camera.

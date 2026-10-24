@@ -730,7 +730,7 @@
 	Terrain loading	Načítá se terén
 	no DEM fetcher	bez zavaděče DEM
 @msg	Placement finished	Umísťování ukončeno
-	3D environment — drag to orbit · Shift-drag to pan · wheel to zoom · the Camera panel switches to Walk (WASD)	3D prostředí — tažením obíháte · Shift+tažením posunete · kolečkem přibližujete · panel Kamera přepne režim chůze (WASD)
+	3D environment — drag to orbit · Shift-drag to pan · wheel to zoom · the Camera panel switches to Walk (arrow keys)	3D prostředí — tažením obíháte · Shift+tažením posunete · kolečkem přibližujete · panel Kamera přepne režim chůze (šipky)
 	Triangle budget reached — showing the closest {n} tris	Dosažen limit trojúhelníků — zobrazuje nejbližších {n}
 	Array Point	Pole bodů
 	Array Point Tool	Nástroj Pole bodů
@@ -777,9 +777,9 @@
 	Eye height	Výška oka
 	Look	Pohled
 	Orbit camera — drag to orbit · Shift-drag to pan · wheel to zoom · double-click recentres	Orbitální kamera — tažením obíháte · Shift+tažením posunete · kolečkem přibližujete · dvojklikem vystředíte
-	W/A/S/D walks · Q/E sinks or lifts · Shift runs · the wheel lifts · drag with Space (or Alt) looks	W/A/S/D jde · Q/E klesá nebo stoupá · Shift běží · kolečko zvedá nebo snižuje · tažení s mezerou (nebo Alt) rozhlíží
+	Arrow keys walk · Q/E sinks or lifts · Shift runs · the wheel lifts · drag with Space (or Alt) looks	šipky jdou · Q/E klesá nebo stoupá · Shift běží · kolečko zvedá nebo snižuje · tažení s mezerou (nebo Alt) rozhlíží
 	Walk	Chůze
-	Walk mode — W/A/S/D to move · Space-drag to look · Q/E down/up · Shift runs · the wheel lifts	Režim chůze — W/A/S/D pro pohyb · mezerník+tažení rozhlíží · Q/E klesá nebo stoupá · Shift běží · kolečko mění výšku
+	Walk mode — Arrow keys to move · Space-drag to look · Q/E down/up · Shift runs · the wheel lifts	Režim chůze — šipkami pro pohyb · mezerník+tažení rozhlíží · Q/E klesá nebo stoupá · Shift běží · kolečko mění výšku
 	Camera preview	Náhled kamery
 	Show Grid Layer	Zobrazit vrstvu mřížky
 	Update Asset	Aktualizovat objekt

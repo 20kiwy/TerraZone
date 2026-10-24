@@ -16,7 +16,7 @@
 //! World frame (see `terrazon_scene3d::mercator`): metres, `x` east, `y` up, `z` south, the
 //! origin at the scene centre — the DEM window's anchor, which follows the 2D view's centre.
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::sync::mpsc::Receiver;
 use std::time::{Duration, Instant};
 
@@ -54,7 +54,7 @@ const CLIP_W: f32 = 1.0e-4;
 const ORBIT_SPEED: f32 = 0.005;
 /// One wheel notch dollies the camera by this factor.
 const DOLLY: f32 = 1.2;
-/// Walk mode (the EffectCraft camera): metres per second the WASD walk covers (the
+/// Walk mode (the EffectCraft camera): metres per second the arrow-key walk covers (the
 /// reference's own walking pace).
 const WALK_SPEED: f32 = 3.5;
 /// Walk mode's Shift sprint multiplier — TerraZone's ground runs 60 km to the slab's edge, so
@@ -220,10 +220,35 @@ pub struct Imagery {
     /// The pinned tile layers' own textures, keyed by tile-layer id (each pinned layer draws
     /// its one tile above the basemap, at its stored zoom — the Layers panel's order).
     pinned: HashMap<String, ImageryTile>,
+    /// The per-zoom imagery answer counts (the effective-coverage learner): a zoom the source
+    /// keeps refusing — 16 straight failures, not one answer — caps the ring's asks one level
+    /// down, so a declared z22 the vendor doesn't serve here stops costing a dead ask per near
+    /// tile every frame and the near field dresses from the finest zoom that actually answers.
+    zoom_fails: BTreeMap<u8, u32>,
+    zoom_oks: BTreeMap<u8, u32>,
+    /// The learned cap (the finest zoom this source is known to answer here) and the source id
+    /// it was learned for — a different source starts the count over.
+    zoom_cap: Option<u8>,
+    cap_src: String,
 }
 
 struct ImageryTile {
     state: ImageryState,
+}
+
+/// The effective-coverage learner's rule (unit-testable): 16 straight failures at a zoom
+/// ≥ 16 with zero answers caps the ring's asks one level down (never below 14 — a flaky
+/// street zoom is a network problem, not a coverage edge). A zoom the source has answered
+/// never learns a cap, and a cap only ever walks down. `pub(crate)` so the tests pin it.
+pub(crate) fn learn_zoom_cap(fails: &BTreeMap<u8, u32>, oks: &BTreeMap<u8, u32>, z: u8, current: Option<u8>) -> Option<u8> {
+    if z < 16 || oks.get(&z).copied().unwrap_or(0) > 0 || fails.get(&z).copied().unwrap_or(0) < 16 {
+        return current;
+    }
+    let c = z.saturating_sub(1).max(14);
+    match current {
+        Some(cur) if cur <= c => Some(cur),
+        _ => Some(c),
+    }
 }
 
 enum ImageryState {
@@ -327,7 +352,37 @@ impl DemRuntime {
 impl Imagery {
     fn new() -> Self {
         let (tx, rx) = std::sync::mpsc::channel();
-        Self { rx, tx, tiles: HashMap::new(), ring: vec![], asked: None, preview_ring: vec![], preview_asked: None, tag: 0, pinned: HashMap::new() }
+        Self {
+            rx,
+            tx,
+            tiles: HashMap::new(),
+            ring: vec![],
+            asked: None,
+            preview_ring: vec![],
+            preview_asked: None,
+            tag: 0,
+            pinned: HashMap::new(),
+            zoom_fails: BTreeMap::new(),
+            zoom_oks: BTreeMap::new(),
+            zoom_cap: None,
+            cap_src: String::new(),
+        }
+    }
+
+    /// The ring's effective zoom cap: the user's own slider, learned down to the finest zoom
+    /// this source actually answers. Resets when the source changes (the count belongs to one
+    /// source's coverage, not the session).
+    fn effective_max_zoom(&mut self, source_id: &str, cap: u8) -> u8 {
+        if self.cap_src != source_id {
+            self.cap_src = source_id.to_string();
+            self.zoom_fails.clear();
+            self.zoom_oks.clear();
+            self.zoom_cap = None;
+        }
+        match self.zoom_cap {
+            Some(c) => cap.min(c),
+            None => cap,
+        }
     }
 }
 
@@ -691,6 +746,216 @@ fn draw_fleet(app: &mut TerrazoneApp, buckets: &mut [Vec<Tri>; 3], drawn: &mut u
     }
 }
 
+/// The fleet's ground parts in 3D — the pieces the 2D map paints as flat overlays: the feeds'
+/// H3 cell grids, the Waze road network in the vendor's own editor palette, and the SGR's
+/// named stations (the rail corridor itself is a mesh pass, [`draw_sgr_rail`], and the
+/// vehicles are meshes in [`draw_fleet`]). They drape on the same flat ground the document's
+/// art rides and draw UNDER it — the 2D canvas's own order (basemap, fleet, art) — gated by
+/// the same eyes ([`crate::fleet::part_visible`]) and the same data gates the 2D map reads.
+fn draw_fleet_ground(app: &TerrazoneApp, painter: &egui::Painter, xform: &Xform, rect: Rect) {
+    let Some(st) = app.session.active() else { return };
+    let doc = &st.doc;
+    let cache = &app.canvas.fleet;
+    let m = scene_mercator(app);
+    let level = view_zoom_level(app, rect);
+    // lon/lat → world (flat on the draped ground) → screen.
+    let proj = |lon: f64, lat: f64| -> Option<Pos2> {
+        let (x, yn) = m.project(lon, lat);
+        xform.proj([x as f32, SKIN_LIFT, -(yn as f32)])
+    };
+    for l in &doc.fleet.layers {
+        if !l.visible {
+            continue;
+        }
+        let label = l.provider.label();
+        if l.provider == terrazon_fleet::Provider::Waze {
+            // Public feed — the cache's status gates (no auth), exactly the 2D draw's gate.
+            if cache.status_of(l.provider).has_data() && !cache.roads.is_empty() && crate::fleet::part_visible(doc, label, "Roads") {
+                draw_roads_3d(painter, &cache.roads, &proj, rect, level, cache.road_pick);
+            }
+            continue;
+        }
+        if l.provider == terrazon_fleet::Provider::Sgr {
+            // The atlas is embedded data: the stations draw from the eyes alone (the
+            // corridor's ribbon rides [`draw_sgr_rail`] under the trains).
+            if crate::fleet::part_visible(doc, label, "Stations") {
+                let color = l.provider.color();
+                draw_stations_3d(painter, &cache.atlas, &proj, rect, level, color);
+            }
+            continue;
+        }
+        let transport = l.auth.is_set() && cache.status_of(l.provider).has_data();
+        if transport && !cache.grid_of(l.provider).is_empty() && crate::fleet::part_visible(doc, label, "H3 Cells") {
+            draw_grid_3d(painter, cache.grid_of(l.provider), &proj, rect, l.provider.color());
+        }
+    }
+    if doc.fleet.demo && doc.fleet.demo_visible && !cache.demo_grid.is_empty() && crate::fleet::part_visible(doc, "Demo", "H3 Cells") {
+        // The demo's cells take their kind's type colour (the same mapping the 2D map paints).
+        draw_kind_grid_3d(painter, &cache.demo_grid, &proj, rect);
+    }
+}
+
+/// One feed's H3 grid draped: each fetched item's cell outlined in the feed's colour with a
+/// faint fill — the 2D map's [`crate::fleet`] `draw_grid`, on the ground.
+fn draw_grid_3d(painter: &egui::Painter, cells: &[h3o::CellIndex], proj: &dyn Fn(f64, f64) -> Option<Pos2>, rect: Rect, color: [u8; 3]) {
+    let fill = Color32::from_rgba_unmultiplied(color[0], color[1], color[2], 24);
+    let stroke = Stroke::new(1.2, Color32::from_rgba_unmultiplied(color[0], color[1], color[2], 130));
+    for cell in cells {
+        if let Some(pts) = cell_ring_3d(*cell, proj, rect) {
+            painter.add(Shape::Path(egui::epaint::PathShape { points: pts, closed: true, fill, stroke: stroke.into() }));
+        }
+    }
+}
+
+/// The demo's grid draped: each cell takes the kind colour that named it in 2D.
+fn draw_kind_grid_3d(
+    painter: &egui::Painter,
+    grid: &[(h3o::CellIndex, terrazon_fleet::VehicleKind)],
+    proj: &dyn Fn(f64, f64) -> Option<Pos2>,
+    rect: Rect,
+) {
+    for (cell, kind) in grid {
+        let kc = crate::fleet::kind_color(*kind);
+        let color = [kc.r(), kc.g(), kc.b()];
+        let fill = Color32::from_rgba_unmultiplied(color[0], color[1], color[2], 24);
+        let stroke = Stroke::new(1.2, Color32::from_rgba_unmultiplied(color[0], color[1], color[2], 130));
+        if let Some(pts) = cell_ring_3d(*cell, proj, rect) {
+            painter.add(Shape::Path(egui::epaint::PathShape { points: pts, closed: true, fill, stroke: stroke.into() }));
+        }
+    }
+}
+
+/// One cell's hexagon ring projected on the ground (None when any corner fails to project —
+/// a cell that runs behind the eye just skips this frame, the marker hexes carry the near
+/// field), culled against the canvas like the 2D draw's own ring cull.
+fn cell_ring_3d(cell: h3o::CellIndex, proj: &dyn Fn(f64, f64) -> Option<Pos2>, rect: Rect) -> Option<Vec<Pos2>> {
+    let pts: Vec<Pos2> = terrazon_fleet::h3grid::cell_boundary(cell).iter().filter_map(|(lon, lat)| proj(*lon, *lat)).collect();
+    if pts.len() < 4 {
+        return None;
+    }
+    let mut bounds = Rect::from_min_size(pts[0], egui::Vec2::ZERO);
+    for p in &pts {
+        bounds.extend_with(*p);
+    }
+    if !rect.expand(200.0).intersects(bounds) {
+        return None;
+    }
+    Some(pts)
+}
+
+/// The Waze roads draped: every class in its own colour over the imagery, the big classes on
+/// a dark casing at street zooms, the non-driving ways dashed, tunnels dimmed, a live closure
+/// dashed red, the picked segment riding its white halo — the vendor editor's palette the 2D
+/// map paints, projected on the ground.
+fn draw_roads_3d(
+    painter: &egui::Painter,
+    segs: &[terrazon_fleet::providers::waze::WazeSeg],
+    proj: &dyn Fn(f64, f64) -> Option<Pos2>,
+    rect: Rect,
+    level: f64,
+    picked: Option<i64>,
+) {
+    let zoom_scale = crate::fleet::marker_scale(level);
+    let street = level >= 12.0;
+    let dash = (4.0 + 3.0 * zoom_scale).max(5.0);
+    let mut casings: Vec<Shape> = Vec::new();
+    let mut cores: Vec<Shape> = Vec::new();
+    for pass in 0..2 {
+        for seg in segs {
+            let pts: Vec<Pos2> = seg.pts.iter().filter_map(|p| proj(p[0], p[1])).collect();
+            if pts.len() < 2 {
+                continue;
+            }
+            // Cull: the projected line's bounds against the canvas (the 2D draw culls by the
+            // segment's lon/lat bbox against the view box; the projection already did that work).
+            let mut bounds = Rect::from_min_size(pts[0], egui::Vec2::ZERO);
+            for p in &pts {
+                bounds.extend_with(*p);
+            }
+            if !rect.expand(80.0).intersects(bounds) {
+                continue;
+            }
+            let is_pick = picked == Some(seg.id);
+            let [r, g, b] = if seg.closures { [0xd0, 0x2f, 0x2f] } else { terrazon_fleet::providers::waze::road_type_color(seg.road_type) };
+            let dashed = seg.closures || terrazon_fleet::providers::waze::road_type_dashed(seg.road_type);
+            let mut alpha = 235_u8;
+            if seg.level < 0 {
+                alpha = 115; // a tunnel reads as depth, not absence
+            }
+            let color = Color32::from_rgba_unmultiplied(r, g, b, alpha);
+            let width = terrazon_fleet::providers::waze::road_type_width(seg.road_type) * (0.85 + 0.9 * zoom_scale) * if is_pick { 1.5 } else { 1.0 };
+            if pass == 0 {
+                if is_pick {
+                    let halo = Stroke::new(width + 4.0 + 3.0 * zoom_scale, Color32::from_rgba_unmultiplied(255, 255, 255, 235));
+                    push_road_3d(&mut cores, &pts, halo, dashed, dash);
+                }
+                if street && terrazon_fleet::providers::waze::road_type_cased(seg.road_type) {
+                    let casing = Stroke::new(width + 2.4 + 1.8 * zoom_scale, Color32::from_rgba_unmultiplied(56, 54, 50, alpha.min(210)));
+                    push_road_3d(&mut casings, &pts, casing, dashed, dash);
+                }
+            } else {
+                push_road_3d(&mut cores, &pts, Stroke::new(width, color), dashed, dash);
+            }
+        }
+        if pass == 0 {
+            painter.extend(casings.drain(..));
+        }
+    }
+    painter.extend(cores);
+}
+
+/// One draped polyline (or a dashed line's screen-space segments) — the shape the roads and
+/// their casings ride.
+fn push_road_3d(out: &mut Vec<Shape>, pts: &[Pos2], stroke: Stroke, dashed: bool, dash: f32) {
+    if dashed {
+        out.extend(Shape::dashed_line(pts, stroke, dash, dash * 0.7));
+    } else {
+        out.push(Shape::Path(egui::epaint::PathShape { points: pts.to_vec(), closed: false, fill: Color32::TRANSPARENT, stroke: stroke.into() }));
+    }
+}
+
+/// The SGR's named stations draped: a small platform block per stop with its name once the
+/// view reads street names — the 2D map's `draw_stations`, on the ground, the block's screen
+/// size riding the same zoom curve. Names read in the 3D canvas's own label language (dark
+/// chip, light text), culled so close stops don't stack.
+fn draw_stations_3d(
+    painter: &egui::Painter,
+    atlas: &terrazon_fleet::RailAtlas,
+    proj: &dyn Fn(f64, f64) -> Option<Pos2>,
+    rect: Rect,
+    level: f64,
+    color: [u8; 3],
+) {
+    let zoom_scale = crate::fleet::marker_scale(level);
+    let fill = Color32::from_rgba_unmultiplied(color[0], color[1], color[2], 220);
+    let block = (3.0 + 4.0 * zoom_scale).max(3.5);
+    let mut placed: Vec<Pos2> = Vec::new();
+    for st in &atlas.stations {
+        let Some(p) = proj(st.lon, st.lat) else { continue };
+        if !rect.expand(20.0).contains(p) {
+            continue;
+        }
+        painter.rect_filled(Rect::from_center_size(p, egui::vec2(block, block)), 1.5, fill);
+        painter.rect_stroke(
+            Rect::from_center_size(p, egui::vec2(block, block)),
+            1.5,
+            Stroke::new(1.0, Color32::from_black_alpha(160)),
+            egui::StrokeKind::Outside,
+        );
+        if level >= 10.0 {
+            if placed.iter().any(|q| q.distance_sq(p) < 3600.0) {
+                continue;
+            }
+            placed.push(p);
+            let font = FontId::proportional(9.0 + 2.5 * zoom_scale);
+            let galley = painter.layout_no_wrap(st.name.clone(), font, Color32::WHITE);
+            let pos = p + egui::vec2(6.0, -6.0 - galley.size().y);
+            painter.rect_filled(Rect::from_min_size(pos - vec2(2.0, 1.0), galley.size() + vec2(4.0, 2.0)), 2.0, Color32::from_black_alpha(130));
+            painter.galley(pos, galley, Color32::WHITE);
+        }
+    }
+}
+
 /// The leader line under an elevated marker: a hair-thin crossed quad pair from the datum to
 /// the marker's altitude, light grey — the plumb line the eye reads up to the aircraft and
 /// back down to the ground ring it belongs to.
@@ -991,6 +1256,11 @@ pub fn show_3d(app: &mut TerrazoneApp, ui: &mut egui::Ui, rect: Rect) {
     draw_imagery(app, &painter, &xform);
     draw_loading_hint(app, &painter, &t, rect);
 
+    // The fleet's ground parts (the H3 cell grids, the Waze roads, the SGR stations): the
+    // 2D map's flat overlays, draped under the document's art — the same stack the 2D
+    // canvas paints (basemap, fleet, art).
+    draw_fleet_ground(app, &painter, &xform, rect);
+
     let mut buckets: [Vec<Tri>; 3] = [Vec::new(), Vec::new(), Vec::new()];
     let mut drawn = 0usize;
 
@@ -1011,7 +1281,7 @@ pub fn show_3d(app: &mut TerrazoneApp, ui: &mut egui::Ui, rect: Rect) {
 
     // The document's own drawing, draped on the flat ground: every visible path node's
     // topmost stroke and its fill — the fills painted the way the 2D canvas paints them.
-    draw_doc_art(app, &painter, &xform);
+    draw_doc_art(app, &painter, &xform, &rig);
 
     // The document's placed assets (Standing), each on its own ground point: the doc point
     // names the lon/lat (the same space every tool draws in), the ground is the datum.
@@ -1427,6 +1697,9 @@ fn imagery_step(
     }
     let Some(source) = frame.source else { return false };
     let Some(fetcher) = fetcher else { return false };
+    // The ring's asks clamp to the source's effective coverage (the learner's cap — a declared
+    // z22 the vendor doesn't serve here stops being asked).
+    let max_zoom = rt.imagery.effective_max_zoom(&source.id, max_zoom);
     // The pinned tile layers: each asks its one tile from its own source when it hasn't one
     // pending yet (their textures key by tile-layer id, never colliding with the ring's).
     if !pinned.is_empty() {
@@ -1548,6 +1821,9 @@ fn imagery_step(
                 }
                 // The ask's key is `{source}/{z}/{x}/{y}`; the runtime stores by `{z}/{x}/{y}`.
                 let tile_key = key.split('/').skip(1).collect::<Vec<_>>().join("/");
+                if let Some(z) = tile_key.split('/').next().and_then(|s| s.parse::<u8>().ok()) {
+                    *rt.imagery.zoom_oks.entry(z).or_default() += 1;
+                }
                 let state = match image::load_from_memory(&bytes) {
                     Ok(img) => {
                         let rgba = img.to_rgba8();
@@ -1559,14 +1835,32 @@ fn imagery_step(
                 };
                 rt.imagery.tiles.insert(tile_key, ImageryTile { state });
             }
-            TileMsg::Failed { key } | TileMsg::Dropped { key } => {
+            TileMsg::Failed { key } => {
                 if let Some(rest) = key.strip_prefix("pinned/") {
                     let lid = rest.split('/').next().unwrap_or("").to_string();
                     rt.imagery.pinned.insert(lid, ImageryTile { state: ImageryState::Failed(Instant::now() + IMAGERY_RETRY) });
                     continue;
                 }
                 let tile_key = key.split('/').skip(1).collect::<Vec<_>>().join("/");
+                // The learner: a zoom the source keeps REFUSING (a real failed answer — never
+                // a dropped ask, which is the host's queue, not the vendor's) stops being
+                // asked; the near field dresses from the finest zoom that actually answers.
+                if let Some(z) = tile_key.split('/').next().and_then(|s| s.parse::<u8>().ok()) {
+                    *rt.imagery.zoom_fails.entry(z).or_default() += 1;
+                    rt.imagery.zoom_cap = learn_zoom_cap(&rt.imagery.zoom_fails, &rt.imagery.zoom_oks, z, rt.imagery.zoom_cap);
+                }
                 rt.imagery.tiles.insert(tile_key, ImageryTile { state: ImageryState::Failed(Instant::now() + IMAGERY_RETRY) });
+            }
+            TileMsg::Dropped { key } => {
+                // The host's queue was full (a fast pan floods it): the entry goes so the next
+                // frame asks again — never a coverage signal.
+                if let Some(rest) = key.strip_prefix("pinned/") {
+                    let lid = rest.split('/').next().unwrap_or("").to_string();
+                    rt.imagery.pinned.remove(&lid);
+                    continue;
+                }
+                let tile_key = key.split('/').skip(1).collect::<Vec<_>>().join("/");
+                rt.imagery.tiles.remove(&tile_key);
             }
         }
     }
@@ -1605,7 +1899,13 @@ const FOOTPRINT_CAP: usize = 140;
 /// read like a smear) — and the tile covering the sample at its own zoom answers, nearest
 /// first, capped. `None` when the frame gives no ground (all sky, or no frame at all): the
 /// caller falls back to the square ring.
-fn imagery_ring_footprint(anchor: (f64, f64), xform: Option<&Xform>, source: &terrazon_map::TileSource, max_zoom: u8, focus_mpp: f64) -> Option<Vec<(TileId, f64)>> {
+fn imagery_ring_footprint(
+    anchor: (f64, f64),
+    xform: Option<&Xform>,
+    source: &terrazon_map::TileSource,
+    max_zoom: u8,
+    focus_mpp: f64,
+) -> Option<Vec<(TileId, f64)>> {
     let xf = xform?;
     let m = Mercator::new(anchor.1, anchor.0);
     let r = xf.rect;
@@ -1856,7 +2156,13 @@ fn draw_imagery_tile(painter: &egui::Painter, xform: &Xform, m: &Mercator, t: Ti
                 .iter()
                 .map(|(v, uv)| {
                     let ndc = v.truncate() / v.w;
-                    (pos2(xform.rect.left() + (ndc.x * 0.5 + 0.5) * xform.rect.width(), xform.rect.top() + (1.0 - (ndc.y * 0.5 + 0.5)) * xform.rect.height()), *uv)
+                    (
+                        pos2(
+                            xform.rect.left() + (ndc.x * 0.5 + 0.5) * xform.rect.width(),
+                            xform.rect.top() + (1.0 - (ndc.y * 0.5 + 0.5)) * xform.rect.height(),
+                        ),
+                        *uv,
+                    )
                 })
                 .collect();
             // A sub-quad wholly off the viewport paints nothing: skip it (the higher
@@ -2353,12 +2659,8 @@ fn tile_ring_stats(app: &TerrazoneApp) -> String {
     let Some(rt) = app.canvas.dem.as_ref() else { return crate::i18n::fmt(tl!("Tiles {n} · z{a}–z{b}"), &[("n", "0"), ("a", "0"), ("b", "0")]) };
     let n = rt.imagery.ring.len();
     let (zmin, zmax) = rt.imagery.ring.iter().fold((u8::MAX, 0u8), |(a, b), (t, _)| (a.min(t.z), b.max(t.z)));
-    let pending = rt
-        .imagery
-        .ring
-        .iter()
-        .filter(|(t, _)| matches!(rt.imagery.tiles.get(&tile_key(*t)).map(|s| &s.state), Some(ImageryState::Pending)))
-        .count();
+    let pending =
+        rt.imagery.ring.iter().filter(|(t, _)| matches!(rt.imagery.tiles.get(&tile_key(*t)).map(|s| &s.state), Some(ImageryState::Pending))).count();
     if pending > 0 {
         crate::i18n::fmt(
             tl!("Tiles {n} · z{a}–z{b} · {c} loading"),
@@ -2533,14 +2835,10 @@ fn draw_camera_pip(app: &mut TerrazoneApp, ui: &mut egui::Ui, full: Rect, cam: &
     // The preview dresses its own street-scale ring (the main frame's ring is coarse at the
     // aerial distances the main camera sits at). One zoom for the whole preview: every tile
     // rides at ratio 1.0, so the draw's far-first order keeps their own relative order.
-    let preview_ring = app
-        .canvas
-        .dem
-        .as_ref()
-        .map(|rt| rt.imagery.preview_ring.iter().map(|t| (*t, 1.0)).collect::<Vec<_>>())
-        .unwrap_or_default();
+    let preview_ring = app.canvas.dem.as_ref().map(|rt| rt.imagery.preview_ring.iter().map(|t| (*t, 1.0)).collect::<Vec<_>>()).unwrap_or_default();
     draw_imagery_ring(app, &painter, &xform, &preview_ring, false);
-    draw_doc_art(app, &painter, &xform);
+    draw_fleet_ground(app, &painter, &xform, rect);
+    draw_doc_art(app, &painter, &xform, &rig);
     let mut buckets: [Vec<Tri>; 3] = [Vec::new(), Vec::new(), Vec::new()];
     let mut drawn = 0usize;
     draw_fleet(app, &mut buckets, &mut drawn, &xform);
@@ -2612,7 +2910,7 @@ fn draw_canvas_switch(app: &mut TerrazoneApp, ui: &mut egui::Ui, rect: Rect) {
 
 /// The status hint shown when the 3D environment is entered.
 fn enter_3d_status(app: &mut TerrazoneApp) {
-    app.status(tl!("3D environment — drag to orbit · Shift-drag to pan · wheel to zoom · the Camera panel switches to Walk (WASD)"));
+    app.status(tl!("3D environment — drag to orbit · Shift-drag to pan · wheel to zoom · the Camera panel switches to Walk (arrow keys)"));
 }
 
 /// Switch the 3D environment's camera mode — the EffectCraft viewer's pair. The switch hands
@@ -2627,7 +2925,7 @@ pub fn set_cam_mode(app: &mut TerrazoneApp, mode: CamMode) {
         CamMode::Walk => {
             let w = WalkCam::from_orbit(&app.ui.cam3d);
             app.ui.walk3d = w;
-            app.status(tl!("Walk mode — W/A/S/D to move · Space-drag to look · Q/E down/up · Shift runs · the wheel lifts"));
+            app.status(tl!("Walk mode — Arrow keys to move · Space-drag to look · Q/E down/up · Shift runs · the wheel lifts"));
         }
         CamMode::Orbit => {
             let c = OrbitCamera::from_walk(&app.ui.walk3d);
@@ -2662,8 +2960,9 @@ fn draw_loading_hint(app: &TerrazoneApp, painter: &egui::Painter, t: &crate::the
 /// orbits, Shift-drag pans, the wheel dollies, double-click recentres — and with a navigation
 /// tool (Hand/Zoom/Rotate View), Space held, or the placement tool up, the whole pointer belongs
 /// to the camera, exactly as before. In Walk mode (the EffectCraft camera) the same camera
-/// gestures look instead of orbit, and the keyboard drives the rig: W/A/S/D walks forward,
-/// left, back, right, Q/E sinks or lifts, Shift sprints, the wheel raises or lowers.
+/// gestures look instead of orbit, and the keyboard drives the rig: the arrow keys walk
+/// forward, left, back, right (the letters stay with the tools), Q/E sinks or lifts, Shift
+/// sprints, the wheel raises or lowers.
 fn handle_input(app: &mut TerrazoneApp, ui: &mut egui::Ui, resp: &egui::Response, rect: Rect, hover: Option<Pos2>) {
     let m = ui.input(|i| i.modifiers);
     let delta = ui.input(|i| i.pointer.delta());
@@ -2746,25 +3045,14 @@ fn handle_input(app: &mut TerrazoneApp, ui: &mut egui::Ui, resp: &egui::Response
             dispatch_tool(app, ui, resp, rect, hover);
         }
     }
-    // The walk keys: the EffectCraft camera's drive. They read while the canvas is under the
-    // pointer (the wheel's own gate), so typing into a panel never walks the camera.
+    // The walk keys: the EffectCraft camera's drive. The ARROW keys walk — up forward, down
+    // back, left/right strafe — leaving the letters to the tools (W/A/S/D are tool keys; the
+    // arrows were free on this canvas, whose tools dispatch pointer events, not nudges). They
+    // read while the canvas is under the pointer (the wheel's own gate), so typing into a panel
+    // never walks the camera.
     if walking && resp.hovered() {
         let dt = ui.input(|i| i.unstable_dt).min(0.25);
-        let (mut fwd, mut side) = (0.0f32, 0.0f32);
-        ui.input(|i| {
-            if i.key_down(egui::Key::W) {
-                fwd += 1.0;
-            }
-            if i.key_down(egui::Key::S) {
-                fwd -= 1.0;
-            }
-            if i.key_down(egui::Key::D) {
-                side += 1.0;
-            }
-            if i.key_down(egui::Key::A) {
-                side -= 1.0;
-            }
-        });
+        let (fwd, side) = ui.input(crate::view3d::walk_key_axes);
         if fwd != 0.0 || side != 0.0 {
             let sprint = if m.shift { WALK_SPRINT } else { 1.0 };
             app.ui.walk3d.walk(fwd, side, WALK_SPEED * sprint * dt);
@@ -2787,6 +3075,27 @@ fn handle_input(app: &mut TerrazoneApp, ui: &mut egui::Ui, resp: &egui::Response
     if moved && let Some(rt) = app.canvas.dem.as_mut() {
         rt.interacted = true;
     }
+}
+
+/// The walk drive's axis read: the ARROW keys — up forward, down back, left/right strafe —
+/// and nothing else. The letters stay with the tools (W/A/S/D are tool keys), so the rig's
+/// own read never answers them. `pub(crate)` so the tests pin the binding.
+pub(crate) fn walk_key_axes(i: &egui::InputState) -> (f32, f32) {
+    let mut fwd = 0.0f32;
+    let mut side = 0.0f32;
+    if i.key_down(egui::Key::ArrowUp) {
+        fwd += 1.0;
+    }
+    if i.key_down(egui::Key::ArrowDown) {
+        fwd -= 1.0;
+    }
+    if i.key_down(egui::Key::ArrowRight) {
+        side += 1.0;
+    }
+    if i.key_down(egui::Key::ArrowLeft) {
+        side -= 1.0;
+    }
+    (fwd, side)
 }
 
 /// A stroke draws through the camera it pressed under (frozen at Down): its every point picks
@@ -2974,10 +3283,13 @@ struct DrapeLook {
 /// The document's own drawing, draped on the flat ground: every visible path node's topmost
 /// stroke as ground lines, and its topmost solid fill under them — every closed run of the
 /// node paints (a MultiPolygon's islands fill like the 2D canvas's even-odd does for outer
-/// rings), at the fill's own tint × the node's opacity, exactly the alpha the 2D canvas uses.
-/// Text, images and effects stay 2D-only — this is the drawing, simply showing where it was
-/// drawn, on the same ground the imagery lies on.
-fn draw_doc_art(app: &TerrazoneApp, painter: &egui::Painter, xform: &Xform) {
+/// rings), at the fill's own tint × the node's own opacity × the layer's accumulated opacity,
+/// exactly the alpha the 2D canvas uses. The document's TEXT drapes as labels: each text
+/// node's plain string at its anchor on the ground, sized by the view's ground scale (px per
+/// document point, the same metres-per-px the drape tolerance reads) — a named map reads in
+/// 3D like it reads in 2D. Images and effects stay 2D-only — this is the drawing, simply
+/// showing where it was drawn, on the same ground the imagery lies on.
+fn draw_doc_art(app: &TerrazoneApp, painter: &egui::Painter, xform: &Xform, rig: &CameraRig) {
     let Some(st) = app.session.active() else { return };
     let drape = drape_ctx(app);
     let tol = drape_tol(app, xform.rect);
@@ -2985,7 +3297,7 @@ fn draw_doc_art(app: &TerrazoneApp, painter: &egui::Painter, xform: &Xform) {
     let mut budget = 60_000usize;
     let world = |p: Point| drape.world(p);
     for layer in &st.doc.layers {
-        collect_doc_paths(layer, &world, &mut lines, &mut budget, tol);
+        collect_doc_paths(layer, &world, &mut lines, &mut budget, tol, 1.0);
         if budget == 0 {
             break;
         }
@@ -3026,11 +3338,127 @@ fn draw_doc_art(app: &TerrazoneApp, painter: &egui::Painter, xform: &Xform) {
             }
         }
     }
+    // The text labels over the lines (labels read over the shapes, the 2D canvas's order).
+    let mut texts: Vec<DrapeText> = Vec::new();
+    for layer in &st.doc.layers {
+        collect_doc_text(layer, &world, &mut texts, 1.0);
+    }
+    if !texts.is_empty() {
+        let px_per_pt = drape_px_per_pt(app, xform.rect, rig);
+        for dt in &texts {
+            let Some(s) = xform.proj(dt.at) else { continue };
+            if !xform.rect.contains(s) {
+                continue;
+            }
+            let font = FontId::proportional((dt.size * px_per_pt).clamp(5.0, 300.0) as f32);
+            let color = Color32::from_rgba_unmultiplied(dt.rgb[0], dt.rgb[1], dt.rgb[2], (dt.alpha * 255.0).round().clamp(0.0, 255.0) as u8);
+            if color.a() == 0 {
+                continue;
+            }
+            let galley = painter.layout_no_wrap(dt.text.clone(), font, color);
+            // Point type anchors at its first baseline start: the galley hangs above the pick.
+            let pos = s - vec2(0.0, galley.size().y);
+            painter.galley(pos, galley, color);
+        }
+    }
+}
+
+/// One draped text label: the anchor's world point, the plain string, the first run's size in
+/// document points and its fill's colour (a gradient reads as its mid colour, the drape's
+/// honest average), with the node's own × the layers' accumulated opacity.
+#[derive(Debug)]
+pub(crate) struct DrapeText {
+    pub(crate) at: [f32; 3],
+    pub(crate) text: String,
+    pub(crate) size: f64,
+    pub(crate) rgb: [u8; 3],
+    pub(crate) alpha: f32,
+}
+
+/// Screen pixels per document point at the view's ground scale: the metres-per-px the drape
+/// tolerance reads (the camera's own, orbit or walk) through the Mercator's metres per
+/// document point — the rule that sizes the draped text to the view.
+fn drape_px_per_pt(app: &TerrazoneApp, rect: Rect, rig: &CameraRig) -> f64 {
+    let metres_per_px = match rig {
+        CameraRig::Orbit(c) => 2.0 * f64::from(c.dist) * f64::from(c.fov_y.tan().max(0.01)) / f64::from(rect.height().max(1.0)),
+        CameraRig::Walk(w) => {
+            // The walk rig's ground scale at the eye's feet (the same rule the readout's walk
+            // zoom level reads — the view's honest nadir scale).
+            2.0 * f64::from(w.pos[1].max(2.0)) * f64::from(w.fov_y.tan().max(0.01)) / f64::from(rect.height().max(1.0))
+        }
+    };
+    let m_per_doc_pt = 360.0 / WORLD_PT * 111_320.0 * scene_mercator(app).lat0.to_radians().cos().max(0.05);
+    // No clamp ceiling here: a map document's point is kilometres, so the honest scale runs
+    // into the tens of thousands of px per point — the draw's own font clamp (5–300 px) bounds
+    // what renders. Only a degenerate zero guards.
+    (m_per_doc_pt / metres_per_px).max(1.0e-6)
+}
+
+/// Collect the document's TEXT as ground labels: point type anchors at its baseline origin,
+/// area type at its frame's centre, type on a path at the path's start; the first run names
+/// the string, the size and the fill. Rotated/justified subtleties stay 2D — this is the
+/// label showing where it was set. `pub(crate)` so the tests pin the collection.
+pub(crate) fn collect_doc_text(node: &terrazon_doc::Node, world: &dyn Fn(Point) -> [f32; 3], out: &mut Vec<DrapeText>, inherit: f32) {
+    use terrazon_geom::Shape as _;
+    if !node.visible || inherit <= 0.0 {
+        return;
+    }
+    match &node.kind {
+        NodeKind::Text(t) => {
+            let text: String = t.runs.iter().map(|r| r.text.as_str()).collect::<Vec<_>>().join("");
+            if text.trim().is_empty() {
+                return;
+            }
+            let Some(run) = t.runs.first() else { return };
+            let Some((rgb, tint)) = paint_rgba(&run.style.fill) else { return };
+            // The size rides the text's own transform too: a scaled text node (Transform, the
+            // Free Transform tool) reads at its scaled size, the way the 2D canvas renders it.
+            let c = t.xf.as_coeffs();
+            let xf_scale = (c[0] * c[0] + c[1] * c[1]).sqrt();
+            let anchor = match &t.kind {
+                terrazon_doc::TextKind::Point => Point::new(c[4], c[5]),
+                terrazon_doc::TextKind::Area { frame } => {
+                    let b = frame.to_bezpath().bounding_box();
+                    Point::new((b.x0 + b.x1) / 2.0, (b.y0 + b.y1) / 2.0)
+                }
+                terrazon_doc::TextKind::OnPath { path, .. } => match path.to_bezpath().elements().first() {
+                    Some(terrazon_geom::PathEl::MoveTo(p)) => Point::new(p.x, p.y),
+                    _ => return,
+                },
+            };
+            out.push(DrapeText {
+                at: world(anchor),
+                text,
+                size: run.style.size * xf_scale,
+                rgb,
+                alpha: (node.opacity * inherit).clamp(0.0, 1.0) * tint.clamp(0.0, 1.0),
+            });
+        }
+        NodeKind::Layer { children, .. }
+        | NodeKind::Group { children, .. }
+        | NodeKind::Compound { children, .. }
+        | NodeKind::Blend { children, .. } => {
+            let inh = inherit * node.opacity.clamp(0.0, 1.0);
+            for c in children {
+                collect_doc_text(c, world, out, inh);
+            }
+        }
+        _ => {}
+    }
 }
 
 /// Collect the drapeable paths of one node subtree (visible paths with a stroke or fill; layers,
 /// groups, compound paths and blends walk through — path data lives in document coordinates).
-fn collect_doc_paths(node: &terrazon_doc::Node, world: &dyn Fn(Point) -> [f32; 3], out: &mut Vec<DrapeLine>, budget: &mut usize, tol: f64) {
+/// `inherit` is the ancestors' accumulated opacity — a layer's eye at 50% dims everything on
+/// it in 3D exactly the 2D canvas dims it.
+fn collect_doc_paths(
+    node: &terrazon_doc::Node,
+    world: &dyn Fn(Point) -> [f32; 3],
+    out: &mut Vec<DrapeLine>,
+    budget: &mut usize,
+    tol: f64,
+    inherit: f32,
+) {
     if !node.visible || *budget == 0 {
         return;
     }
@@ -3041,7 +3469,7 @@ fn collect_doc_paths(node: &terrazon_doc::Node, world: &dyn Fn(Point) -> [f32; 3
                     &path.to_bezpath(),
                     tol,
                     world,
-                    DrapeLook { rgb: stroke.0, alpha: node.opacity.clamp(0.0, 1.0), width: stroke.1, fill },
+                    DrapeLook { rgb: stroke.0, alpha: (node.opacity * inherit).clamp(0.0, 1.0), width: stroke.1, fill },
                     out,
                     budget,
                 );
@@ -3051,8 +3479,9 @@ fn collect_doc_paths(node: &terrazon_doc::Node, world: &dyn Fn(Point) -> [f32; 3
         | NodeKind::Group { children, .. }
         | NodeKind::Compound { children, .. }
         | NodeKind::Blend { children, .. } => {
+            let inh = inherit * node.opacity.clamp(0.0, 1.0);
             for c in children {
-                collect_doc_paths(c, world, out, budget, tol);
+                collect_doc_paths(c, world, out, budget, tol, inh);
                 if *budget == 0 {
                     break;
                 }
@@ -3484,7 +3913,7 @@ mod tests {
         assert!(zooms.len() >= 2, "a tilted view asks more than one zoom: {zooms:?}");
         let z_focus = drape_zoom_view(mpp, anchor.1, &src, 22);
         let z_max = *zooms.last().unwrap();
-        assert!(z_max >= z_focus + 1, "the near ground asks finer than the focus serves: {z_max} vs {z_focus}");
+        assert!(z_max > z_focus, "the near ground asks finer than the focus serves: {z_max} vs {z_focus}");
         assert!(*zooms.first().unwrap() < z_max, "the far field stays coarser than the near");
         for (t, _) in &ring {
             assert!(t.z >= src.min_zoom && t.z <= src.max_zoom, "every zoom inside the source: {}", t.z);

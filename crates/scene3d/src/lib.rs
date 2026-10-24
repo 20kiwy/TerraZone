@@ -14,8 +14,8 @@
 //!   height for its label): the one terrain render the 3D environment does — the ground itself
 //!   drapes flat, and the relief reads from the contour lines.
 //! * [`camera`] — the cameras and picking rays, framework-free (a port of ArchCraft's): the
-//!   orbit arm, the EffectCraft viewer's first-person walk rig ([`camera::WalkCam`], WASD +
-//!   drag look), the [`camera::CamMode`] pair and the [`camera::CameraRig`] that renders
+//!   orbit arm, the EffectCraft viewer's first-person walk rig ([`camera::WalkCam`], arrow
+//!   keys + drag look), the [`camera::CamMode`] pair and the [`camera::CameraRig`] that renders
 //!   either of them.
 //! * [`mesh`] — [`mesh::Mesh3d`] and its builders: textured ground quads, extruded building
 //!   rings, boxes.

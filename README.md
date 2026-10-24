@@ -130,19 +130,31 @@ rail, waiting departures fanned at their origins:
 
 The `2D`/`3D` canvas switch opens the second canvas: the basemap's imagery draped flat on the
 datum in perspective, the terrain's contour lines with their heights, the document's own drawing
-draped as-is, the placed assets standing on the ground, and the fleet's live markers.
+draped as-is (its text reading as ground labels, its layers' opacities carried down), the placed
+assets standing on the ground, and the fleet's whole stack — markers, the H3 cell grids, the
+Waze road network in the vendor's own editor palette, the SGR stations — everything the 2D map
+paints, on the ground.
 
 - **The endless grid** — the ground grid copies the EffectCraft viewer's: it un-projects the
   screen corners onto the datum, marches horizon rays out to a far clamp ring, adapts its
   1-2-5 step to the zoom (minor/major/super hierarchy, minor lines dropped under 4 px), clips
   every segment against the camera frustum and melts the far ends into the sky with a horizon
   haze — so the grid fills the viewport at every camera and never visibly ends.
+- **The imagery ring learns the source's real coverage** — a zoom the vendor declares but never
+  answers (16 straight failures, not one answer) drops out of the ring's asks, so the near
+  field dresses from the finest zoom that actually answers instead of paying a dead ask per
+  tile every frame.
 - **Two camera modes** (the EffectCraft pair, switchable in the Camera 3D panel): **Orbit**,
   the drag-to-orbit arm with Shift-pan, wheel dolly and double-click recentre; and **Walk**,
-  the first-person rig — W/A/S/D walks forward/left/back/right, Space-drag (or Alt-drag with a
+  the first-person rig — the arrow keys walk forward/left/back/right (the letters stay with
+  the tools), Space-drag (or Alt-drag with a
   tool up) looks, Q/E sinks or lifts, Shift runs, the wheel raises or lowers. Switching hands
   the view over — the walk stands where the orbit stood, the orbit re-aims from where the walk
   ended — so the scene never jumps.
+- **The scene's inputs made visible** — the readout's X/Y/Z and lat/lon are the CURSOR's own
+  ground pick (never the camera's), and the 3D Terrain panel's debug checkboxes draw every
+  ring tile's boundary colour-banded by its zoom with the ring's stats in the readout, and
+  every placed asset's id and aim (`scene3d.set {"tilesDebug": …, "objectsDebug": …}`).
 
 ## Files
 

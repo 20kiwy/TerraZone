@@ -287,3 +287,110 @@ fn scene3d_set_toggles_the_debug_overlays() {
     assert_eq!(r["objectsDebug"], json!(true));
     assert!(!app.ui.tiles_debug && app.ui.objects_debug);
 }
+
+#[test]
+fn the_walk_rig_reads_the_arrow_keys_not_the_letter_keys() {
+    // The walk drive's axis read answers the ARROW keys — up forward, down back, left/right
+    // strafe — and never the letters: W/A/S/D are the tools' keys, so the rig's own read
+    // leaves them alone (the user's rule: "the WASD are used for tools, use arrows for
+    // navigation").
+    let ctx = egui::Context::default();
+    let key = |k: egui::Key| egui::Event::Key { key: k, physical_key: None, pressed: true, repeat: false, modifiers: egui::Modifiers::default() };
+    let raw = egui::RawInput {
+        events: vec![key(egui::Key::ArrowUp), key(egui::Key::ArrowRight), key(egui::Key::W), key(egui::Key::A), key(egui::Key::S), key(egui::Key::D)],
+        ..Default::default()
+    };
+    let axes = std::cell::Cell::new((0.0f32, 0.0f32));
+    let mut out = ctx.run_ui(raw, |ui| {
+        ui.input(|i| axes.set(crate::view3d::walk_key_axes(i)));
+    });
+    out.textures_delta.clear();
+    assert_eq!(axes.get(), (1.0, 1.0), "up walks forward, right strafes — and the letters read nothing");
+    // The other pair: down backs, left strafes the other way (a fresh context — egui's
+    // input pass is one-shot per assert here).
+    let ctx = egui::Context::default();
+    let raw = egui::RawInput { events: vec![key(egui::Key::ArrowDown), key(egui::Key::ArrowLeft)], ..Default::default() };
+    let axes = std::cell::Cell::new((0.0f32, 0.0f32));
+    let mut out = ctx.run_ui(raw, |ui| {
+        ui.input(|i| axes.set(crate::view3d::walk_key_axes(i)));
+    });
+    out.textures_delta.clear();
+    assert_eq!(axes.get(), (-1.0, -1.0), "down walks back, left strafes");
+}
+
+#[test]
+fn the_imagery_ring_learns_a_sources_effective_zoom_cap() {
+    // The coverage learner: a zoom the source declares but never answers (16 straight
+    // failures, zero answers) caps the ring's asks one level down, so the near field
+    // dresses from the finest zoom that actually answers instead of paying a dead ask
+    // per tile every frame.
+    let mut fails = std::collections::BTreeMap::new();
+    let oks = std::collections::BTreeMap::new();
+    for _ in 0..16 {
+        *fails.entry(22u8).or_default() += 1;
+    }
+    assert_eq!(crate::view3d::learn_zoom_cap(&fails, &oks, 22, None), Some(21), "a dead z22 caps at z21");
+    // The cap only walks down: a learned 21 stays with more failures above it.
+    assert_eq!(crate::view3d::learn_zoom_cap(&fails, &oks, 22, Some(21)), Some(21));
+    // A zoom the source answers never learns a cap.
+    let mut answered = std::collections::BTreeMap::new();
+    answered.insert(22u8, 1);
+    assert_eq!(crate::view3d::learn_zoom_cap(&fails, &answered, 22, None), None);
+    // Low zooms never learn (a flaky street zoom is a network problem, not a coverage edge).
+    let mut low = std::collections::BTreeMap::new();
+    for _ in 0..16 {
+        *low.entry(15u8).or_default() += 1;
+    }
+    assert_eq!(crate::view3d::learn_zoom_cap(&low, &oks, 15, None), None);
+    // The floor: even a stack of failures at 15's neighbour never caps below z14.
+    let mut z16 = std::collections::BTreeMap::new();
+    for _ in 0..16 {
+        *z16.entry(16u8).or_default() += 1;
+    }
+    assert_eq!(crate::view3d::learn_zoom_cap(&z16, &oks, 16, None), Some(15));
+}
+
+#[test]
+fn the_drape_collects_the_documents_text_as_labels() {
+    // The 3D drape's text pass: a text.create node surfaces as a DrapeText — the plain
+    // string at its anchor's world point, the run's size and fill, the node's opacity.
+    let mut app = app_with_map();
+    let r = app.run("text.create", json!({"x": 100.0, "y": 120.0, "text": "Sinza", "size": 0.004})).unwrap();
+    assert!(r["id"].as_u64().is_some(), "text.create answers an id: {r}");
+    let st = app.session.active().unwrap();
+    let mut out = Vec::new();
+    let world = |p: terrazon_geom::Point| [p.x as f32, 0.0, -p.y as f32];
+    for layer in &st.doc.layers {
+        crate::view3d::collect_doc_text(layer, &world, &mut out, 1.0);
+    }
+    assert_eq!(out.len(), 1, "one label collected: {out:?}");
+    assert_eq!(out[0].text, "Sinza");
+    // The engine clamps a new label at 0.1 pt (its UI floor) — a map doc scales it down with
+    // a transform, and the drape reads the SCALED size (the xf's own scale rides along).
+    assert!((out[0].size - 0.1).abs() < 1.0e-9, "the size rides the run: {}", out[0].size);
+    app.run("object.scale", json!({"sx": 4, "sy": 4})).unwrap();
+    let st = app.session.active().unwrap();
+    let mut out = Vec::new();
+    let world = |p: terrazon_geom::Point| [p.x as f32, 0.0, -p.y as f32];
+    for layer in &st.doc.layers {
+        crate::view3d::collect_doc_text(layer, &world, &mut out, 1.0);
+    }
+    assert!((out[0].size - 0.004).abs() < 1.0e-9, "the scaled size rides the xf: {}", out[0].size);
+    assert_eq!(out[0].alpha, 1.0);
+    // On a 45% layer the label dims with it (the layer-opacity parity).
+    let lay = app.run("layer.new", json!({"top": true})).unwrap()["id"].as_u64().unwrap();
+    let r = app.run("text.create", json!({"x": -50.0, "y": -60.0, "text": "Gulf"})).unwrap();
+    let tid = r["id"].as_u64().unwrap();
+    app.run("select.set", json!({"ids": [tid]})).unwrap();
+    app.run("layer.move", json!({"id": tid, "target": lay, "place": "inside"})).unwrap();
+    app.run("select.none", json!({})).unwrap();
+    app.run("layer.target", json!({"id": lay})).unwrap();
+    app.run("transparency.set", json!({"opacity": 45})).unwrap();
+    let st = app.session.active().unwrap();
+    let mut out = Vec::new();
+    for layer in &st.doc.layers {
+        crate::view3d::collect_doc_text(layer, &world, &mut out, 1.0);
+    }
+    let gulf = out.iter().find(|d| d.text == "Gulf").expect("the moved label collects");
+    assert!((gulf.alpha - 0.45).abs() < 0.01, "the 45% layer dims its label: {}", gulf.alpha);
+}
